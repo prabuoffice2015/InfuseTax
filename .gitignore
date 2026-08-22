@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+backend/vendor/
+frontend-web/node_modules/
+
+# Next.js build
+frontend-web/.next/
+frontend-web/out/
+
+# Environment local secrets
+.env
+.env.local
+.env.production
+backend/.env
+
+# Logs & OS artifacts
+*.log
+npm-debug.log*
+.DS_Store
+.idea/
+.vscode/
+
+# Docker volumes
+postgres_data/
+redis_data/
