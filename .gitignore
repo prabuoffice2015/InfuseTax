@@ -23,3 +23,9 @@ npm-debug.log*
 # Docker volumes
 postgres_data/
 redis_data/
+
+#Personal
+Prompt.txt
+InfuseTax_Brand_Kit.zip
+itabwallet_project_documentation.md
+start.sh
