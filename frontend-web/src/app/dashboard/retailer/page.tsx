@@ -28,10 +28,13 @@ import {
   FileCheck
 } from "lucide-react";
 import ReceiptModal, { ReceiptData } from "@/components/dashboard/ReceiptModal";
+import UpiQrModal from "@/components/dashboard/UpiQrModal";
 
 export default function RetailerDashboardPage() {
   const [activeDesk, setActiveDesk] = useState<"gst_reg" | "gstr_filing" | "itr" | "pan" | "passport" | "certs">("gst_reg");
   const [selectedReceipt, setSelectedReceipt] = useState<ReceiptData | null>(null);
+  const [showUpiModal, setShowUpiModal] = useState<boolean>(false);
+  const [counterWalletBalance, setCounterWalletBalance] = useState<number>(24850.00);
 
   // -------------------------------------------------------------
   // Desk 1: GST Registration Wizard State (eTaxPrime Benchmark)
@@ -338,6 +341,28 @@ export default function RetailerDashboardPage() {
       {/* Universal Receipt Modal */}
       <ReceiptModal receipt={selectedReceipt} onClose={() => setSelectedReceipt(null)} />
 
+      {/* Dynamic UPI QR Code Top-Up Modal */}
+      <UpiQrModal
+        isOpen={showUpiModal}
+        onClose={() => setShowUpiModal(false)}
+        onSuccess={(amt, txnId) => {
+          setCounterWalletBalance((prev) => prev + amt);
+          const topUpEntry: ReceiptData = {
+            id: txnId,
+            client: "Counter Wallet Top-Up",
+            service: "Dynamic UPI Instant Deposit",
+            amount: amt,
+            comm: 0,
+            status: "INSTANT CREDIT",
+            date: "Just now",
+            customerMobile: "+91 98765 43210",
+            customerPanOrGst: "ICICI-UPI-WEBHOOK",
+          };
+          setFilings([topUpEntry, ...filings]);
+        }}
+        userRole="Retailer"
+      />
+
       {/* Top Banner & Fast Metrics */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -354,12 +379,24 @@ export default function RetailerDashboardPage() {
         </div>
 
         {/* Live Wallet & Commission Pill */}
-        <div className="flex items-center space-x-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
           <div className="px-4 py-2 bg-blue-50 border border-blue-200 rounded-2xl text-right">
             <div className="text-[10px] uppercase font-bold text-blue-700">Counter Wallet Balance</div>
-            <div className="text-base font-extrabold text-blue-950 font-mono">₹24,850.00</div>
+            <div className="text-base font-extrabold text-blue-950 font-mono">
+              ₹{counterWalletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            </div>
           </div>
-          <div className="px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-2xl text-right">
+          
+          <button
+            type="button"
+            onClick={() => setShowUpiModal(true)}
+            className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-extrabold text-xs rounded-2xl shadow-md shadow-amber-500/20 flex items-center space-x-1.5 transition-transform transform hover:scale-105"
+          >
+            <QrCode className="w-4 h-4" />
+            <span>+ UPI Top-Up</span>
+          </button>
+
+          <div className="px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-2xl text-right hidden sm:block">
             <div className="text-[10px] uppercase font-bold text-emerald-700">Today&apos;s Earned Margin</div>
             <div className="text-base font-extrabold text-emerald-900 font-mono">+₹1,470.00</div>
           </div>
