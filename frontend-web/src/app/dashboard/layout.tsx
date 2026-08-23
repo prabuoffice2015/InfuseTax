@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
 import Navbar from "@/components/dashboard/Navbar";
 import MobileBottomNav from "@/components/dashboard/MobileBottomNav";
+import AuthGuard from "@/components/dashboard/AuthGuard";
 
 export default function DashboardLayout({
   children,
@@ -39,27 +40,29 @@ export default function DashboardLayout({
   const user = getUserDetails();
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row pb-16 md:pb-0">
-      {/* Role-Aware Sidebar */}
-      <Sidebar currentRole={role} />
+    <AuthGuard>
+      <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row pb-16 md:pb-0">
+        {/* Role-Aware Sidebar */}
+        <Sidebar currentRole={role} />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <Navbar 
-          userTitle={user.name} 
-          userCode={user.code} 
-          walletBalance={user.balance} 
-        />
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <Navbar 
+            userTitle={user.name} 
+            userCode={user.code} 
+            walletBalance={user.balance} 
+          />
 
-        <main className="p-4 sm:p-6 md:p-8 flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto">
-            {children}
-          </div>
-        </main>
+          <main className="p-4 sm:p-6 md:p-8 flex-1 overflow-y-auto">
+            <div className="max-w-7xl mx-auto">
+              {children}
+            </div>
+          </main>
+        </div>
+
+        {/* Mobile Bottom Navigation Bar */}
+        <MobileBottomNav />
       </div>
-
-      {/* Mobile Bottom Navigation Bar */}
-      <MobileBottomNav />
-    </div>
+    </AuthGuard>
   );
 }

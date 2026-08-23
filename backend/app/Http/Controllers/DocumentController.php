@@ -51,14 +51,36 @@ class DocumentController {
         $pdo = Database::getConnection();
         $docs = [];
 
+        $headers = getallheaders();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+        $userClaims = null;
+        if (!empty($authHeader) && preg_match('/Bearer\s(\S+)/i', $authHeader, $matches)) {
+            $userClaims = \App\Core\Jwt::decode($matches[1]);
+        }
+
+        $role = $userClaims['role'] ?? 'retailer';
+        $userId = $userClaims['sub'] ?? null;
+
         if ($pdo) {
             try {
-                $rows = $pdo->query("
-                    SELECT id, document_type as type, file_name as name, file_url as url, sha256_hash as hash, created_at as date
-                    FROM documents
-                    ORDER BY created_at DESC
-                    LIMIT 20
-                ")->fetchAll();
+                if ($role === 'super_admin' || empty($userId)) {
+                    $rows = $pdo->query("
+                        SELECT id, document_type as type, file_name as name, file_url as url, sha256_hash as hash, created_at as date
+                        FROM documents
+                        ORDER BY created_at DESC
+                        LIMIT 20
+                    ")->fetchAll();
+                } else {
+                    $stmt = $pdo->prepare("
+                        SELECT id, document_type as type, file_name as name, file_url as url, sha256_hash as hash, created_at as date
+                        FROM documents
+                        WHERE user_id = :uid
+                        ORDER BY created_at DESC
+                        LIMIT 20
+                    ");
+                    $stmt->execute(['uid' => $userId]);
+                    $rows = $stmt->fetchAll();
+                }
 
                 if (!empty($rows)) {
                     $docs = $rows;

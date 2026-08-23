@@ -98,11 +98,10 @@ CREATE TABLE IF NOT EXISTS itr_filings (
     client_name VARCHAR(255) NOT NULL,
     pan VARCHAR(10) NOT NULL,
     assessment_year VARCHAR(10) NOT NULL DEFAULT '2025-26',
-    itr_form VARCHAR(20) NOT NULL DEFAULT 'ITR-1',
     gross_salary NUMERIC(12, 2) NOT NULL,
     optimal_regime VARCHAR(50) NOT NULL,
-    tax_savings NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-    net_refund NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+    tax_savings NUMERIC(10, 2) DEFAULT 0.00,
+    net_refund NUMERIC(10, 2) DEFAULT 0.00,
     status VARCHAR(30) DEFAULT 'FILED_VERIFIED',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -114,17 +113,17 @@ CREATE TABLE IF NOT EXISTS documents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    document_type VARCHAR(50) NOT NULL,
     file_name VARCHAR(255) NOT NULL,
-    file_size_kb INT NOT NULL,
-    mime_type VARCHAR(100) NOT NULL,
-    category VARCHAR(50) NOT NULL,
-    r2_storage_key VARCHAR(500) NOT NULL,
-    encryption_algorithm VARCHAR(50) DEFAULT 'AES-256-GCM',
-    uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    file_url TEXT NOT NULL,
+    file_size_bytes BIGINT NOT NULL,
+    sha256_hash VARCHAR(64) NOT NULL,
+    is_encrypted BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ------------------------------------------------------------------------------
--- 8. DOUBLE-ENTRY FINANCIAL AUDIT LEDGER (Immutable)
+-- 8. IMMUTABLE FINANCIAL AUDIT LEDGER (Double-Entry Log)
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS audit_ledger (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -136,34 +135,41 @@ CREATE TABLE IF NOT EXISTS audit_ledger (
     credit_user_id UUID REFERENCES users(id),
     amount NUMERIC(15, 2) NOT NULL,
     balance_after NUMERIC(15, 2) NOT NULL,
-    narration TEXT NOT NULL,
+    narration TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create High-Performance Indexes
-CREATE INDEX IF NOT EXISTS idx_users_tenant ON users(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_wallets_user ON wallets(user_id);
-CREATE INDEX IF NOT EXISTS idx_gst_filings_pan ON gst_filings(pan);
-CREATE INDEX IF NOT EXISTS idx_itr_filings_pan ON itr_filings(pan);
-CREATE INDEX IF NOT EXISTS idx_audit_ledger_created ON audit_ledger(created_at DESC);
+-- ------------------------------------------------------------------------------
+-- 9. HIGH-PERFORMANCE POSTGRESQL SMART INDEXES
+-- ------------------------------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_users_email_role ON users (email, role);
+CREATE INDEX IF NOT EXISTS idx_users_tenant_role ON users (tenant_id, role, status);
+CREATE INDEX IF NOT EXISTS idx_wallets_user_id ON wallets (user_id);
+CREATE INDEX IF NOT EXISTS idx_gst_filings_retailer_created ON gst_filings (retailer_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_gst_filings_tenant ON gst_filings (tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_itr_filings_retailer_created ON itr_filings (retailer_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_documents_user_created ON documents (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_ledger_tenant_created ON audit_ledger (tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_ledger_actor ON audit_ledger (actor_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_utr_requests_status ON utr_requests (status, created_at DESC);
 
 -- ==============================================================================
--- TURNKEY SEED DATA
+-- TURNKEY PRODUCTION SEED DATA
 -- ==============================================================================
 
--- 1. Insert Default Tenant
+-- 1. Create Default Master Tenant
 INSERT INTO tenants (id, code, company_name, domain, dlt_sender_id, primary_color, secondary_color)
 VALUES (
     'a0000000-0000-0000-0000-000000000001',
     'INFUSE',
     'InfuseTax Technologies Pvt Ltd',
-    'tax.infusetax.com',
+    'portal.infusetax.com',
     'INFUST',
     '#1E40AF',
     '#F59E0B'
 ) ON CONFLICT (code) DO NOTHING;
 
--- 2. Insert Core Users
+-- 2. Seed Multi-Tier Users
 INSERT INTO users (id, tenant_id, email, mobile, password_hash, full_name, role, city, state, status)
 VALUES 
 (
@@ -171,7 +177,7 @@ VALUES
     'a0000000-0000-0000-0000-000000000001',
     'admin@infusetax.com',
     '+919876500001',
-    '$2y$10$abcdefghijklmnopqrstuvwxyz123456', -- Secure Argon2/Bcrypt hash
+    '$2y$12$Z0bB1l9v/c1w3K.pLqfS6uM8Q9/a.5w0XvK4jL8nB1xZ5mK3rPqGy',
     'InfuseTax Super Admin',
     'super_admin',
     'Chennai',
@@ -183,7 +189,7 @@ VALUES
     'a0000000-0000-0000-0000-000000000001',
     'distributor@infusetax.com',
     '+919876500002',
-    '$2y$10$abcdefghijklmnopqrstuvwxyz123456',
+    '$2y$12$Z0bB1l9v/c1w3K.pLqfS6uM8Q9/a.5w0XvK4jL8nB1xZ5mK3rPqGy',
     'Apex Zonal Distributor',
     'distributor',
     'Madurai',
@@ -195,7 +201,7 @@ VALUES
     'a0000000-0000-0000-0000-000000000001',
     'retailer@infusetax.com',
     '+919876500003',
-    '$2y$10$abcdefghijklmnopqrstuvwxyz123456',
+    '$2y$12$Z0bB1l9v/c1w3K.pLqfS6uM8Q9/a.5w0XvK4jL8nB1xZ5mK3rPqGy',
     'Ramesh Digital Seva (Retailer)',
     'retailer',
     'Coimbatore',
@@ -207,7 +213,7 @@ VALUES
     'a0000000-0000-0000-0000-000000000001',
     'operator@infusetax.com',
     '+919876500004',
-    '$2y$10$abcdefghijklmnopqrstuvwxyz123456',
+    '$2y$12$Z0bB1l9v/c1w3K.pLqfS6uM8Q9/a.5w0XvK4jL8nB1xZ5mK3rPqGy',
     'Counter Staff (Operator)',
     'operator',
     'Coimbatore',

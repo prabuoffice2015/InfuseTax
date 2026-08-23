@@ -177,20 +177,46 @@ class TaxController {
         ]);
     }
 
-    // 6. Recent Filings Table
+    // 6. Recent Filings Table with User-Type Isolation
     public function getRecentFilings(): void {
         $pdo = Database::getConnection();
         $filings = [];
 
+        // Check JWT / Bearer context if present
+        $headers = getallheaders();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+        $userClaims = null;
+        if (!empty($authHeader) && preg_match('/Bearer\s(\S+)/i', $authHeader, $matches)) {
+            $userClaims = \App\Core\Jwt::decode($matches[1]);
+        }
+
+        $role = $userClaims['role'] ?? 'retailer';
+        $userId = $userClaims['sub'] ?? null;
+
         if ($pdo) {
             try {
-                $rows = $pdo->query("
-                    SELECT g.arn as id, g.trade_name as client, 'GST Registration' as service, 
-                           g.portal_fee as amount, g.retailer_margin as margin, g.created_at, g.status
-                    FROM gst_filings g
-                    ORDER BY g.created_at DESC
-                    LIMIT 10
-                ")->fetchAll();
+                if ($role === 'super_admin' || empty($userId)) {
+                    // Admin sees all filings
+                    $rows = $pdo->query("
+                        SELECT g.arn as id, g.trade_name as client, 'GST Registration' as service, 
+                               g.portal_fee as amount, g.retailer_margin as margin, g.created_at, g.status
+                        FROM gst_filings g
+                        ORDER BY g.created_at DESC
+                        LIMIT 10
+                    ")->fetchAll();
+                } else {
+                    // Retailer / Operator sees only their own store filings
+                    $stmt = $pdo->prepare("
+                        SELECT g.arn as id, g.trade_name as client, 'GST Registration' as service, 
+                               g.portal_fee as amount, g.retailer_margin as margin, g.created_at, g.status
+                        FROM gst_filings g
+                        WHERE g.retailer_id = :uid
+                        ORDER BY g.created_at DESC
+                        LIMIT 10
+                    ");
+                    $stmt->execute(['uid' => $userId]);
+                    $rows = $stmt->fetchAll();
+                }
 
                 if (!empty($rows)) {
                     $filings = $rows;

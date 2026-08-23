@@ -98,8 +98,10 @@ class WalletController {
         ]);
     }
 
-    // 4. Super Admin 1-Click Approve UTR & Instant Credit
+    // 4. Super Admin 1-Click Approve UTR & Instant Credit (RBAC Protected)
     public function approveUtrTopup(array $body): void {
+        \App\Http\Middleware\RoleMiddleware::authorize(['super_admin']);
+
         $utrNumber = strtoupper(trim($body['utr_number'] ?? ''));
         $amount    = floatval($body['amount'] ?? 50000.00);
         $pdo       = Database::getConnection();
