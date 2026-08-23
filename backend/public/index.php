@@ -183,6 +183,104 @@ if ($requestUri === '/api/v1/wallet/topup-upi' && $method === 'POST') {
     exit;
 }
 
+// -------------------------------------------------------------
+// 7. Government Sandbox: POST /api/v1/government/verify-pan
+// -------------------------------------------------------------
+if ($requestUri === '/api/v1/government/verify-pan' && $method === 'POST') {
+    $pan = strtoupper(trim($body['pan'] ?? ''));
+    $isValid = (bool) preg_match('/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/', $pan);
+
+    if (!$isValid) {
+        http_response_code(400);
+        echo json_encode([
+            'status'  => 'error',
+            'message' => 'Invalid Permanent Account Number (PAN) format. Must be 10 characters (e.g. ABCDE1234F).',
+        ]);
+        exit;
+    }
+
+    $entityTypeMap = [
+        'P' => 'Individual / Sole Proprietor',
+        'C' => 'Company / Pvt Ltd',
+        'H' => 'Hindu Undivided Family (HUF)',
+        'F' => 'Partnership Firm / LLP',
+        'T' => 'Trust',
+        'A' => 'Association of Persons (AOP)',
+        'B' => 'Body of Individuals (BOI)',
+        'G' => 'Government Entity',
+        'J' => 'Artificial Juridical Person',
+        'L' => 'Local Authority',
+    ];
+
+    $typeChar = $pan[3] ?? 'P';
+    $entityType = $entityTypeMap[$typeChar] ?? 'Individual';
+
+    echo json_encode([
+        'status'             => 'success',
+        'pan'                => $pan,
+        'pan_status'         => 'VALID & OPERATIVE',
+        'aadhaar_seeding'    => 'Aadhaar Linked',
+        'entity_type'        => $entityType,
+        'holder_name'        => 'PRABHU THANGAVEL',
+        'father_name'        => 'THANGAVEL M',
+        'dob_or_incorporate' => '1992-05-14',
+        'jurisdiction'       => 'WARD 2(1), CHENNAI',
+        'protean_ref'        => 'PRT' . substr(strval(time()), -7),
+        'verified_at'        => date('c'),
+    ]);
+    exit;
+}
+
+// -------------------------------------------------------------
+// 8. Government Sandbox: POST /api/v1/government/verify-gstin
+// -------------------------------------------------------------
+if ($requestUri === '/api/v1/government/verify-gstin' && $method === 'POST') {
+    $gstin = strtoupper(trim($body['gstin'] ?? ''));
+    $isValid = (bool) preg_match('/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/', $gstin);
+
+    if (!$isValid) {
+        http_response_code(400);
+        echo json_encode([
+            'status'  => 'error',
+            'message' => 'Invalid GSTIN structure. Must be 15 alphanumeric characters (e.g. 33AAAAA0000A1Z5).',
+        ]);
+        exit;
+    }
+
+    $stateCodeMap = [
+        '33' => 'Tamil Nadu',
+        '29' => 'Karnataka',
+        '27' => 'Maharashtra',
+        '07' => 'Delhi',
+        '36' => 'Telangana',
+        '37' => 'Andhra Pradesh',
+        '32' => 'Kerala',
+        '24' => 'Gujarat',
+        '19' => 'West Bengal',
+        '09' => 'Uttar Pradesh',
+    ];
+
+    $stateCode = substr($gstin, 0, 2);
+    $stateName = $stateCodeMap[$stateCode] ?? 'Tamil Nadu';
+
+    echo json_encode([
+        'status'            => 'success',
+        'gstin'             => $gstin,
+        'legal_name'        => 'SRI BALAJI ENTERPRISES PRIVATE LIMITED',
+        'trade_name'        => 'BALAJI TECH & RETAIL',
+        'gstin_status'      => 'Active',
+        'constitution'      => 'Private Limited Company',
+        'state_code'        => $stateCode,
+        'state_name'        => $stateName,
+        'taxpayer_type'     => 'Regular',
+        'registration_date' => '2019-07-01',
+        'e_invoicing_status'=> 'Applicable',
+        'filing_frequency'  => 'Monthly (GSTR-1 & 3B)',
+        'gstn_timestamp'    => date('c'),
+    ]);
+    exit;
+}
+
 // Fallback Default API Response
 echo json_encode([
     'status'      => 'success',
@@ -197,5 +295,7 @@ echo json_encode([
         'form16_ocr'     => '/api/v1/tax/ai/form16-ocr',
         'p2p_transfer'   => '/api/v1/wallet/transfer-p2p',
         'upi_topup'      => '/api/v1/wallet/topup-upi',
+        'verify_pan'     => '/api/v1/government/verify-pan',
+        'verify_gstin'   => '/api/v1/government/verify-gstin',
     ]
 ]);
