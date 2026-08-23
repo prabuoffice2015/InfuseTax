@@ -1,5 +1,5 @@
 -- ==============================================================================
--- INFUSETAX ENTERPRISE SUITE - POSTGRESQL 16 PRODUCTION DDL & SEED DATA
+-- INFUSETAX ENTERPRISE SUITE - SUPABASE / POSTGRESQL 16 PRODUCTION DDL & SEEDS
 -- Multi-Tenant B2B Architecture with Double-Entry ACID Financial Ledger
 -- ==============================================================================
 
@@ -116,11 +116,22 @@ CREATE TABLE IF NOT EXISTS documents (
     document_type VARCHAR(50) NOT NULL,
     file_name VARCHAR(255) NOT NULL,
     file_url TEXT NOT NULL,
-    file_size_bytes BIGINT NOT NULL,
-    sha256_hash VARCHAR(64) NOT NULL,
+    file_size_bytes BIGINT DEFAULT 1048576,
+    sha256_hash VARCHAR(64) DEFAULT 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
     is_encrypted BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Ensure created_at exists even if documents was created previously with uploaded_at
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'documents' AND column_name = 'created_at'
+    ) THEN 
+        ALTER TABLE documents ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+    END IF;
+END $$;
 
 -- ------------------------------------------------------------------------------
 -- 8. IMMUTABLE FINANCIAL AUDIT LEDGER (Double-Entry Log)
@@ -234,4 +245,5 @@ ON CONFLICT (user_id) DO NOTHING;
 INSERT INTO audit_ledger (tenant_id, reference_id, actor_id, action_type, debit_user_id, credit_user_id, amount, balance_after, narration)
 VALUES 
 ('a0000000-0000-0000-0000-000000000001', 'TXN-UTR-90812', 'b0000000-0000-0000-0000-000000000001', 'WALLET_TOPUP', NULL, 'b0000000-0000-0000-0000-000000000003', 50000.00, 48750.00, 'Bank Deposit Approval UTR 423512349876 credited to Ramesh Digital Seva'),
-('a0000000-0000-0000-0000-000000000001', 'TXN-P2P-77621', 'b0000000-0000-0000-0000-000000000002', 'P2P_DISBURSAL', 'b0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000003', 10000.00, 450000.00, 'Instant P2P Balance Allocation from Apex Distributor to Ramesh Seva');
+('a0000000-0000-0000-0000-000000000001', 'TXN-P2P-77621', 'b0000000-0000-0000-0000-000000000002', 'P2P_DISBURSAL', 'b0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000003', 10000.00, 450000.00, 'Instant P2P Balance Allocation from Apex Distributor to Ramesh Seva')
+ON CONFLICT DO NOTHING;
