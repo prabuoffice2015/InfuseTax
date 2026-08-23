@@ -17,6 +17,8 @@ import {
 
 import AiCopilotDrawer from "@/components/dashboard/AiCopilotDrawer";
 import { Language, languageNames } from "@/lib/i18n";
+import { getAuthUser, clearAuthSession } from "@/lib/auth";
+import { useRouter } from "next/navigation";
 
 interface NavbarProps {
   userTitle?: string;
@@ -29,13 +31,28 @@ export default function Navbar({
   userCode = "INF1029",
   walletBalance = 48750.00
 }: NavbarProps) {
+  const router = useRouter();
   const [showTopupModal, setShowTopupModal] = useState(false);
   const [showAiDrawer, setShowAiDrawer] = useState(false);
   const [currentLang, setCurrentLang] = useState<Language>("en");
+  const [activeUser, setActiveUser] = useState<{ name: string; email: string; role: string; wallet?: number } | null>(null);
   const [utrAmount, setUtrAmount] = useState("");
   const [utrNo, setUtrNo] = useState("");
   const [selectedBank, setSelectedBank] = useState("HDFC Bank (A/c: 50200012345678)");
   const [isSuccess, setIsSuccess] = useState(false);
+
+  React.useEffect(() => {
+    const user = getAuthUser();
+    if (user) {
+      setActiveUser(user);
+    }
+  }, []);
+
+  const handleSignOut = (e: React.MouseEvent) => {
+    e.preventDefault();
+    clearAuthSession();
+    router.push("/sign-in");
+  };
 
   const handleTopupSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,11 +144,11 @@ export default function Navbar({
           <div className="flex items-center space-x-3 pl-2 border-l border-slate-200">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow-sm">
-                {userTitle.charAt(0)}
+                {(activeUser?.name || userTitle).charAt(0)}
               </div>
               <div className="hidden lg:block text-left">
-                <div className="text-xs font-bold text-slate-900 leading-none">{userTitle}</div>
-                <div className="text-[10px] text-slate-500 font-mono mt-0.5">{userCode}</div>
+                <div className="text-xs font-bold text-slate-900 leading-none">{activeUser?.name || userTitle}</div>
+                <div className="text-[10px] text-slate-500 font-mono mt-0.5">{activeUser?.role ? activeUser.role.toUpperCase() : userCode}</div>
               </div>
             </div>
 
@@ -144,13 +161,13 @@ export default function Navbar({
             </div>
 
             {/* Logout Button */}
-            <Link
-              href="/sign-in"
-              className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl border border-rose-200 transition-colors"
+            <button
+              onClick={handleSignOut}
+              className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl border border-rose-200 transition-colors cursor-pointer"
               title="Sign Out to Login Desk"
             >
               Sign Out
-            </Link>
+            </button>
           </div>
         </div>
       </header>
