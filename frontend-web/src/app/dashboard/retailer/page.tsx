@@ -30,6 +30,8 @@ import {
 import ReceiptModal, { ReceiptData } from "@/components/dashboard/ReceiptModal";
 import UpiQrModal from "@/components/dashboard/UpiQrModal";
 import DocumentUploadVault from "@/components/dashboard/DocumentUploadVault";
+import TaxCalendarTicker from "@/components/dashboard/TaxCalendarTicker";
+import DocumentFraudDetector from "@/components/dashboard/DocumentFraudDetector";
 
 export default function RetailerDashboardPage() {
   const [activeDesk, setActiveDesk] = useState<"gst_reg" | "gstr_filing" | "itr" | "pan" | "passport" | "certs" | "vault">("gst_reg");
@@ -403,6 +405,9 @@ export default function RetailerDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Statutory Tax Deadlines Countdown Ticker */}
+      <TaxCalendarTicker />
 
       {/* Desk Selector Navigation Tabs */}
       <div className="flex overflow-x-auto pb-2 gap-2">
@@ -1627,6 +1632,7 @@ export default function RetailerDashboardPage() {
               <p className="text-xs text-slate-500">Secure storage for Electricity Bills, Form 16, Aadhaar & Rent NOC with zero-egress cloud storage</p>
             </div>
             <DocumentUploadVault />
+            <DocumentFraudDetector />
           </div>
         )}
       </div>
