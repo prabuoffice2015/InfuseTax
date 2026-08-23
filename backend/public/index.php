@@ -25,10 +25,13 @@ spl_autoload_register(function ($class) {
 // 2. Load Environment Variables from .env
 \App\Core\Env::load(__DIR__ . '/../.env');
 
-// 3. Load API Route Definitions
+// 3. Apply OWASP HTTP Security Headers
+\App\Core\Security::applySecurityHeaders();
+
+// 4. Load API Route Definitions
 require_once __DIR__ . '/../routes/api.php';
 
-// 4. Dispatch Incoming HTTP Request
+// 5. Dispatch Incoming HTTP Request
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $uri    = $_SERVER['REQUEST_URI'] ?? '/';
 

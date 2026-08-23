@@ -15,6 +15,7 @@ Router::get('/health', 'HealthController@check');
 
 // 2. Authentication & Session
 Router::post('/api/v1/auth/login', 'AuthController@login');
+Router::get('/api/v1/auth/profile', 'AuthController@profile');
 
 // 3. Tax, GST, ITR & Compliance Desks
 Router::post('/api/v1/tax/gst-registration', 'TaxController@submitGstRegistration');
