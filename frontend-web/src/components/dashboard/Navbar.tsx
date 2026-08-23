@@ -14,6 +14,8 @@ import {
   ArrowUpRight 
 } from "lucide-react";
 
+import AiCopilotDrawer from "@/components/dashboard/AiCopilotDrawer";
+
 interface NavbarProps {
   userTitle?: string;
   userCode?: string;
@@ -26,6 +28,7 @@ export default function Navbar({
   walletBalance = 48750.00
 }: NavbarProps) {
   const [showTopupModal, setShowTopupModal] = useState(false);
+  const [showAiDrawer, setShowAiDrawer] = useState(false);
   const [utrAmount, setUtrAmount] = useState("");
   const [utrNo, setUtrNo] = useState("");
   const [selectedBank, setSelectedBank] = useState("HDFC Bank (A/c: 50200012345678)");
@@ -64,11 +67,16 @@ export default function Navbar({
 
         {/* Right: Wallet Balance, AI Status & Profile */}
         <div className="flex items-center space-x-4">
-          {/* Live AI Copilot Status */}
-          <div className="hidden sm:flex items-center space-x-1.5 px-3 py-1 bg-amber-50 border border-amber-200/80 rounded-full text-xs font-semibold text-amber-800">
+          {/* Live AI Copilot Status Trigger Button */}
+          <button
+            type="button"
+            onClick={() => setShowAiDrawer(true)}
+            className="hidden sm:flex items-center space-x-1.5 px-3 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 hover:border-amber-300 rounded-full text-xs font-semibold text-amber-800 transition-all cursor-pointer shadow-xs transform hover:scale-105"
+            title="Open AI Tax & Compliance Copilot Assistant"
+          >
             <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
             <span>AI Copilot Active</span>
-          </div>
+          </button>
 
           {/* Wallet Balance Badge */}
           <div className="flex items-center bg-slate-900 text-white rounded-xl pl-3.5 pr-1.5 py-1.5 shadow-md shadow-slate-900/10">
@@ -220,6 +228,12 @@ export default function Navbar({
           </div>
         </div>
       )}
+
+      {/* AI Tax Copilot Assistant Drawer */}
+      <AiCopilotDrawer 
+        isOpen={showAiDrawer} 
+        onClose={() => setShowAiDrawer(false)} 
+      />
     </>
   );
 }
