@@ -4,6 +4,7 @@ import React from "react";
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
 import Navbar from "@/components/dashboard/Navbar";
+import MobileBottomNav from "@/components/dashboard/MobileBottomNav";
 
 export default function DashboardLayout({
   children,
@@ -38,7 +39,7 @@ export default function DashboardLayout({
   const user = getUserDetails();
 
   return (
-    <div className="min-h-screen bg-slate-100 flex">
+    <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row pb-16 md:pb-0">
       {/* Role-Aware Sidebar */}
       <Sidebar currentRole={role} />
 
@@ -50,12 +51,15 @@ export default function DashboardLayout({
           walletBalance={user.balance} 
         />
 
-        <main className="p-6 md:p-8 flex-1 overflow-y-auto">
+        <main className="p-4 sm:p-6 md:p-8 flex-1 overflow-y-auto">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <MobileBottomNav />
     </div>
   );
 }

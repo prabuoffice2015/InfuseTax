@@ -1,0 +1,42 @@
+{
+  "name": "InfuseTax Mobile POS",
+  "short_name": "InfuseTax",
+  "description": "AI-Powered Tax, GST, ITR & E-Governance Mobile Counter POS",
+  "start_url": "/dashboard/retailer",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#1E40AF",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/brand/infusetax_icon_512x512.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/brand/infusetax_icon_512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "productivity", "business"],
+  "shortcuts": [
+    {
+      "name": "GST Registration",
+      "url": "/dashboard/retailer?desk=gst_reg",
+      "description": "Launch New GST Registration Wizard"
+    },
+    {
+      "name": "Form 16 ITR OCR",
+      "url": "/dashboard/retailer?desk=itr",
+      "description": "AI OCR Income Tax Optimizer"
+    },
+    {
+      "name": "UPI Wallet Top-Up",
+      "url": "/dashboard/retailer?action=topup",
+      "description": "Instant Dynamic UPI QR Recharge"
+    }
+  ]
+}
