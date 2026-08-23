@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Printer, X, CheckCircle2, QrCode, Download, ShieldCheck } from "lucide-react";
+import { Printer, X, CheckCircle2, QrCode, Download, ShieldCheck, Share2 } from "lucide-react";
+import WhatsAppReceiptModal from "./WhatsAppReceiptModal";
 
 export interface ReceiptData {
   id: string;
@@ -29,6 +30,7 @@ interface ReceiptModalProps {
 
 export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
   const [printLayout, setPrintLayout] = useState<"thermal" | "a4">("a4");
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState<boolean>(false);
 
   if (!receipt) return null;
 
@@ -41,52 +43,66 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden my-8">
-        {/* Header Controls */}
-        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between print:hidden">
-          <div className="flex items-center space-x-2">
-            <ShieldCheck className="w-5 h-5 text-emerald-400" />
-            <span className="text-sm font-bold">Official InfuseTax Transaction Receipt</span>
-          </div>
+    <>
+      <WhatsAppReceiptModal
+        receipt={showWhatsAppModal ? receipt : null}
+        onClose={() => setShowWhatsAppModal(false)}
+      />
 
-          <div className="flex items-center space-x-3">
-            {/* Format Toggle */}
-            <div className="bg-slate-800 p-1 rounded-xl flex items-center space-x-1 text-xs">
-              <button
-                onClick={() => setPrintLayout("a4")}
-                className={`px-3 py-1 rounded-lg font-bold transition-colors ${
-                  printLayout === "a4" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"
-                }`}
-              >
-                A4 Invoice
-              </button>
-              <button
-                onClick={() => setPrintLayout("thermal")}
-                className={`px-3 py-1 rounded-lg font-bold transition-colors ${
-                  printLayout === "thermal" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"
-                }`}
-              >
-                80mm Thermal
-              </button>
+      <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden my-8">
+          {/* Header Controls */}
+          <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between print:hidden">
+            <div className="flex items-center space-x-2">
+              <ShieldCheck className="w-5 h-5 text-emerald-400" />
+              <span className="text-sm font-bold">Official InfuseTax Transaction Receipt</span>
             </div>
 
-            <button
-              onClick={handlePrint}
-              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center space-x-1.5 shadow-md shadow-emerald-900/30"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Print</span>
-            </button>
+            <div className="flex items-center space-x-2.5">
+              {/* Format Toggle */}
+              <div className="bg-slate-800 p-1 rounded-xl flex items-center space-x-1 text-xs">
+                <button
+                  onClick={() => setPrintLayout("a4")}
+                  className={`px-3 py-1 rounded-lg font-bold transition-colors ${
+                    printLayout === "a4" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  A4
+                </button>
+                <button
+                  onClick={() => setPrintLayout("thermal")}
+                  className={`px-3 py-1 rounded-lg font-bold transition-colors ${
+                    printLayout === "thermal" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  80mm
+                </button>
+              </div>
 
-            <button
-              onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+              <button
+                onClick={() => setShowWhatsAppModal(true)}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center space-x-1.5 shadow-md shadow-emerald-900/30"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span>WhatsApp</span>
+              </button>
+
+              <button
+                onClick={handlePrint}
+                className="px-3 py-1.5 bg-blue-700 hover:bg-blue-600 text-white font-bold text-xs rounded-xl flex items-center space-x-1.5 shadow-md"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print</span>
+              </button>
+
+              <button
+                onClick={onClose}
+                className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
-        </div>
 
         {/* Printable Content Area */}
         <div className="p-8 max-h-[80vh] overflow-y-auto print:max-h-none print:p-0">
@@ -263,5 +279,6 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }

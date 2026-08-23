@@ -29,9 +29,10 @@ import {
 } from "lucide-react";
 import ReceiptModal, { ReceiptData } from "@/components/dashboard/ReceiptModal";
 import UpiQrModal from "@/components/dashboard/UpiQrModal";
+import DocumentUploadVault from "@/components/dashboard/DocumentUploadVault";
 
 export default function RetailerDashboardPage() {
-  const [activeDesk, setActiveDesk] = useState<"gst_reg" | "gstr_filing" | "itr" | "pan" | "passport" | "certs">("gst_reg");
+  const [activeDesk, setActiveDesk] = useState<"gst_reg" | "gstr_filing" | "itr" | "pan" | "passport" | "certs" | "vault">("gst_reg");
   const [selectedReceipt, setSelectedReceipt] = useState<ReceiptData | null>(null);
   const [showUpiModal, setShowUpiModal] = useState<boolean>(false);
   const [counterWalletBalance, setCounterWalletBalance] = useState<number>(24850.00);
@@ -451,6 +452,14 @@ export default function RetailerDashboardPage() {
         >
           <Award className="w-4 h-4" />
           <span>Dynamic E-Certificates</span>
+        </button>
+
+        <button
+          onClick={() => setActiveDesk("vault")}
+          className={`px-4 py-3 rounded-2xl text-xs font-bold shrink-0 flex items-center space-x-2 transition-all ${activeDesk === "vault" ? "bg-emerald-700 text-white shadow-lg shadow-emerald-700/25 ring-2 ring-emerald-700/20" : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"}`}
+        >
+          <UploadCloud className="w-4 h-4 text-emerald-400" />
+          <span>Cloudflare R2 Vault</span>
         </button>
       </div>
 
@@ -1605,6 +1614,19 @@ export default function RetailerDashboardPage() {
                 </div>
               </form>
             )}
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* DESK 7: CLOUDFLARE R2 SECURE DOCUMENT VAULT               */}
+        {/* ========================================================= */}
+        {activeDesk === "vault" && (
+          <div className="space-y-6">
+            <div className="border-b border-slate-100 pb-4">
+              <h3 className="text-lg font-bold text-slate-900">Encrypted Document Upload Vault (Cloudflare R2)</h3>
+              <p className="text-xs text-slate-500">Secure storage for Electricity Bills, Form 16, Aadhaar & Rent NOC with zero-egress cloud storage</p>
+            </div>
+            <DocumentUploadVault />
           </div>
         )}
       </div>
