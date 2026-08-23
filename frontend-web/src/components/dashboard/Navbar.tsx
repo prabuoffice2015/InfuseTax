@@ -98,15 +98,34 @@ export default function Navbar({
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full" />
           </button>
 
-          {/* User Profile */}
-          <div className="flex items-center space-x-2.5 pl-2 border-l border-slate-200">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow-sm">
-              {userTitle.charAt(0)}
+          {/* User Profile & Role Switcher */}
+          <div className="flex items-center space-x-3 pl-2 border-l border-slate-200">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow-sm">
+                {userTitle.charAt(0)}
+              </div>
+              <div className="hidden lg:block text-left">
+                <div className="text-xs font-bold text-slate-900 leading-none">{userTitle}</div>
+                <div className="text-[10px] text-slate-500 font-mono mt-0.5">{userCode}</div>
+              </div>
             </div>
-            <div className="hidden lg:block text-left">
-              <div className="text-xs font-bold text-slate-900 leading-none">{userTitle}</div>
-              <div className="text-[10px] text-slate-500 font-mono mt-0.5">{userCode}</div>
+
+            {/* Role Switcher Links */}
+            <div className="hidden xl:flex items-center space-x-1 bg-slate-100 p-1 rounded-xl text-[10px] font-bold">
+              <Link href="/dashboard/company" className="px-2 py-1 rounded-lg hover:bg-white text-slate-700">Admin</Link>
+              <Link href="/dashboard/distributor" className="px-2 py-1 rounded-lg hover:bg-white text-slate-700">Distributor</Link>
+              <Link href="/dashboard/retailer" className="px-2 py-1 rounded-lg hover:bg-white text-slate-700">Retailer</Link>
+              <Link href="/dashboard/operator" className="px-2 py-1 rounded-lg hover:bg-white text-slate-700">Operator</Link>
             </div>
+
+            {/* Logout Button */}
+            <Link
+              href="/sign-in"
+              className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl border border-rose-200 transition-colors"
+              title="Sign Out to Login Desk"
+            >
+              Sign Out
+            </Link>
           </div>
         </div>
       </header>
