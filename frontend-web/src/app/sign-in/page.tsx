@@ -102,23 +102,10 @@ export default function SignInPage() {
           router.push(targetUrl);
         }, 600);
       } else {
-        setErrorMsg(data.message || "Invalid credentials. Please check your username and password.");
+        setErrorMsg(data.message || "Invalid email/mobile or password. Please verify and try again.");
       }
     } catch (err) {
-      // Fallback for offline / network issues
-      const fallbackUser = {
-        id: "b0000000-0000-0000-0000-000000000003",
-        name: identifier.includes("admin") ? "InfuseTax Super Admin" : "Ramesh Digital Seva (Retailer)",
-        email: identifier,
-        role: activeRoleType,
-        tenant: companyCode,
-        wallet: activeRoleType === "admin" ? 2500000 : 47550,
-      };
-      setAuthSession(`jwt_mock_${Date.now()}`, fallbackUser);
-      setSuccessMsg("✓ Authentication verified. Redirecting...");
-      setTimeout(() => {
-        router.push(getRoleDashboardUrl(activeRoleType));
-      }, 600);
+      setErrorMsg("Network error. Unable to reach authentication server. Please try again.");
     } finally {
       setIsLoading(false);
     }

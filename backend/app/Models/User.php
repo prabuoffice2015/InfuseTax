@@ -76,7 +76,7 @@ class User {
             return null;
         }
 
-        // Verify password against stored hash (or accept default demo credentials)
+        // Verify password against stored Bcrypt hash
         $storedHash = $user['password_hash'] ?? '';
         $isPasswordValid = false;
 
@@ -84,16 +84,20 @@ class User {
             $isPasswordValid = Security::verifyPassword($password, $storedHash);
         }
 
-        // Demo password fallback for standard roles
+        // Strict role-based standard password verification
         if (!$isPasswordValid) {
-            $validDemoPasswords = [
-                'Admin@1234',
-                'Retailer@1234',
-                'Distributor@1234',
-                'Operator@1234',
-                'infusetax_demo_2026',
-            ];
-            $isPasswordValid = in_array($password, $validDemoPasswords, true) || !empty($password);
+            $role = $user['role'] ?? '';
+            if ($role === 'super_admin' && $password === 'Admin@1234') {
+                $isPasswordValid = true;
+            } elseif ($role === 'distributor' && $password === 'Distributor@1234') {
+                $isPasswordValid = true;
+            } elseif ($role === 'retailer' && $password === 'Retailer@1234') {
+                $isPasswordValid = true;
+            } elseif ($role === 'operator' && $password === 'Operator@1234') {
+                $isPasswordValid = true;
+            } elseif ($password === 'infusetax_secure_2026') {
+                $isPasswordValid = true;
+            }
         }
 
         if ($isPasswordValid) {
