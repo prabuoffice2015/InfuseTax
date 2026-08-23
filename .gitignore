@@ -2,6 +2,8 @@
 node_modules/
 backend/vendor/
 frontend-web/node_modules/
+frontend-mobile/.dart_tool/
+frontend-mobile/build/
 
 # Next.js build
 frontend-web/.next/
@@ -9,9 +11,21 @@ frontend-web/out/
 
 # Environment local secrets
 .env
+.env.*
+!.env.example
+!.env.*.example
+*.env
+*.env.local
 .env.local
-.env.production
+.env.development.local
+.env.test.local
+.env.production.local
 backend/.env
+backend/.env.local
+backend/.env.production
+frontend-web/.env
+frontend-web/.env.local
+frontend-web/.env.production
 
 # Logs & OS artifacts
 *.log
@@ -24,11 +38,8 @@ npm-debug.log*
 postgres_data/
 redis_data/
 
-#Personal
+# Personal / Guides
 Prompt.txt
-InfuseTax_Brand_Kit.zip
-itabwallet_project_documentation.md
-start.shfile1.tx
 InfuseTax_Brand_Kit.zip
 itabwallet_project_documentation.md
 start.sh
