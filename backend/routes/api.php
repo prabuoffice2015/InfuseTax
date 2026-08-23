@@ -4,29 +4,39 @@ use App\Core\Router;
 
 /*
 |--------------------------------------------------------------------------
-| InfuseTax Enterprise API Routes (MVC Pattern)
+| InfuseTax Enterprise API Routes (Complete 100% MVC REST Suite)
 |--------------------------------------------------------------------------
 */
 
-// Healthcheck
+// 1. Healthcheck
 Router::get('/api/v1/health', 'HealthController@check');
 Router::get('/api/health', 'HealthController@check');
 Router::get('/health', 'HealthController@check');
 
-// Authentication
+// 2. Authentication & Session
 Router::post('/api/v1/auth/login', 'AuthController@login');
 
-// Tax & Compliance Desks
+// 3. Tax, GST, ITR & Compliance Desks
 Router::post('/api/v1/tax/gst-registration', 'TaxController@submitGstRegistration');
 Router::post('/api/v1/tax/ai/form16-ocr', 'TaxController@optimizeForm16');
+Router::post('/api/v1/tax/pan-application', 'TaxController@submitPanApplication');
+Router::post('/api/v1/tax/passport-application', 'TaxController@submitPassportApplication');
+Router::post('/api/v1/tax/generate-certificate', 'TaxController@generateCertificate');
+Router::get('/api/v1/filings/recent', 'TaxController@getRecentFilings');
 
-// Prepaid Wallet & P2P Engine
+// 4. Prepaid Wallet, P2P Disbursal & UPI Engine
 Router::post('/api/v1/wallet/transfer-p2p', 'WalletController@transferP2P');
 Router::post('/api/v1/wallet/topup-upi', 'WalletController@generateUpiQr');
+Router::post('/api/v1/wallet/topup-request', 'WalletController@requestUtrTopup');
+Router::post('/api/v1/wallet/approve-utr', 'WalletController@approveUtrTopup');
 
-// Government Sandboxes
+// 5. Cloudflare R2 Document Vault
+Router::post('/api/v1/documents/upload', 'DocumentController@uploadDocument');
+Router::get('/api/v1/documents', 'DocumentController@listDocuments');
+
+// 6. Government Verification Sandboxes
 Router::post('/api/v1/government/verify-pan', 'GovernmentController@verifyPan');
 Router::post('/api/v1/government/verify-gstin', 'GovernmentController@verifyGstin');
 
-// Portal Analytics & Stats
+// 7. Portal Analytics & Live Aggregated Stats
 Router::get('/api/v1/dashboard/stats', 'DashboardController@getStats');
