@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Building2, 
   Palette, 
@@ -29,9 +29,28 @@ import {
   ArrowUpRight,
   ArrowDownRight
 } from "lucide-react";
+import { getAuthToken } from "@/lib/auth";
 
 export default function CompanyDashboardPage() {
   const [activeTab, setActiveTab] = useState<"overview" | "utr" | "branding" | "users" | "pricing" | "ledger">("overview");
+
+  // Sync with URL hash
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (["overview", "utr", "branding", "users", "pricing", "ledger"].includes(hash)) {
+        setActiveTab(hash as any);
+      }
+    };
+    handleHash();
+    window.addEventListener("hashchange", handleHash);
+    return () => window.removeEventListener("hashchange", handleHash);
+  }, []);
+
+  const switchTab = (tab: "overview" | "utr" | "branding" | "users" | "pricing" | "ledger") => {
+    setActiveTab(tab);
+    window.location.hash = tab;
+  };
 
   // -------------------------------------------------------------
   // 1. White-Label Branding Engine State
@@ -250,7 +269,7 @@ export default function CompanyDashboardPage() {
       {/* Top Navigation Tabs */}
       <div className="flex overflow-x-auto pb-2 gap-2">
         <button
-          onClick={() => setActiveTab("overview")}
+          onClick={() => switchTab("overview")}
           className={`px-4 py-2.5 rounded-2xl text-xs font-bold shrink-0 flex items-center space-x-2 transition-all ${
             activeTab === "overview" ? "bg-blue-700 text-white shadow-md shadow-blue-700/20" : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
           }`}
@@ -260,7 +279,7 @@ export default function CompanyDashboardPage() {
         </button>
 
         <button
-          onClick={() => setActiveTab("utr")}
+          onClick={() => switchTab("utr")}
           className={`px-4 py-2.5 rounded-2xl text-xs font-bold shrink-0 flex items-center space-x-2 transition-all ${
             activeTab === "utr" ? "bg-amber-600 text-white shadow-md shadow-amber-600/20" : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
           }`}
@@ -270,17 +289,7 @@ export default function CompanyDashboardPage() {
         </button>
 
         <button
-          onClick={() => setActiveTab("branding")}
-          className={`px-4 py-2.5 rounded-2xl text-xs font-bold shrink-0 flex items-center space-x-2 transition-all ${
-            activeTab === "branding" ? "bg-purple-700 text-white shadow-md shadow-purple-700/20" : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          <Palette className="w-4 h-4" />
-          <span>White-Label Theming</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("users")}
+          onClick={() => switchTab("users")}
           className={`px-4 py-2.5 rounded-2xl text-xs font-bold shrink-0 flex items-center space-x-2 transition-all ${
             activeTab === "users" ? "bg-blue-700 text-white shadow-md shadow-blue-700/20" : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
           }`}
@@ -290,7 +299,7 @@ export default function CompanyDashboardPage() {
         </button>
 
         <button
-          onClick={() => setActiveTab("pricing")}
+          onClick={() => switchTab("pricing")}
           className={`px-4 py-2.5 rounded-2xl text-xs font-bold shrink-0 flex items-center space-x-2 transition-all ${
             activeTab === "pricing" ? "bg-blue-700 text-white shadow-md shadow-blue-700/20" : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
           }`}
@@ -300,7 +309,17 @@ export default function CompanyDashboardPage() {
         </button>
 
         <button
-          onClick={() => setActiveTab("ledger")}
+          onClick={() => switchTab("branding")}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold shrink-0 flex items-center space-x-2 transition-all ${
+            activeTab === "branding" ? "bg-purple-700 text-white shadow-md shadow-purple-700/20" : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          <Palette className="w-4 h-4" />
+          <span>White-Label Theming</span>
+        </button>
+
+        <button
+          onClick={() => switchTab("ledger")}
           className={`px-4 py-2.5 rounded-2xl text-xs font-bold shrink-0 flex items-center space-x-2 transition-all ${
             activeTab === "ledger" ? "bg-blue-700 text-white shadow-md shadow-blue-700/20" : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
           }`}

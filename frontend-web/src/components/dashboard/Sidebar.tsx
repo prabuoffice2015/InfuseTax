@@ -55,11 +55,12 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
 
     if (role.includes("admin") || role.includes("super_admin") || role === "company") {
       return [
-        { label: "Company Overview", href: "/dashboard/company", icon: LayoutDashboard },
+        { label: "Master Overview", href: "/dashboard/company#overview", icon: LayoutDashboard },
+        { label: "UTR Bank Approvals", href: "/dashboard/company#utr", icon: CheckSquare },
+        { label: "Outlets & Users", href: "/dashboard/company#users", icon: Users },
+        { label: "Commission Slabs", href: "/dashboard/company#pricing", icon: Sliders },
         { label: "White-Label Theming", href: "/dashboard/company#branding", icon: Palette },
-        { label: "UTR Top-Up Approvals", href: "/dashboard/company#utr-approvals", icon: CheckSquare },
-        { label: "Master Audit Ledger", href: "/dashboard/company#audit", icon: History },
-        { label: "Retailer Outlets", href: "/dashboard/company#users", icon: Users },
+        { label: "Master Audit Ledger", href: "/dashboard/company#ledger", icon: History },
       ];
     } else if (role.includes("distributor")) {
       return [

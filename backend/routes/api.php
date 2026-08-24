@@ -41,3 +41,11 @@ Router::post('/api/v1/government/verify-gstin', 'GovernmentController@verifyGsti
 
 // 7. Portal Analytics & Live Aggregated Stats
 Router::get('/api/v1/dashboard/stats', 'DashboardController@getStats');
+
+// 8. Super Admin Portal & Master Control Center
+Router::get('/api/v1/admin/users', 'DashboardController@listAdminUsers');
+Router::post('/api/v1/admin/users/status', 'DashboardController@toggleUserStatus');
+Router::get('/api/v1/admin/audit-ledger', 'DashboardController@getAuditLedger');
+Router::post('/api/v1/admin/tenant/update', 'DashboardController@updateTenantBranding');
+Router::get('/api/v1/wallet/pending-utrs', 'WalletController@getPendingUtrs');
+
