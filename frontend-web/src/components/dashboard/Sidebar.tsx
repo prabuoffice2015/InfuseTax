@@ -109,7 +109,6 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
   };
 
   const badge = getRoleBadge();
-  const isAdmin = (activeUserRole || currentRole).toLowerCase().includes("admin");
   const currentTab = searchParams.get("tab") || "overview";
 
   return (
@@ -165,28 +164,15 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
 
       {/* Footer / User Session & Sign Out */}
       <div className="p-4 border-t border-slate-800 space-y-3">
-        {/* Admin Tier Switcher Only Visible for Super Admin */}
-        {isAdmin && (
-          <div className="space-y-1.5">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">
-              Admin Mode Switcher
-            </div>
-            <div className="grid grid-cols-2 gap-1.5 text-[10px] font-medium">
-              <Link href="/dashboard/company" className="p-1.5 bg-slate-800/80 hover:bg-blue-900/60 text-slate-300 hover:text-white rounded-lg text-center border border-slate-700">
-                Company
-              </Link>
-              <Link href="/dashboard/distributor" className="p-1.5 bg-slate-800/80 hover:bg-blue-900/60 text-slate-300 hover:text-white rounded-lg text-center border border-slate-700">
-                Distributor
-              </Link>
-              <Link href="/dashboard/retailer" className="p-1.5 bg-slate-800/80 hover:bg-blue-900/60 text-slate-300 hover:text-white rounded-lg text-center border border-slate-700">
-                Retailer POS
-              </Link>
-              <Link href="/dashboard/operator" className="p-1.5 bg-slate-800/80 hover:bg-blue-900/60 text-slate-300 hover:text-white rounded-lg text-center border border-slate-700">
-                Operator
-              </Link>
-            </div>
+        {/* Logged In User Profile Info */}
+        <div className="px-1">
+          <div className="text-xs font-bold text-white truncate">
+            {getAuthUser()?.name || "InfuseTax User"}
           </div>
-        )}
+          <div className="text-[10px] text-slate-400 font-mono truncate">
+            {getAuthUser()?.email || "user@infusetax.com"}
+          </div>
+        </div>
 
         {/* Functional Bottom Left Sign Out Button */}
         <button
