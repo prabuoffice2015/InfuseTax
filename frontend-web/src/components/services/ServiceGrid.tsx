@@ -254,10 +254,10 @@ export default function ServiceGrid() {
             </p>
           </div>
           <Link
-            href="/create-account"
+            href="/sign-in"
             className="px-6 py-3.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-sm rounded-xl shadow-lg shadow-amber-400/20 transition-all transform hover:scale-[1.02] flex-shrink-0"
           >
-            Register Counter Now
+            Access Partner Portal
           </Link>
         </div>
       </div>

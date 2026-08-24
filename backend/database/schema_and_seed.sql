@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS users (
     role VARCHAR(50) NOT NULL CHECK (role IN ('super_admin', 'accountant', 'distributor', 'retailer', 'operator')),
     city VARCHAR(100),
     state VARCHAR(100),
+    parent_id UUID REFERENCES users(id) ON DELETE SET NULL,
     status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'pending')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

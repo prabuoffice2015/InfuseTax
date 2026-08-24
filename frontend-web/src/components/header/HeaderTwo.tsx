@@ -144,15 +144,10 @@ export default function HeaderTwo() {
         <div className="hidden lg:flex items-center space-x-3">
           <Link
             href="/sign-in"
-            className="px-5 py-2.5 text-sm font-semibold text-slate-700 hover:text-blue-700 border border-slate-200 hover:border-blue-300 rounded-xl transition-all hover:bg-slate-50"
+            className="px-6 py-2.5 text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 rounded-xl shadow-lg shadow-blue-700/20 hover:shadow-blue-700/30 transition-all transform hover:-translate-y-0.5 flex items-center space-x-1.5"
           >
-            Sign In
-          </Link>
-          <Link
-            href="/create-account"
-            className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-700 hover:bg-blue-800 rounded-xl shadow-lg shadow-blue-700/20 hover:shadow-blue-700/30 transition-all transform hover:-translate-y-0.5"
-          >
-            Create Account
+            <ShieldCheck className="w-4 h-4 text-blue-200" />
+            <span>Partner Portal Login</span>
           </Link>
         </div>
 
@@ -183,16 +178,10 @@ export default function HeaderTwo() {
             <Link
               href="/sign-in"
               onClick={() => setIsMobileMenuOpen(false)}
-              className="w-full text-center py-2.5 text-sm font-semibold text-slate-800 border border-slate-300 rounded-xl"
+              className="w-full text-center py-2.5 text-sm font-bold text-white bg-blue-700 rounded-xl shadow-md flex items-center justify-center space-x-1.5"
             >
-              Sign In
-            </Link>
-            <Link
-              href="/create-account"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="w-full text-center py-2.5 text-sm font-semibold text-white bg-blue-700 rounded-xl shadow-md"
-            >
-              Create Account
+              <ShieldCheck className="w-4 h-4 text-blue-200" />
+              <span>Partner Portal Login</span>
             </Link>
           </div>
         </div>

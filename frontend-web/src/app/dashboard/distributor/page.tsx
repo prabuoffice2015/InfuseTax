@@ -17,16 +17,35 @@ import {
   History,
   Lock,
   Download,
-  Percent
+  Percent,
+  UserPlus,
+  X,
+  Building2,
+  AlertCircle
 } from "lucide-react";
+import { getAuthToken } from "@/lib/auth";
 
 export default function DistributorDashboardPage() {
   const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showOnboardModal, setShowOnboardModal] = useState(false);
   const [selectedRetailer, setSelectedRetailer] = useState("RET1029");
   const [transferAmount, setTransferAmount] = useState("");
   const [transferRemarks, setTransferRemarks] = useState("");
   const [transferSuccess, setTransferSuccess] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Onboard Retailer Form State
+  const [newShopName, setNewShopName] = useState("");
+  const [newOwnerName, setNewOwnerName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newMobile, setNewMobile] = useState("");
+  const [newCity, setNewCity] = useState("Madurai");
+  const [newState, setNewState] = useState("Tamil Nadu");
+  const [newOpeningBal, setNewOpeningBal] = useState("5000");
+  const [newPassword, setNewPassword] = useState("Retailer@1234");
+  const [isOnboarding, setIsOnboarding] = useState(false);
+  const [onboardSuccessMsg, setOnboardSuccessMsg] = useState("");
+  const [onboardErrorMsg, setOnboardErrorMsg] = useState("");
 
   const [retailers, setRetailers] = useState([
     { id: 1, code: "RET1029", shop: "Ramesh Digital Seva", owner: "Ramesh Kumar", city: "Chennai, TN", balance: 48750, monthlyTx: 142, marginPct: 20, status: "Active" },
@@ -41,6 +60,65 @@ export default function DistributorDashboardPage() {
     { id: "P2P-9080", toCode: "RET1088", toName: "Kumar Tax Point", amount: 25000, date: "22 Aug 2026, 11:30", remarks: "GST Return filing top-up" },
     { id: "P2P-9079", toCode: "RET1145", toName: "Apex CSC Tax Desk", amount: 10000, date: "21 Aug 2026, 16:45", remarks: "Weekend advance" },
   ]);
+
+  const handleOnboardRetailer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsOnboarding(true);
+    setOnboardErrorMsg("");
+    setOnboardSuccessMsg("");
+
+    try {
+      const token = getAuthToken();
+      const res = await fetch("/api/v1/distributor/retailers/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          full_name: `${newShopName} (${newOwnerName})`,
+          email: newEmail,
+          mobile: newMobile,
+          role: "retailer",
+          city: newCity,
+          state: newState,
+          opening_balance: parseFloat(newOpeningBal) || 0,
+          password: newPassword,
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.status === "success") {
+        const newEntry = {
+          id: Date.now(),
+          code: `RET${Math.floor(1200 + Math.random() * 800)}`,
+          shop: newShopName,
+          owner: newOwnerName,
+          city: `${newCity}, TN`,
+          balance: parseFloat(newOpeningBal) || 0,
+          monthlyTx: 0,
+          marginPct: 20,
+          status: "Active"
+        };
+        setRetailers([newEntry, ...retailers]);
+        setOnboardSuccessMsg(`✓ Retailer "${newShopName}" provisioned successfully!`);
+        setTimeout(() => {
+          setShowOnboardModal(false);
+          setOnboardSuccessMsg("");
+          setNewShopName("");
+          setNewOwnerName("");
+          setNewEmail("");
+          setNewMobile("");
+        }, 1500);
+      } else {
+        setOnboardErrorMsg(data.message || "Failed to onboard retailer.");
+      }
+    } catch (err: any) {
+      setOnboardErrorMsg("Network error connecting to backend API.");
+    } finally {
+      setIsOnboarding(false);
+    }
+  };
 
   const handleP2pTransfer = (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,15 +174,22 @@ export default function DistributorDashboardPage() {
           <p className="text-xs text-slate-500 mt-1">
             Manage downline retail outlets, disburse instant P2P wallet balance, and track overriding commissions.
           </p>
+        </div>        <div className="flex items-center space-x-3 shrink-0">
+          <button
+            onClick={() => setShowOnboardModal(true)}
+            className="px-5 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs rounded-2xl shadow-lg shadow-purple-600/25 flex items-center space-x-2 transition-transform transform hover:scale-[1.02] cursor-pointer"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>+ Onboard Downline Retailer</span>
+          </button>
+          <button
+            onClick={() => setShowTransferModal(true)}
+            className="px-5 py-3 bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-xs rounded-2xl border border-purple-200 flex items-center space-x-2 transition-colors cursor-pointer"
+          >
+            <Send className="w-4 h-4 text-purple-700" />
+            <span>Allocate Balance (P2P)</span>
+          </button>
         </div>
-
-        <button
-          onClick={() => setShowTransferModal(true)}
-          className="px-5 py-3 bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs rounded-2xl shadow-lg shadow-purple-700/25 flex items-center space-x-2 shrink-0 transition-transform transform hover:scale-[1.02]"
-        >
-          <Send className="w-4 h-4" />
-          <span>Allocate Retailer Balance (P2P)</span>
-        </button>
       </div>
 
       {/* KPI Cards */}
@@ -165,6 +250,13 @@ export default function DistributorDashboardPage() {
                 className="pl-8 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-purple-600 font-medium"
               />
             </div>
+            <button
+              onClick={() => setShowOnboardModal(true)}
+              className="px-3.5 py-2 bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs rounded-xl flex items-center space-x-1.5 shadow-sm cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>New Outlet</span>
+            </button>
           </div>
         </div>
 
@@ -180,37 +272,34 @@ export default function DistributorDashboardPage() {
                 <th className="p-4">Monthly Filings</th>
                 <th className="p-4">Margin %</th>
                 <th className="p-4">Status</th>
-                <th className="p-4 text-right">Liquidity Action</th>
+                <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
               {filteredRetailers.map((ret) => (
-                <tr key={ret.id} className="hover:bg-slate-50/80 transition-colors">
+                <tr key={ret.id} className="hover:bg-purple-50/40 transition-colors">
                   <td className="p-4 font-mono font-bold text-purple-700">{ret.code}</td>
                   <td className="p-4 font-bold text-slate-900">{ret.shop}</td>
-                  <td className="p-4 text-slate-700">{ret.owner}</td>
+                  <td className="p-4">{ret.owner}</td>
                   <td className="p-4 text-slate-500">{ret.city}</td>
-                  <td className="p-4 font-mono font-bold text-slate-900">
-                    ₹{ret.balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </td>
+                  <td className="p-4 font-mono font-bold text-emerald-600">₹{ret.balance.toLocaleString()}</td>
+                  <td className="p-4 font-mono">{ret.monthlyTx} filings</td>
                   <td className="p-4">
-                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 font-bold rounded-md border border-blue-200">
-                      {ret.monthlyTx} returns
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                      {ret.marginPct}%
                     </span>
                   </td>
-                  <td className="p-4 font-bold text-slate-900 font-mono">{ret.marginPct}%</td>
                   <td className="p-4">
-                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 font-bold rounded-md border border-emerald-200 text-[10px]">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
                       {ret.status}
                     </span>
                   </td>
                   <td className="p-4 text-right">
                     <button
                       onClick={() => openTransferFor(ret.code)}
-                      className="px-3 py-1.5 bg-purple-50 hover:bg-purple-600 hover:text-white text-purple-700 font-bold rounded-lg transition-all border border-purple-200 text-xs inline-flex items-center space-x-1"
+                      className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-[11px] font-bold rounded-lg transition-colors border border-purple-200 cursor-pointer"
                     >
-                      <Send className="w-3 h-3" />
-                      <span>Transfer Money</span>
+                      Top-Up Balance
                     </button>
                   </td>
                 </tr>
@@ -220,83 +309,235 @@ export default function DistributorDashboardPage() {
         </div>
       </div>
 
-      {/* P2P Disbursal Logs */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-purple-100 text-purple-800 rounded-xl">
-              <History className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Recent P2P Balance Transfers</h2>
-              <p className="text-xs text-slate-500">History of wallet disbursements to downline stores</p>
-            </div>
+      {/* P2P Transfer History */}
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Recent Parent-to-Child Disbursals</h2>
+            <p className="text-xs text-slate-500">Live double-entry audit trail of wallet transfers to downline retailers</p>
+          </div>
+          <div className="flex items-center space-x-2 text-xs font-bold text-purple-700">
+            <History className="w-4 h-4" />
+            <span>Audit Synchronized</span>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-600">
-            <thead className="bg-slate-50 text-slate-700 uppercase tracking-wider text-[10px] font-bold border-b border-slate-200">
-              <tr>
-                <th className="p-4">Transfer ID</th>
-                <th className="p-4">Recipient Store</th>
-                <th className="p-4">Amount Disbursed</th>
-                <th className="p-4">Timestamp</th>
-                <th className="p-4">Remarks</th>
-                <th className="p-4">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium">
-              {transferHistory.map((t) => (
-                <tr key={t.id} className="hover:bg-slate-50">
-                  <td className="p-4 font-mono font-bold text-purple-700">{t.id}</td>
-                  <td className="p-4">
-                    <span className="font-bold text-slate-900">{t.toName}</span>{" "}
-                    <span className="font-mono text-slate-400 text-[11px]">({t.toCode})</span>
-                  </td>
-                  <td className="p-4 font-mono font-extrabold text-emerald-600">₹{t.amount.toLocaleString()}</td>
-                  <td className="p-4 text-slate-500">{t.date}</td>
-                  <td className="p-4 text-slate-700">{t.remarks}</td>
-                  <td className="p-4">
-                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 font-bold rounded text-[10px] border border-emerald-200">
-                      SETTLED ✓
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-3">
+          {transferHistory.map((tx) => (
+            <div key={tx.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold font-mono text-xs">
+                  P2P
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-900">{tx.toName} ({tx.toCode})</div>
+                  <div className="text-[11px] text-slate-500">{tx.remarks} • {tx.date}</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm font-bold font-mono text-purple-700">-₹{tx.amount.toLocaleString()}</div>
+                <div className="text-[10px] text-emerald-600 font-semibold">Settled Instantly</div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* P2P Fund Transfer Modal */}
+      {/* Modal 1: Onboard Downline Retailer Modal */}
+      {showOnboardModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 space-y-6 border border-slate-100 my-8">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-700">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Onboard Downline Retailer Outlet</h3>
+                  <p className="text-xs text-slate-500">Tier 2 Zonal Franchise Provisioning</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowOnboardModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {onboardSuccessMsg && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center space-x-2">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{onboardSuccessMsg}</span>
+              </div>
+            )}
+
+            {onboardErrorMsg && (
+              <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold rounded-2xl flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{onboardErrorMsg}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleOnboardRetailer} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Store / Outlet Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newShopName}
+                    onChange={(e) => setNewShopName(e.target.value)}
+                    placeholder="e.g. Balaji Tax Seva"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Proprietor Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newOwnerName}
+                    onChange={(e) => setNewOwnerName(e.target.value)}
+                    placeholder="e.g. Senthil Kumar"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Login Email Address *</label>
+                  <input
+                    type="email"
+                    required
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="senthil.tax@infusetax.com"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Mobile Number (10 Digits) *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={newMobile}
+                    onChange={(e) => setNewMobile(e.target.value)}
+                    placeholder="+91 98421 77889"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">City / District</label>
+                  <input
+                    type="text"
+                    value={newCity}
+                    onChange={(e) => setNewCity(e.target.value)}
+                    placeholder="Madurai"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">State</label>
+                  <input
+                    type="text"
+                    value={newState}
+                    onChange={(e) => setNewState(e.target.value)}
+                    placeholder="Tamil Nadu"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Opening Wallet Disbursal (₹)</label>
+                  <input
+                    type="number"
+                    value={newOpeningBal}
+                    onChange={(e) => setNewOpeningBal(e.target.value)}
+                    placeholder="5000"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Initial Password</label>
+                  <input
+                    type="text"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Retailer@1234"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-purple-50/80 border border-purple-200 rounded-2xl text-[11px] text-purple-900 space-y-1">
+                <div className="font-bold flex items-center space-x-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                  <span>Downline Linkage & Commission Settlement</span>
+                </div>
+                <p>This retailer will be linked under your Master Distributor account. All filing margin overrides will auto-credit to your distributor wallet.</p>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowOnboardModal(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isOnboarding}
+                  className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-purple-600/25 flex items-center space-x-1.5 cursor-pointer disabled:opacity-60"
+                >
+                  {isOnboarding ? (
+                    <span>Provisioning Retailer...</span>
+                  ) : (
+                    <>
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>Provision Outlet Now</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 2: P2P Wallet Allocation Modal */}
       {showTransferModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 relative">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
-              <div className="flex items-center space-x-2.5">
-                <div className="p-2 bg-purple-100 text-purple-700 rounded-xl">
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 space-y-6 border border-slate-100">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-700">
                   <Send className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Disburse Wallet Liquidity (P2P)</h3>
-                  <p className="text-xs text-slate-500">Atomic instant debit from your wallet to downline</p>
+                  <h3 className="text-base font-bold text-slate-900">P2P Wallet Allocation</h3>
+                  <p className="text-xs text-slate-500">Instant parent-to-child liquidity disbursal</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowTransferModal(false)}
-                className="text-slate-400 hover:text-slate-700 text-sm font-bold"
+                className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 cursor-pointer"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             {transferSuccess ? (
-              <div className="py-8 text-center space-y-2">
-                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
-                  <Check className="w-6 h-6" />
+              <div className="text-center py-6 space-y-3 animate-fadeIn">
+                <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                  <Check className="w-8 h-8" />
                 </div>
-                <h4 className="text-base font-bold text-slate-900">Transfer Successful!</h4>
+                <h4 className="text-base font-bold text-slate-900">Disbursal Completed!</h4>
                 <p className="text-xs text-slate-600">₹{Number(transferAmount).toLocaleString()} credited instantly to Retailer {selectedRetailer}.</p>
               </div>
             ) : (
@@ -350,13 +591,13 @@ export default function DistributorDashboardPage() {
                   <button
                     type="button"
                     onClick={() => setShowTransferModal(false)}
-                    className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                    className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold rounded-xl shadow-md shadow-purple-700/20"
+                    className="px-5 py-2.5 bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold rounded-xl shadow-md shadow-purple-700/20 cursor-pointer"
                   >
                     Disburse Balance Now
                   </button>

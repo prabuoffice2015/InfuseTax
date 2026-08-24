@@ -186,25 +186,13 @@ export default function SignInPage() {
             </Link>
           </div>
 
-          {/* Toggle Tab Buttons */}
-          <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl mb-6 border border-slate-200">
-            <button
-              type="button"
-              className="py-2 text-xs sm:text-sm font-bold text-blue-700 bg-white rounded-xl shadow-sm border border-slate-200/60"
-            >
-              Sign In
-            </button>
-            <Link
-              href="/create-account"
-              className="py-2 text-xs sm:text-sm font-semibold text-slate-600 text-center hover:text-slate-900 transition-colors"
-            >
-              Create Account
-            </Link>
-          </div>
-
-          <div className="mb-5">
+          <div className="mb-6">
+            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold mb-2 border border-blue-100">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Authorized Enterprise Access</span>
+            </div>
             <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Portal Authentication</h2>
-            <p className="text-xs text-slate-500 mt-1">Sign in with your registered credentials to access your tax terminal.</p>
+            <p className="text-xs text-slate-500 mt-1">Sign in with your registered franchise credentials to access your terminal.</p>
           </div>
 
           {/* Error / Success Notifications */}

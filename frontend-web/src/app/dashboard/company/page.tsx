@@ -944,6 +944,7 @@ export default function CompanyDashboardPage() {
                         <option value="distributor">👥 Master Distributor (Tier 2)</option>
                         <option value="retailer">🏪 Retailer Outlet POS (Tier 3)</option>
                         <option value="operator">👤 Counter Operator Staff (Tier 4)</option>
+                        <option value="super_admin">🏢 Company Sub-Admin / Manager (Tier 1)</option>
                       </select>
                     </div>
 

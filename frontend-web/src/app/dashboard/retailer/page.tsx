@@ -25,19 +25,96 @@ import {
   Sliders,
   DollarSign,
   TrendingUp,
-  FileCheck
+  FileCheck,
+  Users,
+  UserPlus,
+  X,
+  Clock,
+  Lock
 } from "lucide-react";
 import ReceiptModal, { ReceiptData } from "@/components/dashboard/ReceiptModal";
 import UpiQrModal from "@/components/dashboard/UpiQrModal";
 import DocumentUploadVault from "@/components/dashboard/DocumentUploadVault";
 import TaxCalendarTicker from "@/components/dashboard/TaxCalendarTicker";
 import DocumentFraudDetector from "@/components/dashboard/DocumentFraudDetector";
+import { getAuthToken } from "@/lib/auth";
 
 export default function RetailerDashboardPage() {
-  const [activeDesk, setActiveDesk] = useState<"gst_reg" | "gstr_filing" | "itr" | "pan" | "passport" | "certs" | "vault">("gst_reg");
+  const [activeDesk, setActiveDesk] = useState<"gst_reg" | "gstr_filing" | "itr" | "pan" | "passport" | "certs" | "vault" | "staff">("gst_reg");
   const [selectedReceipt, setSelectedReceipt] = useState<ReceiptData | null>(null);
   const [showUpiModal, setShowUpiModal] = useState<boolean>(false);
+  const [showStaffModal, setShowStaffModal] = useState<boolean>(false);
   const [counterWalletBalance, setCounterWalletBalance] = useState<number>(24850.00);
+
+  // Shop Operator Staff State
+  const [staffMembers, setStaffMembers] = useState([
+    { id: 1, name: "Ganesh M", email: "operator@infusetax.com", mobile: "+91 98765 00004", shift: "Morning (9 AM - 6 PM)", role: "Counter Operator", status: "Active" },
+    { id: 2, name: "Priya S", email: "priya.desk@infusetax.com", mobile: "+91 98421 00088", shift: "Evening (2 PM - 9 PM)", role: "ITR & GST Desk Staff", status: "Active" },
+  ]);
+  const [staffName, setStaffName] = useState("");
+  const [staffEmail, setStaffEmail] = useState("");
+  const [staffMobile, setStaffMobile] = useState("");
+  const [staffShift, setStaffShift] = useState("Morning (9 AM - 6 PM)");
+  const [staffPassword, setStaffPassword] = useState("Operator@1234");
+  const [isStaffSaving, setIsStaffSaving] = useState(false);
+  const [staffSuccessMsg, setStaffSuccessMsg] = useState("");
+  const [staffErrorMsg, setStaffErrorMsg] = useState("");
+
+  const handleOnboardStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsStaffSaving(true);
+    setStaffErrorMsg("");
+    setStaffSuccessMsg("");
+
+    try {
+      const token = getAuthToken();
+      const res = await fetch("/api/v1/retailer/operators/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          full_name: staffName,
+          email: staffEmail,
+          mobile: staffMobile,
+          role: "operator",
+          password: staffPassword,
+          city: "Shop Counter",
+          state: "Tamil Nadu",
+          opening_balance: 0,
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.status === "success") {
+        const newStaff = {
+          id: Date.now(),
+          name: staffName,
+          email: staffEmail,
+          mobile: staffMobile,
+          shift: staffShift,
+          role: "Counter Operator",
+          status: "Active"
+        };
+        setStaffMembers([newStaff, ...staffMembers]);
+        setStaffSuccessMsg(`✓ Staff "${staffName}" added! They can now log in at /sign-in`);
+        setTimeout(() => {
+          setShowStaffModal(false);
+          setStaffSuccessMsg("");
+          setStaffName("");
+          setStaffEmail("");
+          setStaffMobile("");
+        }, 1500);
+      } else {
+        setStaffErrorMsg(data.message || "Failed to add operator.");
+      }
+    } catch (err: any) {
+      setStaffErrorMsg("Network error connecting to backend.");
+    } finally {
+      setIsStaffSaving(false);
+    }
+  };
 
   // -------------------------------------------------------------
   // Desk 1: GST Registration Wizard State (eTaxPrime Benchmark)
@@ -399,6 +476,15 @@ export default function RetailerDashboardPage() {
             <span>+ UPI Top-Up</span>
           </button>
 
+          <button
+            type="button"
+            onClick={() => setShowStaffModal(true)}
+            className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-extrabold text-xs rounded-2xl shadow-md shadow-purple-600/20 flex items-center space-x-1.5 transition-transform transform hover:scale-105 cursor-pointer"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>+ Add Staff (Operator)</span>
+          </button>
+
           <div className="px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-2xl text-right hidden sm:block">
             <div className="text-[10px] uppercase font-bold text-emerald-700">Today&apos;s Earned Margin</div>
             <div className="text-base font-extrabold text-emerald-900 font-mono">+₹1,470.00</div>
@@ -465,6 +551,14 @@ export default function RetailerDashboardPage() {
         >
           <UploadCloud className="w-4 h-4 text-emerald-400" />
           <span>Cloudflare R2 Vault</span>
+        </button>
+
+        <button
+          onClick={() => setActiveDesk("staff")}
+          className={`px-4 py-3 rounded-2xl text-xs font-bold shrink-0 flex items-center space-x-2 transition-all ${activeDesk === "staff" ? "bg-purple-700 text-white shadow-lg shadow-purple-700/25 ring-2 ring-purple-700/20" : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"}`}
+        >
+          <Users className="w-4 h-4 text-purple-600" />
+          <span>Shop Staff ({staffMembers.length})</span>
         </button>
       </div>
 
@@ -1635,6 +1729,69 @@ export default function RetailerDashboardPage() {
             <DocumentFraudDetector />
           </div>
         )}
+
+        {/* ========================================================= */}
+        {/* DESK 8: SHOP OPERATORS & COUNTER STAFF MANAGEMENT         */}
+        {/* ========================================================= */}
+        {activeDesk === "staff" && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Shop Operators & Counter Shift Staff</h3>
+                <p className="text-xs text-slate-500">Create employee logins with scoped permissions for customer data entry & returns filing</p>
+              </div>
+              <button
+                onClick={() => setShowStaffModal(true)}
+                className="px-4 py-2.5 bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs rounded-xl shadow-md flex items-center space-x-1.5 cursor-pointer shrink-0"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>+ Add Counter Staff</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {staffMembers.map((staff) => (
+                <div key={staff.id} className="p-5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-sm">
+                        {staff.name.charAt(0)}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900">{staff.name}</h4>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-100 text-purple-800">
+                          {staff.role}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                      {staff.status}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1 text-xs text-slate-600 border-t border-slate-200/60 pt-2.5">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Email Login:</span>
+                      <span className="font-semibold text-slate-800">{staff.email}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Contact:</span>
+                      <span className="font-mono text-slate-800">{staff.mobile}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Shift Timing:</span>
+                      <span className="font-medium text-purple-700">{staff.shift}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 bg-white rounded-xl border border-slate-200 text-[11px] text-slate-500">
+                    🔒 <strong>Scoped Permissions:</strong> Can file GST, ITR, PAN & Certificates. Financial ledger & bank withdrawals are restricted to shop owner.
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ========================================================= */}
@@ -1677,7 +1834,7 @@ export default function RetailerDashboardPage() {
                   <td className="p-4 text-right">
                     <button
                       onClick={() => setSelectedReceipt(f)}
-                      className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all text-xs inline-flex items-center space-x-1.5 shadow-sm"
+                      className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all text-xs inline-flex items-center space-x-1.5 shadow-sm cursor-pointer"
                     >
                       <Printer className="w-3.5 h-3.5 text-amber-300" />
                       <span>Print Receipt</span>
@@ -1689,6 +1846,137 @@ export default function RetailerDashboardPage() {
           </table>
         </div>
       </div>
+
+      {/* Staff Operator Onboarding Modal */}
+      {showStaffModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 space-y-6 border border-slate-100">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-700">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Add Counter Desk Operator</h3>
+                  <p className="text-xs text-slate-500">Tier 4 Employee Credential Provisioning</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowStaffModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {staffSuccessMsg && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center space-x-2">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{staffSuccessMsg}</span>
+              </div>
+            )}
+
+            {staffErrorMsg && (
+              <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold rounded-2xl flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{staffErrorMsg}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleOnboardStaff} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Employee Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={staffName}
+                  onChange={(e) => setStaffName(e.target.value)}
+                  placeholder="e.g. Ganesh M"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-purple-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Login Email Address *</label>
+                <input
+                  type="email"
+                  required
+                  value={staffEmail}
+                  onChange={(e) => setStaffEmail(e.target.value)}
+                  placeholder="ganesh.desk@infusetax.com"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-purple-600"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Mobile Number *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={staffMobile}
+                    onChange={(e) => setStaffMobile(e.target.value)}
+                    placeholder="+91 98765 00004"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Shift Timing</label>
+                  <select
+                    value={staffShift}
+                    onChange={(e) => setStaffShift(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-purple-600"
+                  >
+                    <option value="Morning (9 AM - 6 PM)">Morning (9 AM - 6 PM)</option>
+                    <option value="Evening (2 PM - 9 PM)">Evening (2 PM - 9 PM)</option>
+                    <option value="Full Day (9 AM - 9 PM)">Full Day (9 AM - 9 PM)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Initial Password</label>
+                <input
+                  type="text"
+                  value={staffPassword}
+                  onChange={(e) => setStaffPassword(e.target.value)}
+                  placeholder="Operator@1234"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-purple-600"
+                />
+              </div>
+
+              <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl text-[11px] text-purple-900">
+                🛡️ <strong>Scoped Counter Access:</strong> Employee will automatically be routed to the <strong>Operator Shift Terminal</strong> (`/dashboard/operator`) on login.
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowStaffModal(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isStaffSaving}
+                  className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-purple-600/25 flex items-center space-x-1.5 cursor-pointer disabled:opacity-60"
+                >
+                  {isStaffSaving ? (
+                    <span>Adding Staff...</span>
+                  ) : (
+                    <>
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>Create Staff Login</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -96,20 +96,69 @@ class DashboardController {
     }
 
     /**
-     * Creates / Onboards a new user (Distributor, Retailer, Operator) with role-based permissions & initial wallet.
+     * Creates / Onboards a new user with strict hierarchical RBAC:
+     * - Super Admin: Can create Company, Master Distributor, Retailer, Operator.
+     * - Distributor: Can ONLY create Downline Retailers (linked to their distributor ID).
+     * - Retailer: Can ONLY create Counter Operators / Desk Employees (linked to their shop ID).
+     * - Operator: Forbidden (403).
      */
     public function createUser(array $body): void {
-        RoleMiddleware::authorize(['super_admin']);
+        $actor = \App\Http\Middleware\AuthMiddleware::authenticate();
+        $actorRole = $actor['role'] ?? '';
+        $actorId = $actor['sub'] ?? $actor['id'] ?? null;
+        $actorTenantId = $actor['tenant_id'] ?? 'a0000000-0000-0000-0000-000000000001';
 
         $fullName     = trim($body['full_name'] ?? '');
         $email        = strtolower(trim($body['email'] ?? ''));
         $mobile       = trim($body['mobile'] ?? '');
         $password     = $body['password'] ?? 'Retailer@1234';
-        $role         = $body['role'] ?? 'retailer';
+        $requestedRole= strtolower(trim($body['role'] ?? 'retailer'));
         $city         = $body['city'] ?? 'Chennai';
         $state        = $body['state'] ?? 'Tamil Nadu';
         $openBalance  = floatval($body['opening_balance'] ?? 0.00);
         $permissions  = $body['permissions'] ?? ['gst' => true, 'itr' => true, 'pan' => true];
+
+        // 1. Enforce Hierarchical Permissions
+        $targetRole = $requestedRole;
+        $parentId = $actorId;
+
+        if ($actorRole === 'super_admin') {
+            // Super Admin can create any allowed role
+            if (!in_array($requestedRole, ['super_admin', 'distributor', 'retailer', 'operator'], true)) {
+                $targetRole = 'retailer';
+            }
+            if (!empty($body['parent_id'])) {
+                $parentId = $body['parent_id'];
+            }
+        } elseif ($actorRole === 'distributor') {
+            // Distributor can ONLY onboard Retailers
+            if ($requestedRole !== 'retailer') {
+                Response::json([
+                    'status'  => 'error',
+                    'message' => 'Access Denied: Master Distributors are authorized to onboard Retailer Outlets only.'
+                ], 403);
+                return;
+            }
+            $targetRole = 'retailer';
+            $parentId = $actorId;
+        } elseif ($actorRole === 'retailer') {
+            // Retailer can ONLY onboard Desk Operators / Employees
+            if ($requestedRole !== 'operator' && $requestedRole !== 'employee') {
+                Response::json([
+                    'status'  => 'error',
+                    'message' => 'Access Denied: Retailer shop owners are authorized to onboard Desk Operators / Employees only.'
+                ], 403);
+                return;
+            }
+            $targetRole = 'operator';
+            $parentId = $actorId;
+        } else {
+            Response::json([
+                'status'  => 'error',
+                'message' => 'Access Denied: Operators and general users cannot onboard new accounts.'
+            ], 403);
+            return;
+        }
 
         if (empty($fullName) || empty($email) || empty($mobile)) {
             Response::json([
@@ -135,24 +184,45 @@ class DashboardController {
                     return;
                 }
 
+                // If Distributor is creating Retailer with initial wallet balance, ensure Distributor has sufficient funds
+                if ($actorRole === 'distributor' && $openBalance > 0 && $actorId) {
+                    $distWalletStmt = $pdo->prepare("SELECT balance FROM wallets WHERE user_id = :uid FOR UPDATE");
+                    $distWalletStmt->execute(['uid' => $actorId]);
+                    $distWallet = $distWalletStmt->fetch();
+                    $distBalance = floatval($distWallet['balance'] ?? 0.00);
+
+                    if ($distBalance < $openBalance) {
+                        Response::json([
+                            'status'  => 'error',
+                            'message' => "Insufficient distributor wallet balance (₹" . number_format($distBalance, 2) . ") to allocate ₹" . number_format($openBalance, 2) . " to new retailer."
+                        ], 400);
+                        return;
+                    }
+
+                    // Deduct from distributor
+                    $deductStmt = $pdo->prepare("UPDATE wallets SET balance = balance - :amt, updated_at = NOW() WHERE user_id = :uid");
+                    $deductStmt->execute(['amt' => $openBalance, 'uid' => $actorId]);
+                }
+
                 $tenant = $pdo->query("SELECT id FROM tenants WHERE code = 'INFUSE' LIMIT 1")->fetch();
-                $tenantId = $tenant['id'] ?? 'a0000000-0000-0000-0000-000000000001';
+                $tenantId = $tenant['id'] ?? $actorTenantId;
                 $passwordHash = \App\Core\Security::hashPassword($password);
 
                 $stmt = $pdo->prepare("
-                    INSERT INTO users (tenant_id, email, mobile, password_hash, full_name, role, city, state, status)
-                    VALUES (:tid, :email, :mobile, :phash, :name, :role, :city, :state, 'active')
+                    INSERT INTO users (tenant_id, email, mobile, password_hash, full_name, role, city, state, parent_id, status)
+                    VALUES (:tid, :email, :mobile, :phash, :name, :role, :city, :state, :parent_id, 'active')
                     RETURNING id
                 ");
                 $stmt->execute([
-                    'tid'   => $tenantId,
-                    'email' => $email,
-                    'mobile'=> $mobile,
-                    'phash' => $passwordHash,
-                    'name'  => $fullName,
-                    'role'  => $role,
-                    'city'  => $city,
-                    'state' => $state,
+                    'tid'       => $tenantId,
+                    'email'     => $email,
+                    'mobile'    => $mobile,
+                    'phash'     => $passwordHash,
+                    'name'      => $fullName,
+                    'role'      => $targetRole,
+                    'city'      => $city,
+                    'state'     => $state,
+                    'parent_id' => $parentId,
                 ]);
                 $newUserId = $stmt->fetchColumn();
 
@@ -172,13 +242,13 @@ class DashboardController {
                     \App\Models\AuditLedger::log(
                         tenantId: $tenantId,
                         referenceId: 'ONBOARD-' . rand(10000, 99999),
-                        actorId: null,
-                        actionType: 'OPENING_BALANCE',
-                        debitUserId: null,
+                        actorId: $actorId,
+                        actionType: ($actorRole === 'distributor') ? 'DISTRIBUTOR_DISBURSAL' : 'OPENING_BALANCE',
+                        debitUserId: ($actorRole === 'distributor') ? $actorId : null,
                         creditUserId: $newUserId,
                         amount: $openBalance,
                         balanceAfter: $openBalance,
-                        narration: "New {$role} user onboarded with ₹{$openBalance} opening balance."
+                        narration: "New {$targetRole} ({$fullName}) onboarded by {$actorRole} with ₹{$openBalance} initial balance."
                     );
                 }
             } catch (\Throwable $e) {
@@ -192,13 +262,13 @@ class DashboardController {
 
         Response::json([
             'status'  => 'success',
-            'message' => "Successfully onboarded new {$role}: {$fullName}!",
+            'message' => "Successfully onboarded new {$targetRole}: {$fullName}!",
             'user'    => [
                 'id'          => $newUserId ?: 'USR-' . rand(1000, 9999),
                 'name'        => $fullName,
                 'email'       => $email,
                 'contact'     => $mobile,
-                'role'        => $role,
+                'role'        => $targetRole,
                 'city'        => $city,
                 'state'       => $state,
                 'wallet'      => $openBalance,

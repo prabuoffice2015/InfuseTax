@@ -42,9 +42,11 @@ Router::post('/api/v1/government/verify-gstin', 'GovernmentController@verifyGsti
 // 7. Portal Analytics & Live Aggregated Stats
 Router::get('/api/v1/dashboard/stats', 'DashboardController@getStats');
 
-// 8. Super Admin Portal & Master Control Center
+// 8. Super Admin & Hierarchical User Onboarding Suite
 Router::get('/api/v1/admin/users', 'DashboardController@listAdminUsers');
 Router::post('/api/v1/admin/users/create', 'DashboardController@createUser');
+Router::post('/api/v1/distributor/retailers/create', 'DashboardController@createUser');
+Router::post('/api/v1/retailer/operators/create', 'DashboardController@createUser');
 Router::post('/api/v1/admin/users/status', 'DashboardController@toggleUserStatus');
 Router::get('/api/v1/admin/audit-ledger', 'DashboardController@getAuditLedger');
 Router::post('/api/v1/admin/tenant/update', 'DashboardController@updateTenantBranding');
