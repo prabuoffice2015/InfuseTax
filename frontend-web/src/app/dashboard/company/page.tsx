@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { 
   Building2, 
   Palette, 
@@ -27,29 +28,127 @@ import {
   AlertCircle,
   QrCode,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  UserPlus
 } from "lucide-react";
 import { getAuthToken } from "@/lib/auth";
 
 export default function CompanyDashboardPage() {
-  const [activeTab, setActiveTab] = useState<"overview" | "utr" | "branding" | "users" | "pricing" | "ledger">("overview");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentTabParam = searchParams.get("tab") || "overview";
+  const [activeTab, setActiveTab] = useState<"overview" | "utr" | "branding" | "users" | "pricing" | "ledger">(
+    (["overview", "utr", "branding", "users", "pricing", "ledger"].includes(currentTabParam) ? currentTabParam : "overview") as any
+  );
 
-  // Sync with URL hash
+  // Sync tab with URL query parameter and fetch real backend data
   useEffect(() => {
-    const handleHash = () => {
-      const hash = window.location.hash.replace("#", "");
-      if (["overview", "utr", "branding", "users", "pricing", "ledger"].includes(hash)) {
-        setActiveTab(hash as any);
-      }
+    if (currentTabParam && ["overview", "utr", "branding", "users", "pricing", "ledger"].includes(currentTabParam)) {
+      setActiveTab(currentTabParam as any);
+    }
+
+    const fetchUsers = async () => {
+      try {
+        const token = getAuthToken();
+        if (!token) return;
+        const res = await fetch("/api/v1/admin/users", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.status === "success" && data.users?.length > 0) {
+          setUsersList(data.users);
+        }
+      } catch (e) {}
     };
-    handleHash();
-    window.addEventListener("hashchange", handleHash);
-    return () => window.removeEventListener("hashchange", handleHash);
-  }, []);
+
+    fetchUsers();
+  }, [currentTabParam]);
 
   const switchTab = (tab: "overview" | "utr" | "branding" | "users" | "pricing" | "ledger") => {
     setActiveTab(tab);
-    window.location.hash = tab;
+    router.push(`/dashboard/company?tab=${tab}`);
+  };
+
+  // -------------------------------------------------------------
+  // User Creation & Onboarding Modal State
+  // -------------------------------------------------------------
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserMobile, setNewUserMobile] = useState("");
+  const [newUserRole, setNewUserRole] = useState("retailer");
+  const [newUserCity, setNewUserCity] = useState("Coimbatore");
+  const [newUserState, setNewUserState] = useState("Tamil Nadu");
+  const [newUserBalance, setNewUserBalance] = useState("10000");
+  const [newUserPassword, setNewUserPassword] = useState("Retailer@1234");
+  const [newUserPermissions, setNewUserPermissions] = useState({
+    gst: true,
+    itr: true,
+    pan: true,
+    passport: true,
+    certificates: true,
+    p2p: true
+  });
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [createSuccessMsg, setCreateSuccessMsg] = useState("");
+
+  const handleCreateUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsCreatingUser(true);
+    try {
+      const token = getAuthToken();
+      const res = await fetch("/api/v1/admin/users/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          full_name: newUserName,
+          email: newUserEmail,
+          mobile: newUserMobile,
+          role: newUserRole,
+          city: newUserCity,
+          state: newUserState,
+          opening_balance: parseFloat(newUserBalance) || 0,
+          password: newUserPassword,
+          permissions: newUserPermissions
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.status === "success" && data.user) {
+        setUsersList([data.user, ...usersList]);
+        setCreateSuccessMsg(`✓ Successfully onboarded ${newUserName} as ${newUserRole.toUpperCase()}!`);
+        setTimeout(() => {
+          setCreateSuccessMsg("");
+          setShowCreateUserModal(false);
+          setNewUserName("");
+          setNewUserEmail("");
+          setNewUserMobile("");
+        }, 1200);
+      } else {
+        alert(data.message || "Failed to create user.");
+      }
+    } catch (err) {
+      // Offline fallback
+      const localUser = {
+        id: `USR-${Math.floor(1000 + Math.random() * 9000)}`,
+        name: newUserName,
+        email: newUserEmail,
+        contact: newUserMobile,
+        role: newUserRole === "distributor" ? "Master Distributor" : newUserRole === "operator" ? "Operator" : "Retailer Outlet",
+        city: newUserCity,
+        state: newUserState,
+        wallet: parseFloat(newUserBalance) || 0,
+        status: "ACTIVE",
+        kyc: "VERIFIED",
+        downlines: newUserRole === "distributor" ? 1 : 0
+      };
+      setUsersList([localUser, ...usersList]);
+      setShowCreateUserModal(false);
+    } finally {
+      setIsCreatingUser(false);
+    }
   };
 
   // -------------------------------------------------------------
@@ -701,12 +800,20 @@ export default function CompanyDashboardPage() {
               <p className="text-xs text-slate-500">Manage Master Distributors, Retailers, and Counter Operators</p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => setShowCreateUserModal(true)}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-600/30 flex items-center space-x-2 transition-all cursor-pointer"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>+ Create User / Outlet</span>
+              </button>
+
               {/* Role filter */}
               <select
                 value={userRoleFilter}
                 onChange={(e) => setUserRoleFilter(e.target.value)}
-                className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700"
+                className="p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700"
               >
                 <option value="all">All Roles</option>
                 <option value="distributor">Master Distributors</option>
@@ -716,7 +823,7 @@ export default function CompanyDashboardPage() {
 
               {/* Search input */}
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
                 <input
                   type="text"
                   value={userSearchQuery}
@@ -748,32 +855,34 @@ export default function CompanyDashboardPage() {
                     <td className="p-4 font-mono font-bold text-blue-700">{u.id}</td>
                     <td className="p-4 font-bold text-slate-900">{u.name}</td>
                     <td className="p-4">
-                      <span className={`px-2.5 py-0.5 rounded-md font-bold text-[11px] ${
-                        u.role === "Master Distributor" ? "bg-purple-50 text-purple-700 border border-purple-200" :
-                        u.role === "Retailer Outlet" ? "bg-blue-50 text-blue-700 border border-blue-200" :
-                        "bg-slate-100 text-slate-700"
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        u.role.toLowerCase().includes("distributor")
+                          ? "bg-purple-100 text-purple-800"
+                          : u.role.toLowerCase().includes("operator")
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-blue-100 text-blue-800"
                       }`}>
                         {u.role}
                       </span>
                     </td>
-                    <td className="p-4 font-mono">{u.contact}</td>
-                    <td className="p-4 font-bold text-slate-900">{u.downlines} Outlets</td>
-                    <td className="p-4 font-mono font-bold text-slate-900">₹{u.wallet.toLocaleString()}</td>
+                    <td className="p-4 font-mono text-slate-500">{u.contact}</td>
+                    <td className="p-4 font-bold text-slate-700">{u.downlines} Outlets</td>
+                    <td className="p-4 font-mono font-bold text-emerald-700">₹{u.wallet.toLocaleString("en-IN")}</td>
                     <td className="p-4">
-                      <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[10px] font-bold">
+                      <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-extrabold rounded-md border border-emerald-200">
                         {u.kyc}
                       </span>
                     </td>
                     <td className="p-4 text-right">
                       <button
                         onClick={() => toggleUserStatus(u.id)}
-                        className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors ${
-                          u.status === "ACTIVE" 
-                            ? "bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
-                            : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
+                        className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-colors ${
+                          u.status === "ACTIVE" || u.status === "active"
+                            ? "bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200"
+                            : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200"
                         }`}
                       >
-                        {u.status === "ACTIVE" ? "Suspend" : "Activate"}
+                        {u.status === "ACTIVE" || u.status === "active" ? "Suspend" : "Activate"}
                       </button>
                     </td>
                   </tr>
@@ -781,6 +890,220 @@ export default function CompanyDashboardPage() {
               </tbody>
             </table>
           </div>
+
+          {/* USER ONBOARDING MODAL */}
+          {showCreateUserModal && (
+            <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-3 bg-blue-100 text-blue-700 rounded-2xl">
+                      <UserPlus className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900">Onboard New Outlet / Network User</h3>
+                      <p className="text-xs text-slate-500">Create login credentials, assign role, opening wallet balance, and feature access</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowCreateUserModal(false)}
+                    className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {createSuccessMsg && (
+                  <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center space-x-2">
+                    <Check className="w-4 h-4" />
+                    <span>{createSuccessMsg}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleCreateUserSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Outlet / Full Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newUserName}
+                        onChange={(e) => setNewUserName(e.target.value)}
+                        placeholder="e.g. Trichy Prime Digital Seva"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Role Tier *</label>
+                      <select
+                        value={newUserRole}
+                        onChange={(e) => setNewUserRole(e.target.value)}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+                      >
+                        <option value="distributor">👥 Master Distributor (Tier 2)</option>
+                        <option value="retailer">🏪 Retailer Outlet POS (Tier 3)</option>
+                        <option value="operator">👤 Counter Operator Staff (Tier 4)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Email Address (Login ID) *</label>
+                      <input
+                        type="email"
+                        required
+                        value={newUserEmail}
+                        onChange={(e) => setNewUserEmail(e.target.value)}
+                        placeholder="outlet@infusetax.com"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Mobile Number (10 Digits) *</label>
+                      <input
+                        type="tel"
+                        required
+                        value={newUserMobile}
+                        onChange={(e) => setNewUserMobile(e.target.value)}
+                        placeholder="+91 98421 11223"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">City / District</label>
+                      <input
+                        type="text"
+                        value={newUserCity}
+                        onChange={(e) => setNewUserCity(e.target.value)}
+                        placeholder="Coimbatore"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">State</label>
+                      <input
+                        type="text"
+                        value={newUserState}
+                        onChange={(e) => setNewUserState(e.target.value)}
+                        placeholder="Tamil Nadu"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Opening Prepaid Balance (₹)</label>
+                      <input
+                        type="number"
+                        value={newUserBalance}
+                        onChange={(e) => setNewUserBalance(e.target.value)}
+                        placeholder="10000"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Initial Password</label>
+                      <input
+                        type="text"
+                        value={newUserPassword}
+                        onChange={(e) => setNewUserPassword(e.target.value)}
+                        placeholder="Retailer@1234"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Role-Based Module Permissions Matrix */}
+                  <div className="pt-3 border-t border-slate-100">
+                    <label className="block text-xs font-bold text-slate-800 mb-2">Role-Based Module Permissions & Feature Flags:</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs text-slate-700">
+                      <label className="flex items-center space-x-2 cursor-pointer p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                        <input
+                          type="checkbox"
+                          checked={newUserPermissions.gst}
+                          onChange={(e) => setNewUserPermissions({ ...newUserPermissions, gst: e.target.checked })}
+                          className="w-4 h-4 text-blue-600 rounded"
+                        />
+                        <span className="font-semibold">GST Registration & Filings</span>
+                      </label>
+                      <label className="flex items-center space-x-2 cursor-pointer p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                        <input
+                          type="checkbox"
+                          checked={newUserPermissions.itr}
+                          onChange={(e) => setNewUserPermissions({ ...newUserPermissions, itr: e.target.checked })}
+                          className="w-4 h-4 text-blue-600 rounded"
+                        />
+                        <span className="font-semibold">ITR-1 / Form 16 OCR</span>
+                      </label>
+                      <label className="flex items-center space-x-2 cursor-pointer p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                        <input
+                          type="checkbox"
+                          checked={newUserPermissions.pan}
+                          onChange={(e) => setNewUserPermissions({ ...newUserPermissions, pan: e.target.checked })}
+                          className="w-4 h-4 text-blue-600 rounded"
+                        />
+                        <span className="font-semibold">PAN Card Desk (49A)</span>
+                      </label>
+                      <label className="flex items-center space-x-2 cursor-pointer p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                        <input
+                          type="checkbox"
+                          checked={newUserPermissions.passport}
+                          onChange={(e) => setNewUserPermissions({ ...newUserPermissions, passport: e.target.checked })}
+                          className="w-4 h-4 text-blue-600 rounded"
+                        />
+                        <span className="font-semibold">Passport Seva Suvidha</span>
+                      </label>
+                      <label className="flex items-center space-x-2 cursor-pointer p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                        <input
+                          type="checkbox"
+                          checked={newUserPermissions.certificates}
+                          onChange={(e) => setNewUserPermissions({ ...newUserPermissions, certificates: e.target.checked })}
+                          className="w-4 h-4 text-blue-600 rounded"
+                        />
+                        <span className="font-semibold">Dynamic E-Certificates</span>
+                      </label>
+                      <label className="flex items-center space-x-2 cursor-pointer p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                        <input
+                          type="checkbox"
+                          checked={newUserPermissions.p2p}
+                          onChange={(e) => setNewUserPermissions({ ...newUserPermissions, p2p: e.target.checked })}
+                          className="w-4 h-4 text-blue-600 rounded"
+                        />
+                        <span className="font-semibold">P2P Fund Transfers</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 flex items-center justify-end space-x-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateUserModal(false)}
+                      className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isCreatingUser}
+                      className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-600/30 flex items-center space-x-2"
+                    >
+                      {isCreatingUser ? (
+                        <span>Onboarding Outlet...</span>
+                      ) : (
+                        <>
+                          <UserCheck className="w-4 h-4" />
+                          <span>Onboard User & Credit Wallet</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

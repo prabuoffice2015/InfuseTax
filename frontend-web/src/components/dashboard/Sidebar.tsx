@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { 
   LayoutDashboard, 
@@ -33,6 +33,7 @@ interface SidebarProps {
 export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
   const [activeUserRole, setActiveUserRole] = useState(currentRole);
 
@@ -55,12 +56,12 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
 
     if (role.includes("admin") || role.includes("super_admin") || role === "company") {
       return [
-        { label: "Master Overview", href: "/dashboard/company#overview", icon: LayoutDashboard },
-        { label: "UTR Bank Approvals", href: "/dashboard/company#utr", icon: CheckSquare },
-        { label: "Outlets & Users", href: "/dashboard/company#users", icon: Users },
-        { label: "Commission Slabs", href: "/dashboard/company#pricing", icon: Sliders },
-        { label: "White-Label Theming", href: "/dashboard/company#branding", icon: Palette },
-        { label: "Master Audit Ledger", href: "/dashboard/company#ledger", icon: History },
+        { label: "Master Overview", href: "/dashboard/company?tab=overview", tabKey: "overview", icon: LayoutDashboard },
+        { label: "UTR Bank Approvals", href: "/dashboard/company?tab=utr", tabKey: "utr", icon: CheckSquare },
+        { label: "Outlets & Users", href: "/dashboard/company?tab=users", tabKey: "users", icon: Users },
+        { label: "Commission Slabs", href: "/dashboard/company?tab=pricing", tabKey: "pricing", icon: Sliders },
+        { label: "White-Label Theming", href: "/dashboard/company?tab=branding", tabKey: "branding", icon: Palette },
+        { label: "Master Audit Ledger", href: "/dashboard/company?tab=ledger", tabKey: "ledger", icon: History },
       ];
     } else if (role.includes("distributor")) {
       return [
@@ -109,6 +110,7 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
 
   const badge = getRoleBadge();
   const isAdmin = (activeUserRole || currentRole).toLowerCase().includes("admin");
+  const currentTab = searchParams.get("tab") || "overview";
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between border-r border-slate-800 shrink-0 min-h-screen sticky top-0">
@@ -139,7 +141,10 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
         <nav className="p-3 space-y-1">
           {navItems.map((item, idx) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href || (item.href.includes("#") && pathname === item.href.split("#")[0]);
+            const isActive = (item as any).tabKey
+              ? pathname === item.href.split("?")[0] && currentTab === (item as any).tabKey
+              : pathname === item.href;
+
             return (
               <Link
                 key={idx}

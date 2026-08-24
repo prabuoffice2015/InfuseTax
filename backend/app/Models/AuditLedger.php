@@ -8,9 +8,9 @@ class AuditLedger {
     public static function log(
         string $tenantId,
         string $referenceId,
-        string $actorId,
+        ?string $actorId,
         string $actionType,
-        ?string $debitUserId,
+        ?string $debitUserId = null,
         ?string $creditUserId = null,
         float $amount = 0.00,
         float $balanceAfter = 0.00,
