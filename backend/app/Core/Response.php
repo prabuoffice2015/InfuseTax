@@ -8,8 +8,20 @@ class Response {
         header('Content-Type: application/json');
         header('Access-Control-Allow-Origin: *');
         header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Tenant-Code');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Tenant-Code, X-Encrypted-Payload, Accept-Encrypted');
         
+        $acceptsEncryption = (!empty($_SERVER['HTTP_X_ENCRYPTED_PAYLOAD']) && $_SERVER['HTTP_X_ENCRYPTED_PAYLOAD'] === 'true') ||
+                             (!empty($_SERVER['HTTP_ACCEPT_ENCRYPTED']) && $_SERVER['HTTP_ACCEPT_ENCRYPTED'] === 'true');
+
+        if ($acceptsEncryption) {
+            $encryptedString = Security::encryptPayload($data);
+            echo json_encode([
+                '_encrypted' => true,
+                '_payload'   => $encryptedString
+            ]);
+            exit;
+        }
+
         echo json_encode($data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
         exit;
     }

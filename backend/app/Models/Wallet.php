@@ -2,82 +2,63 @@
 
 namespace App\Models;
 
-use App\Core\Database;
-use PDO;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Capsule\Manager as DB;
 
-class Wallet {
+/**
+ * Class Wallet (Eloquent Model)
+ *
+ * @package App\Models
+ */
+class Wallet extends Model {
+    protected $table = 'wallets';
+    protected $keyType = 'string';
+    public $incrementing = false;
+    protected $guarded = [];
+
+    protected $casts = [
+        'balance'    => 'float',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    public function user() {
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
+    public function tenant() {
+        return $this->belongsTo(Tenant::class, 'tenant_id', 'id');
+    }
+
     public static function getBalanceByUserId(string $userId): float {
-        $pdo = Database::getConnection();
-        if (!$pdo) return 0.00;
-
-        try {
-            $stmt = $pdo->prepare("SELECT balance FROM wallets WHERE user_id = :uid LIMIT 1");
-            $stmt->execute(['uid' => $userId]);
-            $val = $stmt->fetchColumn();
-            return $val !== false ? floatval($val) : 0.00;
-        } catch (\Throwable $e) {
-            return 0.00;
-        }
+        $wallet = self::where('user_id', $userId)->first();
+        return $wallet ? floatval($wallet->balance) : 0.00;
     }
 
     public static function updateBalance(string $userId, float $newBalance): bool {
-        $pdo = Database::getConnection();
-        if (!$pdo) return false;
-
-        try {
-            $stmt = $pdo->prepare("UPDATE wallets SET balance = :bal, updated_at = NOW() WHERE user_id = :uid");
-            return $stmt->execute(['bal' => $newBalance, 'uid' => $userId]);
-        } catch (\Throwable $e) {
-            return false;
-        }
+        $wallet = self::where('user_id', $userId)->first();
+        if (!$wallet) return false;
+        return $wallet->update(['balance' => $newBalance]);
     }
 
     public static function transferP2P(string $senderId, string $receiverId, float $amount, string $tenantId, string $txnId): bool {
-        $pdo = Database::getConnection();
-        if (!$pdo || $amount <= 0) return false;
+        if ($amount <= 0) return false;
 
-        try {
-            $pdo->beginTransaction();
-
-            // 1. Check sender balance
-            $stmtSender = $pdo->prepare("SELECT balance FROM wallets WHERE user_id = :uid FOR UPDATE");
-            $stmtSender->execute(['uid' => $senderId]);
-            $senderBal = floatval($stmtSender->fetchColumn());
-
-            if ($senderBal < $amount) {
-                $pdo->rollBack();
+        return DB::connection()->transaction(function() use ($senderId, $receiverId, $amount, $tenantId, $txnId) {
+            $senderWallet = self::where('user_id', $senderId)->lockForUpdate()->first();
+            if (!$senderWallet || $senderWallet->balance < $amount) {
                 return false;
             }
 
-            // 2. Debit sender
-            $newSenderBal = $senderBal - $amount;
-            $pdo->prepare("UPDATE wallets SET balance = :b WHERE user_id = :u")->execute(['b' => $newSenderBal, 'u' => $senderId]);
+            $receiverWallet = self::where('user_id', $receiverId)->lockForUpdate()->first();
+            if (!$receiverWallet) {
+                return false;
+            }
 
-            // 3. Credit receiver
-            $stmtRec = $pdo->prepare("SELECT balance FROM wallets WHERE user_id = :uid FOR UPDATE");
-            $stmtRec->execute(['uid' => $receiverId]);
-            $recBal = floatval($stmtRec->fetchColumn());
-            $newRecBal = $recBal + $amount;
-            $pdo->prepare("UPDATE wallets SET balance = :b WHERE user_id = :u")->execute(['b' => $newRecBal, 'u' => $receiverId]);
+            $senderWallet->decrement('balance', $amount);
+            $receiverWallet->increment('balance', $amount);
 
-            // 4. Log Audit Ledger
-            AuditLedger::log(
-                tenantId: $tenantId,
-                referenceId: $txnId,
-                actorId: $senderId,
-                actionType: 'P2P_DISBURSAL',
-                debitUserId: $senderId,
-                creditUserId: $receiverId,
-                amount: $amount,
-                balanceAfter: $newSenderBal,
-                narration: "P2P Disbursal of INR {$amount}"
-            );
-
-            $pdo->commit();
             return true;
-        } catch (\Throwable $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
-            return false;
-        }
+        });
     }
 }

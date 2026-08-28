@@ -152,7 +152,41 @@ CREATE TABLE IF NOT EXISTS audit_ledger (
 );
 
 -- ------------------------------------------------------------------------------
--- 9. HIGH-PERFORMANCE POSTGRESQL SMART INDEXES
+-- 9. SERVICE PRICINGS TABLE (Direct Tier Pricing Setup - No separate slabs)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS service_pricings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    service_key VARCHAR(50) UNIQUE NOT NULL,
+    service_name VARCHAR(100) NOT NULL,
+    tier2_price NUMERIC(10, 2) NOT NULL, -- Price set by Super Admin for Master Distributor
+    tier3_price NUMERIC(10, 2) NOT NULL, -- Price set by Master Distributor for Retailer
+    mrp_customer_fee NUMERIC(10, 2) NOT NULL, -- Retail price for walk-in citizen
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ------------------------------------------------------------------------------
+-- 10. UNIFIED WALLET REQUESTS TABLE (Tier 3 & Tier 4 Top-up Approvals)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS wallet_requests (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    requester_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    requester_role VARCHAR(50) NOT NULL,
+    target_approver_role VARCHAR(50) NOT NULL,
+    approver_id UUID REFERENCES users(id),
+    amount NUMERIC(12, 2) NOT NULL CHECK (amount > 0),
+    payment_mode VARCHAR(50) DEFAULT 'UTR',
+    reference_no VARCHAR(100),
+    proof_doc_url TEXT,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    remarks TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    approved_at TIMESTAMP WITH TIME ZONE
+);
+
+-- ------------------------------------------------------------------------------
+-- 11. HIGH-PERFORMANCE POSTGRESQL SMART INDEXES
 -- ------------------------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_users_email_role ON users (email, role);
 CREATE INDEX IF NOT EXISTS idx_users_tenant_role ON users (tenant_id, role, status);
@@ -164,6 +198,7 @@ CREATE INDEX IF NOT EXISTS idx_documents_user_created ON documents (user_id, cre
 CREATE INDEX IF NOT EXISTS idx_audit_ledger_tenant_created ON audit_ledger (tenant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_ledger_actor ON audit_ledger (actor_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_utr_requests_status ON utr_requests (status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_wallet_requests_status ON wallet_requests (status, requester_role);
 
 -- ==============================================================================
 -- TURNKEY PRODUCTION SEED DATA
@@ -242,7 +277,29 @@ VALUES
 ('b0000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000001', 15400.00)
 ON CONFLICT (user_id) DO NOTHING;
 
--- 4. Seed Audit Ledger Records
+-- 4. Seed Service Direct Pricings (Super Admin Tier 2 Price & Master Distributor Tier 3 Price)
+INSERT INTO service_pricings (tenant_id, service_key, service_name, tier2_price, tier3_price, mrp_customer_fee)
+VALUES 
+('a0000000-0000-0000-0000-000000000001', 'gst_registration', 'GST Registration (New GSTIN)', 950.00, 1200.00, 1500.00),
+('a0000000-0000-0000-0000-000000000001', 'gstr_filing', 'GST Return Filing (GSTR-1 & 3B)', 280.00, 350.00, 500.00),
+('a0000000-0000-0000-0000-000000000001', 'itr_filing', 'Income Tax (ITR) Return Filing', 450.00, 550.00, 800.00),
+('a0000000-0000-0000-0000-000000000001', 'pan_card', 'PAN Card Processing Hub (Form 49A)', 70.00, 85.00, 110.00),
+('a0000000-0000-0000-0000-000000000001', 'passport_seva', 'Passport & PCC Application Desk', 180.00, 220.00, 300.00),
+('a0000000-0000-0000-0000-000000000001', 'govt_certificates', 'Dynamic Government Certificates', 80.00, 105.00, 150.00)
+ON CONFLICT (service_key) DO UPDATE SET
+    tier2_price = EXCLUDED.tier2_price,
+    tier3_price = EXCLUDED.tier3_price,
+    mrp_customer_fee = EXCLUDED.mrp_customer_fee;
+
+-- 5. Seed Wallet Requests (Tier 3 Retailers & Tier 4 Operators)
+INSERT INTO wallet_requests (tenant_id, requester_id, requester_role, target_approver_role, amount, payment_mode, reference_no, status, remarks)
+VALUES 
+('a0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000003', 'retailer', 'distributor', 25000.00, 'BANK_UTR', 'UTR998811223344', 'pending', 'Advance top-up for monthly GST filing rush'),
+('a0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000004', 'operator', 'distributor', 5000.00, 'CASH_COUNTER', 'CASH-REC-001', 'pending', 'Counter shift float top-up'),
+('a0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000003', 'retailer', 'distributor', 15000.00, 'BANK_UTR', 'UTR776655443322', 'approved', 'Weekend ITR advance')
+ON CONFLICT DO NOTHING;
+
+-- 6. Seed Audit Ledger Records
 INSERT INTO audit_ledger (tenant_id, reference_id, actor_id, action_type, debit_user_id, credit_user_id, amount, balance_after, narration)
 VALUES 
 ('a0000000-0000-0000-0000-000000000001', 'TXN-UTR-90812', 'b0000000-0000-0000-0000-000000000001', 'WALLET_TOPUP', NULL, 'b0000000-0000-0000-0000-000000000003', 50000.00, 48750.00, 'Bank Deposit Approval UTR 423512349876 credited to Ramesh Digital Seva'),

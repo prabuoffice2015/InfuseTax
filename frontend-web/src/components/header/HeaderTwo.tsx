@@ -56,13 +56,14 @@ export default function HeaderTwo() {
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-3.5 flex items-center justify-between">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center group">
-          <div className="relative h-12 w-48 sm:h-14 sm:w-56 transition-transform duration-200 group-hover:scale-[1.02]">
+          <div className="relative h-12 w-48 sm:h-14 sm:w-56 max-w-[224px] max-h-[56px] transition-transform duration-200 group-hover:scale-[1.02]">
             <Image
               src="/brand/infusetax_logo_600x200.png"
               alt="InfuseTax Logo"
-              fill
+              width={224}
+              height={56}
               priority
-              className="object-contain object-left"
+              className="object-contain object-left max-h-12 sm:max-h-14 w-auto h-auto"
             />
           </div>
         </Link>
@@ -80,46 +81,36 @@ export default function HeaderTwo() {
               <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180 text-slate-400" />
             </button>
 
-            {/* Dropdown Menu */}
+            {/* Dropdown Menu - The 3 Core Compliance Services */}
             <div className={`absolute top-full left-0 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 p-3 transition-all duration-200 ${isServicesOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible translate-y-2'}`}>
               <div className="space-y-1">
                 <Link href="#services" className="flex items-start space-x-3 p-2.5 rounded-xl hover:bg-blue-50 transition-colors">
                   <div className="p-2 bg-blue-100 text-blue-700 rounded-lg">
-                    <FileText className="w-4 h-4" />
+                    <Building2 className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-800">GST Registration & Filing</div>
-                    <div className="text-[11px] text-slate-500">GSTR-1, GSTR-3B & Anomaly Check</div>
-                  </div>
-                </Link>
-
-                <Link href="#services" className="flex items-start space-x-3 p-2.5 rounded-xl hover:bg-amber-50 transition-colors">
-                  <div className="p-2 bg-amber-100 text-amber-700 rounded-lg">
-                    <CreditCard className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-800">Income Tax (ITR) Filing</div>
-                    <div className="text-[11px] text-slate-500">ITR-1, 2, 4 with Form 16 OCR</div>
+                    <div className="text-xs font-bold text-slate-800">1. GST Registration Desk</div>
+                    <div className="text-[11px] text-slate-500">Sole Prop, Pvt Ltd, Partnership &amp; LLP</div>
                   </div>
                 </Link>
 
                 <Link href="#services" className="flex items-start space-x-3 p-2.5 rounded-xl hover:bg-emerald-50 transition-colors">
                   <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg">
-                    <UserCheck className="w-4 h-4" />
+                    <CreditCard className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-800">E-Governance Desk</div>
-                    <div className="text-[11px] text-slate-500">PAN, Aadhaar & Passport Desks</div>
+                    <div className="text-xs font-bold text-slate-800">2. Income Tax (IT) Filing</div>
+                    <div className="text-[11px] text-slate-500">ITR-1, 2, 3, 4 with Form 16 OCR</div>
                   </div>
                 </Link>
 
-                <Link href="#services" className="flex items-start space-x-3 p-2.5 rounded-xl hover:bg-purple-50 transition-colors">
-                  <div className="p-2 bg-purple-100 text-purple-700 rounded-lg">
-                    <Building2 className="w-4 h-4" />
+                <Link href="#services" className="flex items-start space-x-3 p-2.5 rounded-xl hover:bg-indigo-50 transition-colors">
+                  <div className="p-2 bg-indigo-100 text-indigo-700 rounded-lg">
+                    <FileText className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-800">Dynamic Certificates</div>
-                    <div className="text-[11px] text-slate-500">Community, Income & Seva Desks</div>
+                    <div className="text-xs font-bold text-slate-800">3. GST Return Filing</div>
+                    <div className="text-[11px] text-slate-500">GSTR-1, GSTR-3B &amp; ITC 2B Set-off</div>
                   </div>
                 </Link>
               </div>

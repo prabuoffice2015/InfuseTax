@@ -62,6 +62,19 @@ class Router {
         $bodyRaw = file_get_contents('php://input');
         $body = json_decode($bodyRaw, true) ?? [];
 
+        // Transparently handle AES-256 encrypted payload envelopes from frontend
+        if (isset($body['_payload']) && is_string($body['_payload'])) {
+            $decrypted = Security::decryptPayload($body['_payload']);
+            if ($decrypted !== null) {
+                $body = $decrypted;
+            }
+        } elseif (isset($body['_encrypted_payload']) && is_string($body['_encrypted_payload'])) {
+            $decrypted = Security::decryptPayload($body['_encrypted_payload']);
+            if ($decrypted !== null) {
+                $body = $decrypted;
+            }
+        }
+
         $controller->$action($body);
     }
 }

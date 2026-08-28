@@ -11,15 +11,15 @@ export default function PricingTable() {
       badge: "Most Popular",
       price: "₹999",
       period: "/ year",
-      desc: "For local cyber cafes, CSC centers, and tax consultants serving walk-in customers.",
+      desc: "For local cyber cafes, CSC centers, and tax consultants serving walk-in citizens.",
       features: [
-        "Full ITR & GST Return Desks",
-        "Form 16 AI OCR Auto-Extraction",
-        "PAN Card (Form 49A / Correction)",
-        "Passport Application & PCC Desk",
-        "Dynamic Government Certificates",
-        "Instant Digital Wallet Payouts",
-        "Print Branded Tax Receipts",
+        "1. GST Registration Desk (Sole Prop / Pvt Ltd / LLP)",
+        "2. Income Tax (IT) Return Desk (Indiv & Business)",
+        "3. GST Return Filing (GSTR-1 & GSTR-3B)",
+        "Color Scanned Document Verification Vault",
+        "Instant Digital Wallet Payouts & Float Management",
+        "Print Branded B2B Tax Receipts & Invoices",
+        "Tier 4 Counter Operator Delegation",
       ],
       cta: "Access Retailer Portal",
       ctaLink: "/sign-in",
@@ -39,7 +39,7 @@ export default function PricingTable() {
         "P2P Wallet Balance Distribution",
         "Network-Wide Commission Overrides",
         "Consolidated Tax Filing Reports",
-        "Priority Document Approval Queue",
+        "Tier 4 Operator Service Document Approvals",
         "Dedicated Account Manager",
       ],
       cta: "Distributor Portal",
@@ -53,7 +53,7 @@ export default function PricingTable() {
       badge: "Enterprise",
       price: "₹14,999",
       period: "/ year",
-      desc: "For corporate brands and FinTechs launching their own branded tax portal.",
+      desc: "For corporate brands and FinTechs launching their own branded tax compliance portal.",
       features: [
         "Everything in Master Distributor",
         "Custom Domain (tax.yourbrand.com)",
@@ -117,7 +117,7 @@ export default function PricingTable() {
                   <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">Included Features:</div>
                   {plan.features.map((feat, fIdx) => (
                     <div key={fIdx} className="flex items-start space-x-2.5 text-xs text-slate-700 font-medium">
-                      <Check className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                       <span>{feat}</span>
                     </div>
                   ))}
@@ -127,7 +127,7 @@ export default function PricingTable() {
               {/* Button */}
               <Link
                 href={plan.ctaLink}
-                className={`w-full py-3 px-4 rounded-xl font-bold text-sm text-center flex items-center justify-center space-x-2 transition-all transform hover:scale-[1.02] ${plan.btnBg}`}
+                className={`w-full py-3 px-4 rounded-xl font-bold text-sm text-center flex items-center justify-center space-x-2 transition-all transform hover:scale-[1.02] cursor-pointer ${plan.btnBg}`}
               >
                 <span>{plan.cta}</span>
                 <ArrowRight className="w-4 h-4" />

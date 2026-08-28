@@ -45,7 +45,7 @@ Your *${receipt.service}* has been processed successfully.
 • *Customer Ref:* ${receipt.customerPanOrGst || "Verified via Aadhaar"}
 • *Status:* *${receipt.status}*
 • *Filing Date:* ${receipt.date}
-• *Fee Paid:* ₹${receipt.amount.toLocaleString()} (Paid via Retailer Wallet)
+• *Fee Paid:* ₹${(receipt.amount || 0).toLocaleString()} (Paid via Retailer Wallet)
 
 📥 *Download Official Tax Slip / ARN PDF:*
 ${downloadUrl}

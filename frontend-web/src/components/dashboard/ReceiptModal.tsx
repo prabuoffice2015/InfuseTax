@@ -16,6 +16,9 @@ export interface ReceiptData {
   customerPanOrGst?: string;
   operatorId?: string;
   paymentMode?: string;
+  documents?: { [key: string]: any };
+  verified_doc_url?: string;
+  rejection_remarks?: string;
   taxBreakdown?: {
     baseAmount: number;
     cgst: number;
@@ -34,8 +37,8 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
 
   if (!receipt) return null;
 
-  const baseAmount = receipt.taxBreakdown?.baseAmount ?? Math.round(receipt.amount / 1.18);
-  const totalTax = receipt.amount - baseAmount;
+  const baseAmount = receipt.taxBreakdown?.baseAmount ?? Math.round((receipt.amount || 0) / 1.18);
+  const totalTax = (receipt.amount || 0) - baseAmount;
   const halfTax = +(totalTax / 2).toFixed(2);
 
   const handlePrint = () => {
@@ -174,7 +177,7 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
                     <td className="p-3 font-mono text-slate-600">998311</td>
                     <td className="p-3 text-right font-mono">₹{baseAmount.toFixed(2)}</td>
                     <td className="p-3 text-right font-mono">₹{totalTax.toFixed(2)}</td>
-                    <td className="p-3 text-right font-mono font-bold text-slate-900">₹{receipt.amount.toFixed(2)}</td>
+                    <td className="p-3 text-right font-mono font-bold text-slate-900">₹{(receipt.amount || 0).toFixed(2)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -205,7 +208,7 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
                   </div>
                   <div className="border-t border-blue-200 pt-1.5 flex justify-between text-sm font-extrabold text-blue-900">
                     <span>Total Paid:</span>
-                    <span className="font-mono">₹{receipt.amount.toFixed(2)}</span>
+                    <span className="font-mono">₹{(receipt.amount || 0).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -266,7 +269,7 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
 
               <div className="border-b border-dashed border-slate-400 pb-2 flex justify-between font-bold text-xs">
                 <span>TOTAL PAID:</span>
-                <span>₹{receipt.amount.toFixed(2)}</span>
+                <span>₹{(receipt.amount || 0).toFixed(2)}</span>
               </div>
 
               <div className="text-center pt-1 space-y-1">

@@ -2,33 +2,42 @@
 
 namespace App\Http\Controllers;
 
-use App\Core\Database;
 use App\Core\Response;
+use App\Http\Middleware\RoleMiddleware;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\AuditLedger;
+use App\Models\Notification;
+use App\Models\UtrRequest;
 
+/**
+ * Class WalletController (Eloquent-powered)
+ *
+ * @package App\Http\Controllers
+ */
 class WalletController {
-    // 1. P2P Fund Transfer
+    /**
+     * 1. P2P Fund Transfer
+     */
     public function transferP2P(array $body): void {
         $amount = floatval($body['amount'] ?? 10000.00);
-        $dist = User::findByRole('distributor');
-        $ret  = User::findByRole('retailer');
+        $dist = User::where('role', 'distributor')->first();
+        $ret  = User::where('role', 'retailer')->first();
         $txnId = 'P2P-' . rand(10000, 99999);
 
         $success = false;
         if ($dist && $ret && $amount > 0) {
             $success = Wallet::transferP2P(
-                senderId: $dist['id'],
-                receiverId: $ret['id'],
+                senderId: $dist->id,
+                receiverId: $ret->id,
                 amount: $amount,
-                tenantId: $dist['tenant_id'],
+                tenantId: $dist->tenant_id,
                 txnId: $txnId
             );
         }
 
-        $senderBal = $dist ? Wallet::getBalanceByUserId($dist['id']) : 440000.00;
-        $recBal    = $ret  ? Wallet::getBalanceByUserId($ret['id'])  : 58750.00;
+        $senderBal = $dist ? Wallet::getBalanceByUserId($dist->id) : 440000.00;
+        $recBal    = $ret  ? Wallet::getBalanceByUserId($ret->id)  : 58750.00;
 
         Response::json([
             'status'                => 'success',
@@ -37,11 +46,13 @@ class WalletController {
             'sender_new_balance'    => $senderBal,
             'recipient_new_balance' => $recBal,
             'settled_at'            => date('c'),
-            'message'               => "₹{$amount} transferred successfully via MVC engine.",
+            'message'               => "₹{$amount} transferred successfully via Eloquent engine.",
         ]);
     }
 
-    // 2. Dynamic UPI QR Code Top-Up
+    /**
+     * 2. Dynamic UPI QR Code Top-Up
+     */
     public function generateUpiQr(array $body): void {
         $amount = floatval($body['amount'] ?? 5000);
         $services = require __DIR__ . '/../../../config/services.php';
@@ -60,32 +71,37 @@ class WalletController {
         ]);
     }
 
-    // 3. Bank UTR Deposit Top-Up Request
+    /**
+     * 3. Bank UTR Deposit Top-Up Request
+     */
     public function requestUtrTopup(array $body): void {
         $amount     = floatval($body['amount'] ?? 50000.00);
         $utrNumber  = strtoupper(trim($body['utr_number'] ?? 'UTR' . time()));
         $bankName   = $body['bank_name'] ?? 'State Bank of India (SBI)';
-        $pdo        = Database::getConnection();
         $requestId  = 'UTR-REQ-' . rand(1000, 9999);
 
-        if ($pdo) {
-            try {
-                $ret = User::findByRole('retailer');
-                if ($ret) {
-                    $stmt = $pdo->prepare("
-                        INSERT INTO utr_requests (tenant_id, user_id, bank_name, utr_number, amount, status)
-                        VALUES (:tid, :uid, :bank, :utr, :amt, 'pending')
-                    ");
-                    $stmt->execute([
-                        'tid'  => $ret['tenant_id'],
-                        'uid'  => $ret['id'],
-                        'bank' => $bankName,
-                        'utr'  => $utrNumber,
-                        'amt'  => $amount,
-                    ]);
-                }
-            } catch (\Throwable $e) {}
-        }
+        try {
+            $ret = User::where('role', 'retailer')->first();
+            if ($ret) {
+                UtrRequest::create([
+                    'tenant_id'  => $ret->tenant_id,
+                    'user_id'    => $ret->id,
+                    'bank_name'  => $bankName,
+                    'utr_number' => $utrNumber,
+                    'amount'     => $amount,
+                    'status'     => 'pending',
+                ]);
+            }
+        } catch (\Throwable $e) {}
+
+        Notification::create([
+            'tenant_id' => $ret?->tenant_id ?? 'a0000000-0000-0000-0000-000000000001',
+            'user_id'   => $ret?->id ?? null,
+            'title'     => "Bank UTR Deposit Submitted (₹" . number_format($amount, 2) . ")",
+            'message'   => "Deposit with UTR '" . $utrNumber . "' submitted for admin verification.",
+            'type'      => "info",
+            'is_read'   => false,
+        ]);
 
         Response::json([
             'status'     => 'success',
@@ -98,72 +114,76 @@ class WalletController {
         ]);
     }
 
-    // 4. Super Admin 1-Click Approve UTR & Instant Credit (RBAC Protected)
+    /**
+     * 4. Super Admin 1-Click Approve UTR & Instant Credit (RBAC Protected)
+     */
     public function approveUtrTopup(array $body): void {
-        \App\Http\Middleware\RoleMiddleware::authorize(['super_admin']);
+        RoleMiddleware::authorize(['super_admin']);
 
         $utrNumber = strtoupper(trim($body['utr_number'] ?? ''));
         $amount    = floatval($body['amount'] ?? 50000.00);
-        $pdo       = Database::getConnection();
 
-        if ($pdo) {
-            try {
-                $ret = User::findByRole('retailer');
-                $adm = User::findByRole('super_admin');
+        try {
+            $ret = User::where('role', 'retailer')->first();
+            $adm = User::where('role', 'super_admin')->first();
 
-                if ($ret && $adm) {
-                    $currBal = Wallet::getBalanceByUserId($ret['id']);
-                    $newBal = $currBal + $amount;
-                    Wallet::updateBalance($ret['id'], $newBal);
+            if ($ret && $adm) {
+                $currBal = Wallet::getBalanceByUserId($ret->id);
+                $newBal = $currBal + $amount;
+                Wallet::updateBalance($ret->id, $newBal);
 
-                    AuditLedger::log(
-                        tenantId: $ret['tenant_id'],
-                        referenceId: $utrNumber ?: 'UTR-APP-101',
-                        actorId: $adm['id'],
-                        actionType: 'BANK_UTR_CREDIT',
-                        debitUserId: null,
-                        creditUserId: $ret['id'],
-                        amount: $amount,
-                        balanceAfter: $newBal,
-                        narration: "UTR Approval: {$utrNumber} credited to Retailer"
-                    );
-                }
-            } catch (\Throwable $e) {}
-        }
+                AuditLedger::log(
+                    tenantId: $ret->tenant_id,
+                    referenceId: $utrNumber ?: 'UTR-APP-101',
+                    actorId: $adm->id,
+                    actionType: 'BANK_UTR_CREDIT',
+                    debitUserId: null,
+                    creditUserId: $ret->id,
+                    amount: $amount,
+                    balanceAfter: $newBal,
+                    narration: "UTR Approval: {$utrNumber} credited to Retailer"
+                );
+
+                UtrRequest::where('utr_number', $utrNumber)->update([
+                    'status'      => 'approved',
+                    'approved_by' => $adm->id,
+                    'approved_at' => now(),
+                ]);
+            }
+        } catch (\Throwable $e) {}
 
         Response::json([
-            'status'     => 'success',
-            'message'    => "UTR {$utrNumber} approved! ₹{$amount} credited to retailer wallet.",
-            'utr_number' => $utrNumber,
-            'credited'   => $amount,
-            'approved_at'=> date('c'),
+            'status'      => 'success',
+            'message'     => "UTR {$utrNumber} approved! ₹{$amount} credited to retailer wallet.",
+            'utr_number'  => $utrNumber,
+            'credited'    => $amount,
+            'approved_at' => date('c'),
         ]);
     }
 
-    // 5. List Pending UTR Top-Up Requests
+    /**
+     * 5. List Pending UTR Top-Up Requests using Eloquent Relationships
+     */
     public function getPendingUtrs(): void {
-        \App\Http\Middleware\RoleMiddleware::authorize(['super_admin']);
+        RoleMiddleware::authorize(['super_admin']);
 
-        $pdo = Database::getConnection();
-        $utrs = [];
+        $utrRequests = UtrRequest::where('status', 'pending')
+            ->with('user')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-        if ($pdo) {
-            try {
-                $rows = $pdo->query("
-                    SELECT u.id, u.user_id as \"retailerId\", usr.full_name as retailer,
-                           u.bank_name as bank, u.utr_number as utr, u.amount,
-                           u.status, u.created_at as date
-                    FROM utr_requests u
-                    JOIN users usr ON u.user_id = usr.id
-                    WHERE u.status = 'pending'
-                    ORDER BY u.created_at DESC
-                ")->fetchAll();
-
-                if (!empty($rows)) {
-                    $utrs = $rows;
-                }
-            } catch (\Throwable $e) {}
-        }
+        $utrs = $utrRequests->map(function($u) {
+            return [
+                'id'         => $u->id,
+                'retailerId' => $u->user_id,
+                'retailer'   => $u->user?->full_name ?? 'Retailer',
+                'bank'       => $u->bank_name,
+                'utr'        => $u->utr_number,
+                'amount'     => (float) $u->amount,
+                'status'     => strtoupper($u->status),
+                'date'       => $u->created_at?->format('d M Y, H:i') ?? date('d M Y, H:i'),
+            ];
+        })->toArray();
 
         if (empty($utrs)) {
             $utrs = [

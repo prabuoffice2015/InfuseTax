@@ -2,33 +2,44 @@
 
 namespace App\Models;
 
-use App\Core\Database;
+use Illuminate\Database\Eloquent\Model;
 
-class ItrFiling {
-    public static function create(array $data): ?string {
-        $pdo = Database::getConnection();
-        if (!$pdo) return null;
+/**
+ * Class ItrFiling (Eloquent Model)
+ *
+ * @package App\Models
+ */
+class ItrFiling extends Model {
+    protected $table = 'itr_filings';
+    protected $keyType = 'string';
+    public $incrementing = false;
+    protected $guarded = [];
 
-        try {
-            $ackNumber = 'ITR2026' . rand(100000, 999999);
-            $stmt = $pdo->prepare("
-                INSERT INTO itr_filings (tenant_id, retailer_id, ack_number, client_name, pan, gross_salary, optimal_regime, tax_savings, net_refund, status)
-                VALUES (:tid, :rid, :ack, :client, :pan, :gross, :regime, :savings, :refund, 'FILED_VERIFIED')
-            ");
-            $res = $stmt->execute([
-                'tid'     => $data['tenant_id'],
-                'rid'     => $data['retailer_id'],
-                'ack'     => $ackNumber,
-                'client'  => $data['client_name'],
-                'pan'     => $data['pan'],
-                'gross'   => $data['gross_salary'],
-                'regime'  => $data['optimal_regime'] ?? 'NEW_REGIME_BUDGET_2025_26',
-                'savings' => $data['tax_savings'] ?? 0.00,
-                'refund'  => $data['net_refund'] ?? 0.00,
-            ]);
-            return $res ? $ackNumber : null;
-        } catch (\Throwable $e) {
-            return null;
-        }
+    protected $casts = [
+        'documents_payload' => 'array',
+        'gross_salary'      => 'float',
+        'tax_savings'       => 'float',
+        'net_refund'        => 'float',
+        'portal_fee'        => 'float',
+        'retailer_margin'   => 'float',
+        'created_at'        => 'datetime',
+        'approved_at'       => 'datetime',
+        'rejected_at'       => 'datetime',
+    ];
+
+    public function retailer() {
+        return $this->belongsTo(User::class, 'retailer_id', 'id');
+    }
+
+    public function operator() {
+        return $this->belongsTo(User::class, 'operator_id', 'id');
+    }
+
+    public function approver() {
+        return $this->belongsTo(User::class, 'approver_id', 'id');
+    }
+
+    public function tenant() {
+        return $this->belongsTo(Tenant::class, 'tenant_id', 'id');
     }
 }

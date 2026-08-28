@@ -2,9 +2,41 @@
 
 namespace App\Models;
 
-use App\Core\Database;
+use Illuminate\Database\Eloquent\Model;
 
-class AuditLedger {
+/**
+ * Class AuditLedger (Eloquent Model)
+ *
+ * @package App\Models
+ */
+class AuditLedger extends Model {
+    protected $table = 'audit_ledger';
+    protected $keyType = 'string';
+    public $incrementing = false;
+    protected $guarded = [];
+
+    protected $casts = [
+        'amount'        => 'float',
+        'balance_after' => 'float',
+        'created_at'    => 'datetime',
+    ];
+
+    public function tenant() {
+        return $this->belongsTo(Tenant::class, 'tenant_id', 'id');
+    }
+
+    public function actor() {
+        return $this->belongsTo(User::class, 'actor_id', 'id');
+    }
+
+    public function debitUser() {
+        return $this->belongsTo(User::class, 'debit_user_id', 'id');
+    }
+
+    public function creditUser() {
+        return $this->belongsTo(User::class, 'credit_user_id', 'id');
+    }
+
     public static function log(
         string $tenantId,
         string $referenceId,
@@ -16,25 +48,19 @@ class AuditLedger {
         float $balanceAfter = 0.00,
         string $narration = ''
     ): bool {
-        $pdo = Database::getConnection();
-        if (!$pdo) return false;
-
         try {
-            $stmt = $pdo->prepare("
-                INSERT INTO audit_ledger (tenant_id, reference_id, actor_id, action_type, debit_user_id, credit_user_id, amount, balance_after, narration)
-                VALUES (:tid, :ref, :actor, :act, :deb, :cred, :amt, :bal, :narr)
-            ");
-            return $stmt->execute([
-                'tid'   => $tenantId,
-                'ref'   => $referenceId,
-                'actor' => $actorId,
-                'act'   => $actionType,
-                'deb'   => $debitUserId,
-                'cred'  => $creditUserId,
-                'amt'   => $amount,
-                'bal'   => $balanceAfter,
-                'narr'  => $narration,
+            self::create([
+                'tenant_id'      => $tenantId,
+                'reference_id'   => $referenceId,
+                'actor_id'       => $actorId,
+                'action_type'    => $actionType,
+                'debit_user_id'  => $debitUserId,
+                'credit_user_id' => $creditUserId,
+                'amount'         => $amount,
+                'balance_after'  => $balanceAfter,
+                'narration'      => $narration,
             ]);
+            return true;
         } catch (\Throwable $e) {
             return false;
         }

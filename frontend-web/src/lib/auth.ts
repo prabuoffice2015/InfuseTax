@@ -6,6 +6,7 @@ export interface AuthUser {
   email: string;
   role: "super_admin" | "distributor" | "retailer" | "operator" | string;
   tenant?: string;
+  mobile?: string;
   city?: string;
   state?: string;
   wallet?: number;

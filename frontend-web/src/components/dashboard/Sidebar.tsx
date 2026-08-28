@@ -22,9 +22,15 @@ import {
   Sliders,
   TrendingUp,
   ShieldCheck,
-  Building
+  Building,
+  FileText,
+  Scale,
+  Megaphone,
+  MessageSquare,
+  FileCheck
 } from "lucide-react";
 import { clearAuthSession, getAuthUser } from "@/lib/auth";
+import { secureApiCall } from "@/lib/crypto";
 
 interface SidebarProps {
   currentRole?: string;
@@ -36,6 +42,7 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
   const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
   const [activeUserRole, setActiveUserRole] = useState(currentRole);
+  const [enabledServices, setEnabledServices] = useState<string[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -43,6 +50,31 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
     if (user?.role) {
       setActiveUserRole(user.role);
     }
+    
+    const loadUserPermissions = () => {
+      secureApiCall("/api/v1/auth/profile").then(res => {
+        if (res.ok && res.data?.user) {
+          if (res.data.user.role) setActiveUserRole(res.data.user.role);
+          if (res.data.user.enabled_services) {
+            const list = res.data.user.enabled_services.split(",").map((s: string) => s.trim());
+            setEnabledServices(list);
+          }
+        }
+      }).catch(() => {});
+    };
+
+    loadUserPermissions();
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("infusetax_permissions_updated", loadUserPermissions);
+      window.addEventListener("infusetax_wallet_updated", loadUserPermissions);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("infusetax_permissions_updated", loadUserPermissions);
+        window.removeEventListener("infusetax_wallet_updated", loadUserPermissions);
+      }
+    };
   }, []);
 
   const handleSignOut = (e: React.MouseEvent) => {
@@ -56,44 +88,55 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
 
     if (role.includes("admin") || role.includes("super_admin") || role === "company") {
       return [
-        { label: "Master Overview", href: "/dashboard/company?tab=overview", tabKey: "overview", icon: LayoutDashboard },
+        { label: "Platform Overview", href: "/dashboard/company?tab=overview", tabKey: "overview", icon: LayoutDashboard },
+        { label: "Company Creation", href: "/dashboard/company?tab=companies", tabKey: "companies", icon: Building },
+        { label: "Company Users (T2/T3/T4)", href: "/dashboard/company?tab=company-users", tabKey: "company-users", icon: Users },
+        { label: "Tier 2 Pricing Setup", href: "/dashboard/company?tab=pricing", tabKey: "pricing", icon: Sliders },
         { label: "UTR Bank Approvals", href: "/dashboard/company?tab=utr", tabKey: "utr", icon: CheckSquare },
-        { label: "Outlets & Users", href: "/dashboard/company?tab=users", tabKey: "users", icon: Users },
-        { label: "Commission Slabs", href: "/dashboard/company?tab=pricing", tabKey: "pricing", icon: Sliders },
-        { label: "White-Label Theming", href: "/dashboard/company?tab=branding", tabKey: "branding", icon: Palette },
+        { label: "Company Announcements", href: "/dashboard/company?tab=announcements", tabKey: "announcements", icon: Megaphone },
+        { label: "White Labeling & Permissions", href: "/dashboard/company?tab=branding", tabKey: "branding", icon: Palette },
+        { label: "💬 WhatsApp Gateway & Alerts", href: "/dashboard/company?tab=whatsapp", tabKey: "whatsapp", icon: MessageSquare },
         { label: "Master Audit Ledger", href: "/dashboard/company?tab=ledger", tabKey: "ledger", icon: History },
       ];
     } else if (role.includes("distributor")) {
       return [
-        { label: "Distributor Hub", href: "/dashboard/distributor", icon: LayoutDashboard },
-        { label: "Downline Retailers", href: "/dashboard/distributor#retailers", icon: Users },
-        { label: "P2P Fund Transfer", href: "/dashboard/distributor#p2p", icon: Wallet },
-        { label: "Commission Analytics", href: "/dashboard/distributor#commissions", icon: TrendingUp },
+        { label: "Distributor Dashboard", href: "/dashboard/distributor?tab=overview", tabKey: "overview", icon: LayoutDashboard, permKey: "overview" },
+        { label: "📋 Service Approvals (T3 & T4)", href: "/dashboard/distributor?tab=service-approvals", tabKey: "service-approvals", icon: FileCheck, permKey: "service_approvals" },
+        { label: "💳 Wallet Approvals (T3 & T4)", href: "/dashboard/distributor?tab=approvals", tabKey: "approvals", icon: CheckSquare, permKey: "float_approvals" },
+        { label: "Tier 3 Pricing Setup", href: "/dashboard/distributor?tab=pricing", tabKey: "pricing", icon: Sliders, permKey: "pricing" },
+        { label: "Network Outlets (Users)", href: "/dashboard/distributor?tab=outlets", tabKey: "outlets", icon: Users, permKey: "outlets" },
+        { label: "Company Announcements", href: "/dashboard/distributor?tab=announcements", tabKey: "announcements", icon: Megaphone, permKey: "announcements" },
+        { label: "Wallet & Master Reports", href: "/dashboard/distributor?tab=reports", tabKey: "reports", icon: History, permKey: "reports" },
       ];
     } else if (role.includes("operator") || role.includes("employee")) {
       return [
-        { label: "Operator POS Desk", href: "/dashboard/operator", icon: LayoutDashboard },
-        { label: "GST Registration", href: "/dashboard/operator#gst", icon: Receipt },
-        { label: "Form 16 ITR Filing", href: "/dashboard/operator#itr", icon: FileSpreadsheet },
-        { label: "PAN & Passport Desks", href: "/dashboard/operator#egov", icon: CreditCard },
-        { label: "Shift Transactions", href: "/dashboard/operator#shift", icon: History },
+        { label: "GST Registration Desk", href: "/dashboard/operator?desk=gst_reg", deskKey: "gst_reg", icon: Building, permKey: "gst_registration" },
+        { label: "IT Filing Desk", href: "/dashboard/operator?desk=itr", deskKey: "itr", icon: FileText, permKey: "itr_filing" },
+        { label: "GST Return Filing", href: "/dashboard/operator?desk=gstr_filing", deskKey: "gstr_filing", icon: FileSpreadsheet, permKey: "gstr_filing" },
+        { label: "Shift Wallet Report", href: "/dashboard/operator?desk=reports", deskKey: "reports", icon: History, permKey: "reports" },
       ];
     } else {
-      // Retailer Store POS
+      // Retailer Store POS (Tier 3)
       return [
-        { label: "Retailer POS Terminal", href: "/dashboard/retailer", icon: LayoutDashboard },
-        { label: "GST Registration Desk", href: "/dashboard/retailer#gst-reg", icon: Building },
-        { label: "GSTR-1 & 3B (AI ITC)", href: "/dashboard/retailer#gstr-filing", icon: FileSpreadsheet },
-        { label: "Form 16 ITR Filing", href: "/dashboard/retailer#itr-filing", icon: Sparkles },
-        { label: "PAN Card Desk (49A)", href: "/dashboard/retailer#pan-desk", icon: CreditCard },
-        { label: "Passport Seva Suvidha", href: "/dashboard/retailer#passport-desk", icon: Plane },
-        { label: "Dynamic E-Certificates", href: "/dashboard/retailer#dynamic-certs", icon: Award },
-        { label: "Document Vault (R2)", href: "/dashboard/retailer#vault", icon: ShieldCheck },
+        { label: "GST Registration Desk", href: "/dashboard/retailer?desk=gst_reg", deskKey: "gst_reg", icon: Building, permKey: "gst_registration" },
+        { label: "IT Filing Desk", href: "/dashboard/retailer?desk=itr", deskKey: "itr", icon: FileText, permKey: "itr_filing" },
+        { label: "GST Return Filing", href: "/dashboard/retailer?desk=gstr_filing", deskKey: "gstr_filing", icon: FileSpreadsheet, permKey: "gstr_filing" },
+        { label: "Company Announcements", href: "/dashboard/retailer?desk=announcements", deskKey: "announcements", icon: Megaphone, permKey: "announcements" },
+        { label: "Document Vault & AI", href: "/dashboard/retailer?desk=vault", deskKey: "vault", icon: ShieldCheck, permKey: "vault" },
+        { label: "Shop Staff (Tier 4)", href: "/dashboard/retailer?desk=staff", deskKey: "staff", icon: Users, permKey: "staff" },
+        { label: "📋 Service Approvals (Tier 4)", href: "/dashboard/retailer?desk=service-approvals", deskKey: "service-approvals", icon: FileCheck, permKey: "service_approvals" },
+        { label: "💳 Float Approvals (Tier 4)", href: "/dashboard/retailer?desk=approvals", deskKey: "approvals", icon: CheckSquare, permKey: "float_approvals" },
+        { label: "Store Audit Ledger", href: "/dashboard/retailer?desk=reports", deskKey: "reports", icon: History, permKey: "reports" },
       ];
     }
   };
 
-  const navItems = getRoleNavItems();
+  const allNavItems = getRoleNavItems();
+  const navItems = allNavItems.filter((item: any) => {
+    if (!item.permKey) return true;
+    if (enabledServices.length === 0 || enabledServices.includes("all")) return true;
+    return enabledServices.includes(item.permKey);
+  });
 
   const getRoleBadge = () => {
     const role = (activeUserRole || currentRole).toLowerCase();
@@ -110,6 +153,7 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
 
   const badge = getRoleBadge();
   const currentTab = searchParams.get("tab") || "overview";
+  const currentDesk = searchParams.get("desk") || "gst_reg";
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between border-r border-slate-800 shrink-0 min-h-screen sticky top-0">
@@ -138,11 +182,17 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
 
         {/* Role-Specific Navigation Items */}
         <nav className="p-3 space-y-1">
-          {navItems.map((item, idx) => {
+          {navItems.map((item: any, idx) => {
             const Icon = item.icon;
-            const isActive = (item as any).tabKey
-              ? pathname === item.href.split("?")[0] && currentTab === (item as any).tabKey
-              : pathname === item.href;
+            let isActive = false;
+
+            if (item.tabKey) {
+              isActive = pathname.startsWith(item.href.split("?")[0]) && currentTab === item.tabKey;
+            } else if (item.deskKey) {
+              isActive = pathname.startsWith(item.href.split("?")[0]) && currentDesk === item.deskKey;
+            } else {
+              isActive = pathname === item.href.split("?")[0];
+            }
 
             return (
               <Link
@@ -154,7 +204,7 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
                     : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                 }`}
               >
-                <Icon className="w-4 h-4 shrink-0" />
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-white" : "text-slate-400"}`} />
                 <span>{item.label}</span>
               </Link>
             );

@@ -142,6 +142,53 @@ class Security {
     }
 
     /**
+     * Retrieves the 32-byte binary cryptographic key for payload encryption.
+     */
+    private static function getEncryptionKey(): string {
+        $secret = getenv('APP_PAYLOAD_KEY') ?: 'infusetax_payload_secret_key_32bytes!!';
+        return hash('sha256', $secret, true);
+    }
+
+    /**
+     * Encrypts arbitrary PHP array/object payload using AES-256-CBC with dynamic IV.
+     *
+     * @param mixed $data Raw data payload.
+     * @return string Base64 encoded IV + ciphertext string.
+     */
+    public static function encryptPayload(mixed $data): string {
+        $key = self::getEncryptionKey();
+        $iv = openssl_random_pseudo_bytes(16);
+        $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $encrypted = openssl_encrypt($json, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+        return base64_encode($iv . $encrypted);
+    }
+
+    /**
+     * Decrypts an incoming AES-256-CBC encrypted payload string.
+     *
+     * @param string $encryptedPayload Base64 encoded payload.
+     * @return array<string, mixed>|null Decrypted associative array, or null on decryption failure.
+     */
+    public static function decryptPayload(string $encryptedPayload): ?array {
+        try {
+            $key = self::getEncryptionKey();
+            $decoded = base64_decode($encryptedPayload);
+            if (!$decoded || strlen($decoded) < 17) {
+                return null;
+            }
+            $iv = substr($decoded, 0, 16);
+            $cipherText = substr($decoded, 16);
+            $decrypted = openssl_decrypt($cipherText, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+            if ($decrypted === false) {
+                return null;
+            }
+            return json_decode($decrypted, true) ?? [];
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
      * Applies OWASP-recommended HTTP security headers to all outgoing responses.
      */
     public static function applySecurityHeaders(): void {
@@ -161,3 +208,4 @@ class Security {
         header('Permissions-Policy: geolocation=(), camera=(), microphone=()');
     }
 }
+

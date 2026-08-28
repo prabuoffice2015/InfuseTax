@@ -11,8 +11,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
-  title: "InfuseTax - Modern Tax Compliance, GST, ITR & E-Governance Platform",
-  description: "AI-Powered B2B FinTech, GST Registration, GSTR-1/3B Filing, Income Tax Returns, PAN, Passport and Dynamic Certificate Platform.",
+  title: "InfuseTax - Modern Tax Compliance, GST & Income Tax Platform",
+  description: "AI-Powered B2B FinTech Platform for GST Registration, Income Tax (IT) Return Filing, and GSTR-1/3B Compliance.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -25,8 +25,8 @@ export const metadata: Metadata = {
     apple: "/brand/infusetax_icon_180.png",
   },
   openGraph: {
-    title: "InfuseTax - AI-Powered Tax & E-Governance Platform",
-    description: "Multi-tenant B2B tax compliance, e-filing, and digital document desks.",
+    title: "InfuseTax - AI-Powered Tax Compliance Platform",
+    description: "Multi-tenant B2B tax compliance for GST Registration, ITR Filing, and GSTR-1/3B Returns.",
     images: ["/brand/infusetax_og_1200x630.png"],
   },
 };

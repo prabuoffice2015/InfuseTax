@@ -35,12 +35,12 @@ export default function HeroTwo() {
 
             {/* Main Headline */}
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.15]">
-              Next-Gen <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-300 to-amber-300">Tax & E-Governance</span> Platform for Businesses
+              Next-Gen <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-300 to-amber-300">Tax &amp; Compliance</span> Platform for Businesses
             </h1>
 
             {/* Subheading */}
             <p className="text-base sm:text-lg text-slate-300 max-w-2xl leading-relaxed">
-              InfuseTax empowers Distributors, Retailers, and Tax Professionals with instant GST return filing, Form 16 AI auto-extraction, PAN & Passport desks, and real-time multi-tier wallet commissions.
+              InfuseTax empowers Distributors, Retailers, and Tax Professionals with instant GST Registration (1a/1b/1c), Income Tax (IT) Return Filing, and GSTR-1 &amp; 3B monthly/quarterly returns.
             </p>
 
             {/* Interactive Service Finder Search Bar */}
@@ -52,11 +52,9 @@ export default function HeroTwo() {
                   onChange={(e) => setSelectedService(e.target.value)}
                   className="bg-transparent text-sm text-white focus:outline-none w-full cursor-pointer"
                 >
-                  <option value="itr" className="bg-slate-900 text-white">Income Tax (ITR) Filing (Form 16 OCR)</option>
-                  <option value="gst" className="bg-slate-900 text-white">GST Registration & GSTR-1/3B Return</option>
-                  <option value="pan" className="bg-slate-900 text-white">PAN Card (New / Correction / Duplicate)</option>
-                  <option value="passport" className="bg-slate-900 text-white">Passport Application & PCC Desk</option>
-                  <option value="certificate" className="bg-slate-900 text-white">Dynamic Government Certificates</option>
+                  <option value="gst_reg" className="bg-slate-900 text-white">1. GST Registration Desk (Sole Prop, Pvt Ltd, LLP)</option>
+                  <option value="itr" className="bg-slate-900 text-white">2. Income Tax (IT) Return Filing (ITR-1, 2, 3, 4)</option>
+                  <option value="gstr" className="bg-slate-900 text-white">3. GST Return Filing (GSTR-1 &amp; GSTR-3B)</option>
                 </select>
               </div>
 

@@ -5,22 +5,18 @@ import Link from "next/link";
 import { 
   Receipt, 
   FileSpreadsheet, 
-  CreditCard, 
-  Plane, 
-  Award, 
-  Wallet, 
-  ArrowUpRight, 
+  Building, 
   Sparkles, 
   CheckCircle2,
   FileCheck2,
-  Building,
   ShieldCheck,
   Zap,
-  Info
+  ArrowUpRight,
+  ArrowRight
 } from "lucide-react";
 
 export default function ServiceGrid() {
-  const [activeTab, setActiveTab] = useState<"all" | "gst" | "itr" | "egov">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "gst" | "itr">("all");
 
   const services = [
     {
@@ -29,16 +25,34 @@ export default function ServiceGrid() {
       icon: Building,
       badge: "Fast Track 3-7 Days",
       badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
-      title: "GST Registration (New GSTIN)",
-      subtitle: "Turnover > ₹40L (Goods) / ₹20L (Services)",
-      desc: "Complete end-to-end GST registration for Proprietorships, Partnerships, LLPs, and Pvt Ltd companies with instant TRN generation, Aadhaar e-KYC authentication, and ARN tracking.",
+      title: "GST Registration Desk",
+      subtitle: "Sole Prop, Pvt Ltd, Partnership & LLP",
+      desc: "Complete end-to-end GST registration with instant TRN generation, mandatory color scanned KYC document verification, Aadhaar e-KYC authentication, and live ARN tracking.",
       features: [
-        "Proprietorship, Partnership, LLP & Pvt Ltd",
-        "Aadhaar OTP e-KYC & TRN Generation",
-        "Principal Place Proof & Rent NOC Review",
+        "1a. Sole Proprietorship (11 Documents Checklist)",
+        "1b. Private Limited Company (Dual Director & COI)",
+        "1c. Partnership Firm / LLP (Firm Deed & RoF)",
         "15-Digit GSTIN Certificate Issuance",
       ],
       color: "from-blue-600 to-indigo-600",
+      link: "/sign-in",
+    },
+    {
+      id: "itr-filing",
+      category: "itr",
+      icon: FileSpreadsheet,
+      badge: "AY 2025-26 Budget Ready",
+      badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      title: "Income Tax (IT) Return Filing",
+      subtitle: "Individual & Business Person Desks",
+      desc: "Comprehensive IT filing engine with ITD login credentials integration, 01st Apr to 31st Mar annual bank statements upload, and AI regime comparison (Old vs. New ₹75k Standard Deduction).",
+      features: [
+        "Individual (Salaried / Pensioner ITR-1 / 2)",
+        "Business Person (ITR-3 / 4 Presumptive)",
+        "Full FY Bank Statements (01 Apr - 31 Mar)",
+        "Instant Verified ITR-V Slip Download",
+      ],
+      color: "from-emerald-600 to-teal-600",
       link: "/sign-in",
     },
     {
@@ -48,87 +62,15 @@ export default function ServiceGrid() {
       badge: "TaxBuddy Standard",
       badgeColor: "bg-indigo-50 text-indigo-700 border-indigo-200",
       title: "GST Return Filing (GSTR-1 & 3B)",
-      subtitle: "Monthly / Quarterly QRMP & CMP-08",
-      desc: "Automated return filing for regular and composition taxpayers. Includes AI-powered GSTR-2B Input Tax Credit (ITC) reconciliation to prevent supplier mismatches and penalty notices.",
+      subtitle: "Monthly / Quarterly QRMP Compliance",
+      desc: "Automated monthly return filing with auto-calculated outward supplies liability, Input Tax Credit (ITC 2B) reconciliation, cash ledger set-off, and instant ARN assignment.",
       features: [
-        "GSTR-1 (Sales Outward) & IFF Invoices",
-        "GSTR-3B (Summary, ITC & Tax Cash Ledger)",
-        "CMP-08 Composition & GSTR-9 Annual Return",
-        "AI Anomaly Checker & ITC Mismatch Alerts",
+        "GSTR-1 (Outward Supplies & Sales B2B/B2C)",
+        "GSTR-3B (Summary Return & Tax Cash Ledger)",
+        "Automated ITC 2B Set-off & Anomaly Alerts",
+        "Instant B2B Tax Invoice & Receipt Printing",
       ],
-      color: "from-indigo-600 to-sky-600",
-      link: "/sign-in",
-    },
-    {
-      id: "itr-filing",
-      category: "itr",
-      icon: FileSpreadsheet,
-      badge: "Form 16 Auto-OCR",
-      badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
-      title: "Income Tax (ITR) Return Filing",
-      subtitle: "ITR-1, ITR-2, ITR-4 Desks",
-      desc: "Upload Form 16 or Bank Statements for instant AI OCR data extraction in <3 seconds. Automatic comparison of Old vs. New Tax Regimes to maximize customer tax refund eligibility.",
-      features: [
-        "Instant Form 16 PDF Auto-Extraction",
-        "Salary, Business & Capital Gains Support",
-        "Chapter VI-A (80C, 80D, 80CCD) Maximizer",
-        "Automated Verified ITR-V Slip Download",
-      ],
-      color: "from-amber-600 to-yellow-600",
-      link: "/sign-in",
-    },
-    {
-      id: "pan-desk",
-      category: "egov",
-      icon: CreditCard,
-      badge: "Instant e-KYC",
-      badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
-      title: "PAN Card Processing Hub",
-      subtitle: "Form 49A, Correction & Duplicate",
-      desc: "Facilitate physical and digital PAN card applications, demographic corrections (Name/DOB/Father's Name), and damaged/lost PAN reprints with Aadhaar OTP e-Sign verification.",
-      features: [
-        "New PAN Application (Form 49A)",
-        "Minor to Major & Demographic Correction",
-        "Instant Admin Acknowledgment Slip Upload",
-        "Integrated Wallet Fee Deduction",
-      ],
-      color: "from-emerald-600 to-teal-600",
-      link: "/sign-in",
-    },
-    {
-      id: "passport-desk",
-      category: "egov",
-      icon: Plane,
-      badge: "Excel Batch Export",
-      badgeColor: "bg-purple-50 text-purple-700 border-purple-200",
-      title: "Passport & PCC Application Desk",
-      subtitle: "Normal, Tatkaal & Police Clearance",
-      desc: "Comprehensive passport filing portal supporting Fresh, Re-issue, and PCC submissions. Features an administrative batch Excel export engine for bulk filing on the passport portal.",
-      features: [
-        "Normal & Tatkaal Application Modes",
-        "Police Clearance Certificate (PCC) Flow",
-        "Batch Excel Export Engine for Portals",
-        "Appointment Slip & Fee Receipt Vault",
-      ],
-      color: "from-purple-600 to-pink-600",
-      link: "/sign-in",
-    },
-    {
-      id: "dynamic-certificates",
-      category: "egov",
-      icon: Award,
-      badge: "Custom JSONB Schema",
-      badgeColor: "bg-rose-50 text-rose-700 border-rose-200",
-      title: "Dynamic Government Certificates",
-      subtitle: "Income, Community, Native, Seva",
-      desc: "Customizable government certificate workflow engine. Super Admins dynamically configure required document attachments, form fields, and service margins with zero code deployments.",
-      features: [
-        "Dynamic JSONB Form & Document Schema",
-        "Community, Income, Native & Legal Heir",
-        "Real-Time Application Status Tracker",
-        "Download Verified Certificate Proofs",
-      ],
-      color: "from-rose-600 to-orange-600",
+      color: "from-indigo-600 to-purple-600",
       link: "/sign-in",
     },
   ];
@@ -147,10 +89,10 @@ export default function ServiceGrid() {
             <span>InfuseTax Core Services</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Integrated Tax, GST & E-Governance Desks
+            The 3 Core Tax & Compliance Desks
           </h2>
           <p className="text-base sm:text-lg text-slate-600">
-            Engineered to industry standards of <strong className="text-slate-800">TaxBuddy</strong> & <strong className="text-slate-800">eTaxPrime</strong> — providing your retail and distributor network with maximum compliance accuracy.
+            Engineered to industry standards of <strong className="text-slate-800">TaxBuddy</strong> & <strong className="text-slate-800">eTaxPrime</strong> — providing your distributor, retailer, and counter network with 100% statutory accuracy.
           </p>
         </div>
 
@@ -159,33 +101,27 @@ export default function ServiceGrid() {
           <div className="inline-flex p-1.5 bg-slate-200/80 rounded-2xl space-x-1">
             <button
               onClick={() => setActiveTab("all")}
-              className={`px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${activeTab === "all" ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
+              className={`px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${activeTab === "all" ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
             >
-              All Services
+              All 3 Services
             </button>
             <button
               onClick={() => setActiveTab("gst")}
-              className={`px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${activeTab === "gst" ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
+              className={`px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${activeTab === "gst" ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
             >
-              GST Services
+              GST Desks (Registration & Returns)
             </button>
             <button
               onClick={() => setActiveTab("itr")}
-              className={`px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${activeTab === "itr" ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
+              className={`px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${activeTab === "itr" ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
             >
-              Income Tax (ITR)
-            </button>
-            <button
-              onClick={() => setActiveTab("egov")}
-              className={`px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${activeTab === "egov" ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
-            >
-              E-Governance
+              Income Tax (IT) Filing
             </button>
           </div>
         </div>
 
-        {/* Services Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* Services Grid (3 Columns) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {filteredServices.map((item) => {
             const Icon = item.icon;
             return (
@@ -199,66 +135,44 @@ export default function ServiceGrid() {
                     <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${item.color} flex items-center justify-center text-white shadow-lg shadow-blue-500/10 group-hover:scale-105 transition-transform duration-300`}>
                       <Icon className="w-7 h-7" />
                     </div>
-                    <span className={`text-[11px] font-bold px-3 py-1 rounded-full border ${item.badgeColor}`}>
+                    <span className={`text-[11px] font-extrabold px-3 py-1 rounded-full border ${item.badgeColor}`}>
                       {item.badge}
                     </span>
                   </div>
 
                   {/* Title & Subtitle */}
-                  <h3 className="text-xl font-bold text-slate-900 mb-1 group-hover:text-blue-700 transition-colors">
+                  <h3 className="text-xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
                     {item.title}
                   </h3>
-                  <div className="text-xs font-semibold text-blue-600 mb-3">
-                    {item.subtitle}
-                  </div>
+                  <div className="text-xs font-semibold text-slate-400 mb-3">{item.subtitle}</div>
 
                   {/* Description */}
-                  <p className="text-xs text-slate-600 leading-relaxed mb-6">
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
                     {item.desc}
                   </p>
 
                   {/* Features List */}
-                  <ul className="space-y-2 mb-6 border-t border-slate-100 pt-5">
+                  <div className="space-y-2.5 mb-8 border-t border-slate-100 pt-5">
                     {item.features.map((feat, idx) => (
-                      <li key={idx} className="flex items-start space-x-2 text-xs font-medium text-slate-700">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <div key={idx} className="flex items-start space-x-2 text-xs text-slate-700 font-medium">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                         <span>{feat}</span>
-                      </li>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
 
-                {/* Card Action Link */}
+                {/* CTA Action */}
                 <Link
                   href={item.link}
-                  className="inline-flex items-center justify-between w-full pt-4 border-t border-slate-100 text-sm font-bold text-blue-700 hover:text-blue-800 transition-colors group/link"
+                  className="w-full py-3 px-4 bg-slate-50 hover:bg-blue-600 text-slate-700 hover:text-white rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center space-x-2 border border-slate-200 hover:border-transparent group/btn"
                 >
-                  <span>Launch Application Desk</span>
-                  <ArrowUpRight className="w-4 h-4 transform group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
+                  <span>Launch Filing Desk</span>
+                  <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
                 </Link>
               </div>
             );
           })}
-        </div>
-
-        {/* Bottom Compliance Guarantee Banner */}
-        <div className="mt-16 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl p-8 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 border border-blue-800/50">
-          <div className="space-y-2 text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start space-x-2 text-amber-400 text-xs font-bold uppercase tracking-wider">
-              <ShieldCheck className="w-4 h-4" />
-              <span>100% Statutory Compliance Guarantee</span>
-            </div>
-            <h4 className="text-xl sm:text-2xl font-bold">Ready to Offer Tax & GST Services at Your Outlet?</h4>
-            <p className="text-xs text-slate-300 max-w-xl">
-              Equip your retail counter or distribution network with instant digital wallets and automated filing desks.
-            </p>
-          </div>
-          <Link
-            href="/sign-in"
-            className="px-6 py-3.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-sm rounded-xl shadow-lg shadow-amber-400/20 transition-all transform hover:scale-[1.02] flex-shrink-0"
-          >
-            Access Partner Portal
-          </Link>
         </div>
       </div>
     </section>

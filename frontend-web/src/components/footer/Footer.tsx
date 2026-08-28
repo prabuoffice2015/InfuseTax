@@ -19,12 +19,13 @@ export default function Footer() {
           {/* Brand Col */}
           <div className="lg:col-span-4 space-y-4">
             <Link href="/" className="inline-block">
-              <div className="relative h-12 w-48 brightness-0 invert opacity-90">
+              <div className="relative h-12 w-48 max-w-[200px] max-h-[48px] brightness-0 invert opacity-90">
                 <Image
                   src="/brand/infusetax_logo_600x200.png"
                   alt="InfuseTax Logo"
-                  fill
-                  className="object-contain object-left"
+                  width={200}
+                  height={48}
+                  className="object-contain object-left max-h-12 w-auto h-auto"
                 />
               </div>
             </Link>
@@ -37,27 +38,27 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Quick Links */}
-          <div className="lg:col-span-2 space-y-3">
-            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Tax Desks</h4>
+          {/* Quick Links: The 3 Core Compliance Desks */}
+          <div className="lg:col-span-3 space-y-3">
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider">The 3 Core Desks</h4>
             <ul className="space-y-2 text-xs">
-              <li><Link href="#services" className="hover:text-amber-400 transition-colors">Income Tax (ITR-1/2/4)</Link></li>
-              <li><Link href="#services" className="hover:text-amber-400 transition-colors">GST Registration</Link></li>
-              <li><Link href="#services" className="hover:text-amber-400 transition-colors">GSTR-1 & GSTR-3B Filing</Link></li>
-              <li><Link href="#services" className="hover:text-amber-400 transition-colors">Form 16 OCR Auto-Fill</Link></li>
-              <li><Link href="#services" className="hover:text-amber-400 transition-colors">TDS Reconciliations</Link></li>
+              <li><Link href="#services" className="hover:text-amber-400 transition-colors">1. GST Registration (1a/1b/1c)</Link></li>
+              <li><Link href="#services" className="hover:text-amber-400 transition-colors">2. Income Tax (IT) Return Filing</Link></li>
+              <li><Link href="#services" className="hover:text-amber-400 transition-colors">3. GST Return Filing (GSTR-1 &amp; 3B)</Link></li>
+              <li><Link href="#ai-copilot" className="hover:text-amber-400 transition-colors">Form 16 OCR &amp; Tax Regime AI</Link></li>
+              <li><Link href="#services" className="hover:text-amber-400 transition-colors">ITC 2B Reconciliation</Link></li>
             </ul>
           </div>
 
-          {/* E-Gov Links */}
-          <div className="lg:col-span-2 space-y-3">
-            <h4 className="text-sm font-bold text-white uppercase tracking-wider">E-Governance</h4>
+          {/* Partner Suite */}
+          <div className="lg:col-span-3 space-y-3">
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Multi-Tier Network</h4>
             <ul className="space-y-2 text-xs">
-              <li><Link href="#services" className="hover:text-amber-400 transition-colors">PAN Card Desk (Form 49A)</Link></li>
-              <li><Link href="#services" className="hover:text-amber-400 transition-colors">Aadhaar Updates Hub</Link></li>
-              <li><Link href="#services" className="hover:text-amber-400 transition-colors">Passport Application Desk</Link></li>
-              <li><Link href="#services" className="hover:text-amber-400 transition-colors">Dynamic Certificates</Link></li>
-              <li><Link href="#services" className="hover:text-amber-400 transition-colors">Voter & Ration Card Desks</Link></li>
+              <li><Link href="/sign-in" className="hover:text-amber-400 transition-colors">Tier 1: Company Super Admin</Link></li>
+              <li><Link href="/sign-in" className="hover:text-amber-400 transition-colors">Tier 2: Master Distributor Desk</Link></li>
+              <li><Link href="/sign-in" className="hover:text-amber-400 transition-colors">Tier 3: Retailer Outlet POS</Link></li>
+              <li><Link href="/sign-in" className="hover:text-amber-400 transition-colors">Tier 4: Operator Counter Terminal</Link></li>
+              <li><Link href="#pricing" className="hover:text-amber-400 transition-colors">Commercial Pricing Plans</Link></li>
             </ul>
           </div>
 

@@ -43,6 +43,34 @@ class AuthMiddleware {
             Response::error('Unauthorized: Invalid, expired, or tampered token. Please re-authenticate.', 401);
         }
 
+        // Enforce User Exists & Company Active state
+        $userId = $claims['sub'] ?? '';
+        $pdo = \App\Core\Database::getConnection();
+        if ($pdo && !empty($userId)) {
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT u.id, u.status as user_status, t.is_active as tenant_is_active, t.company_name
+                    FROM users u
+                    LEFT JOIN tenants t ON u.tenant_id = t.id
+                    WHERE u.id = :uid
+                    LIMIT 1
+                ");
+                $stmt->execute(['uid' => $userId]);
+                $chk = $stmt->fetch(\PDO::FETCH_ASSOC);
+                if (!$chk) {
+                    Response::error('Session expired or user account not found. Please sign in again.', 401);
+                }
+                if (($claims['role'] ?? '') !== 'super_admin') {
+                    if (isset($chk['tenant_is_active']) && !$chk['tenant_is_active']) {
+                        Response::error('Company (' . ($chk['company_name'] ?? 'Tenant Node') . ') is suspended by Super Admin.', 403);
+                    }
+                    if (($chk['user_status'] ?? 'active') !== 'active') {
+                        Response::error('User account is suspended.', 403);
+                    }
+                }
+            } catch (\Throwable $e) {}
+        }
+
         self::$authenticatedUser = $claims;
         return $claims;
     }
