@@ -1,4 +1,4 @@
-# InfuseTax Cloud REST API Dockerfile with Composer & Eloquent ORM
+# InfuseTax Cloud REST API Dockerfile for Render Cloud Deployments
 FROM php:8.3-cli-alpine
 
 # Install system dependencies, PostgreSQL PHP drivers & Composer
@@ -16,14 +16,14 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
-# Copy dependency definitions first for Docker caching
-COPY composer.json /app/
+# Copy dependency definitions from backend directory
+COPY backend/composer.json /app/
 
 # Install PHP dependencies with Eloquent ORM
 RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
 
-# Copy backend source code
-COPY . /app
+# Copy backend source code into /app
+COPY backend /app
 
 # Generate optimized production autoloader
 RUN composer dump-autoload --optimize --no-dev

@@ -41,7 +41,7 @@ class Database {
             'charset'   => 'utf8',
             'prefix'    => '',
             'schema'    => 'public',
-            'sslmode'   => 'prefer',
+            'sslmode'   => getenv('DB_SSLMODE') ?: 'prefer',
         ]);
 
         $capsule->setEventDispatcher(new Dispatcher(new Container));
