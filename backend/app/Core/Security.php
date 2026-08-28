@@ -206,6 +206,19 @@ class Security {
         
         // Restrict browser features and sensors
         header('Permissions-Policy: geolocation=(), camera=(), microphone=()');
+
+        // CORS Headers for Vercel, localhost, and production clients
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
+        header("Access-Control-Allow-Origin: {$origin}");
+        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS, PATCH');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Encrypted-Payload, Accept-Encrypted, Accept');
+        header('Access-Control-Allow-Credentials: true');
+
+        // Handle CORS Pre-flight OPTIONS request immediately
+        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
+            http_response_code(204);
+            exit;
+        }
     }
 }
 

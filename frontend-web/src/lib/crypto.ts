@@ -96,6 +96,17 @@ export async function decryptPayload(base64Payload: string): Promise<any> {
   }
 }
 
+export function resolveApiUrl(url: string): string {
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
+  if (apiBase) {
+    return `${apiBase.replace(/\/+$/, "")}/${url.replace(/^\/+/, "")}`;
+  }
+  return url;
+}
+
 /**
  * High-Security Fetch Wrapper with automatic Auth Headers and optional AES-256 Payload Encryption.
  */
@@ -126,7 +137,7 @@ export async function secureFetch(
     }
   }
 
-  return fetch(url, {
+  return fetch(resolveApiUrl(url), {
     ...options,
     headers,
     body
@@ -181,7 +192,7 @@ export async function secureApiCall(
   }
 
   try {
-    const res = await fetch(url, {
+    const res = await fetch(resolveApiUrl(url), {
       ...options,
       headers,
       body: bodyStr

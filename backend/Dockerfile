@@ -20,13 +20,13 @@ WORKDIR /app
 COPY composer.json /app/
 
 # Install PHP dependencies with Eloquent ORM
-RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --ignore-platform-reqs
 
 # Copy backend source code
 COPY . /app
 
 # Generate optimized production autoloader
-RUN composer dump-autoload --optimize --no-dev
+RUN composer dump-autoload --optimize --no-dev --ignore-platform-reqs
 
 ENV PORT=10000
 EXPOSE 10000
