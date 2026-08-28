@@ -27,7 +27,7 @@ class Security {
      * @return string The 60-character secure bcrypt hash string.
      */
     public static function hashPassword(string $password): string {
-        $cost = (int) (getenv('BCRYPT_ROUNDS') ?: 12);
+        $cost = (int) (getenv('BCRYPT_ROUNDS') ?: 10);
         return password_hash($password, PASSWORD_BCRYPT, ['cost' => $cost]);
     }
 

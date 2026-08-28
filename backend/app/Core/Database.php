@@ -42,6 +42,12 @@ class Database {
             'prefix'    => '',
             'schema'    => 'public',
             'sslmode'   => getenv('DB_SSLMODE') ?: 'prefer',
+            'options'   => [
+                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_TIMEOUT            => 2,
+                PDO::ATTR_PERSISTENT         => true,
+            ],
         ]);
 
         $capsule->setEventDispatcher(new Dispatcher(new Container));

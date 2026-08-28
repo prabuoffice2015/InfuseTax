@@ -130,7 +130,9 @@ class WhatsAppService {
                     'Authorization: Bearer ' . $apiToken,
                     'Content-Type: application/json'
                 ]);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+                curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
                 $resp = curl_exec($ch);
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
