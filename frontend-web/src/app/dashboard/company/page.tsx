@@ -354,21 +354,31 @@ export default function CompanySuperAdminPage() {
   const loadAllData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch Stats
-      const statsRes = await secureApiCall("/api/v1/dashboard/stats");
-      if (statsRes.ok && statsRes.data?.stats) {
-        setStats(statsRes.data.stats);
+      const [
+        statsRes, compRes, usersRes, pricingRes, logsRes, utrRes, ledgerRes, annRes
+      ] = await Promise.allSettled([
+        secureApiCall("/api/v1/dashboard/stats"),
+        secureApiCall("/api/v1/admin/companies"),
+        secureApiCall("/api/v1/admin/users"),
+        secureApiCall("/api/v1/pricing"),
+        secureApiCall("/api/v1/pricing/audit-logs"),
+        secureApiCall("/api/v1/wallet/requests"),
+        secureApiCall("/api/v1/admin/audit-ledger"),
+        secureApiCall("/api/v1/announcements")
+      ]);
+
+      if (statsRes.status === "fulfilled" && statsRes.value.ok && statsRes.value.data?.stats) {
+        setStats(statsRes.value.data.stats);
       }
 
-      // 2. Fetch Companies
-      const compRes = await secureApiCall("/api/v1/admin/companies");
-      if (compRes.ok && compRes.data?.companies) {
-        setCompanies(compRes.data.companies);
-        const targetId = selectedBrandingCompanyId || compRes.data.companies[0]?.id;
+      if (compRes.status === "fulfilled" && compRes.value.ok && compRes.value.data?.companies) {
+        const comps = compRes.value.data.companies;
+        setCompanies(comps);
+        const targetId = selectedBrandingCompanyId || comps[0]?.id;
         if (targetId) {
           if (!selectedCompanyId) setSelectedCompanyId(targetId);
           if (!selectedBrandingCompanyId) setSelectedBrandingCompanyId(targetId);
-          const comp = compRes.data.companies.find((c: any) => c.id === targetId) || compRes.data.companies[0];
+          const comp = comps.find((c: any) => c.id === targetId) || comps[0];
           if (comp) {
             setBrandingSettings({
               company_name: comp.company_name,
@@ -393,38 +403,28 @@ export default function CompanySuperAdminPage() {
         }
       }
 
-      // 3. Fetch Users
-      const usersRes = await secureApiCall("/api/v1/admin/users");
-      if (usersRes.ok && usersRes.data?.users) {
-        setUsers(usersRes.data.users);
+      if (usersRes.status === "fulfilled" && usersRes.value.ok && usersRes.value.data?.users) {
+        setUsers(usersRes.value.data.users);
       }
 
-      // 4. Fetch Pricing & Audit Logs
-      const pricingRes = await secureApiCall("/api/v1/pricing");
-      if (pricingRes.ok && pricingRes.data?.pricing) {
-        setPricings(pricingRes.data.pricing);
-      }
-      const logsRes = await secureApiCall("/api/v1/pricing/audit-logs");
-      if (logsRes.ok && logsRes.data?.logs) {
-        setPriceAuditLogs(logsRes.data.logs);
+      if (pricingRes.status === "fulfilled" && pricingRes.value.ok && pricingRes.value.data?.pricing) {
+        setPricings(pricingRes.value.data.pricing);
       }
 
-      // 5. Fetch UTR Requests
-      const utrRes = await secureApiCall("/api/v1/wallet/requests");
-      if (utrRes.ok && utrRes.data?.requests) {
-        setUtrRequests(utrRes.data.requests);
+      if (logsRes.status === "fulfilled" && logsRes.value.ok && logsRes.value.data?.logs) {
+        setPriceAuditLogs(logsRes.value.data.logs);
       }
 
-      // 6. Fetch Master Audit Ledger
-      const ledgerRes = await secureApiCall("/api/v1/admin/audit-ledger");
-      if (ledgerRes.ok && ledgerRes.data?.ledger) {
-        setMasterLedger(ledgerRes.data.ledger);
+      if (utrRes.status === "fulfilled" && utrRes.value.ok && utrRes.value.data?.requests) {
+        setUtrRequests(utrRes.value.data.requests);
       }
 
-      // 7. Fetch Announcements
-      const annRes = await secureApiCall("/api/v1/announcements");
-      if (annRes.ok && annRes.data?.announcements) {
-        setAnnouncements(annRes.data.announcements);
+      if (ledgerRes.status === "fulfilled" && ledgerRes.value.ok && ledgerRes.value.data?.ledger) {
+        setMasterLedger(ledgerRes.value.data.ledger);
+      }
+
+      if (annRes.status === "fulfilled" && annRes.value.ok && annRes.value.data?.announcements) {
+        setAnnouncements(annRes.value.data.announcements);
       }
     } catch (err) {
       console.error("Failed to load dashboard data:", err);

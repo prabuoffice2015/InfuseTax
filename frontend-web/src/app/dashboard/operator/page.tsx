@@ -197,25 +197,28 @@ export default function OperatorTerminalPage() {
         setAnnouncements(annData.announcements);
       }
 
-      // Profile & Float Balance
-      const { ok: pOk, data: profileData } = await secureApiCall("/api/v1/auth/profile");
-      if (pOk && profileData.user) {
-        setUserProfile(profileData.user);
-        if (profileData.user.wallet !== undefined && profileData.user.wallet !== null) {
-          setCounterBalance(parseFloat(profileData.user.wallet));
+      const [
+        pRes, lRes, fRes
+      ] = await Promise.allSettled([
+        secureApiCall("/api/v1/auth/profile"),
+        secureApiCall("/api/v1/admin/audit-ledger"),
+        secureApiCall("/api/v1/filings/recent")
+      ]);
+
+      if (pRes.status === "fulfilled" && pRes.value.ok && pRes.value.data?.user) {
+        const u = pRes.value.data.user;
+        setUserProfile(u);
+        if (u.wallet !== undefined && u.wallet !== null) {
+          setCounterBalance(parseFloat(u.wallet));
         }
       }
 
-      // Audit Ledger / Wallet Transaction History
-      const { ok: lOk, data: ledgerData } = await secureApiCall("/api/v1/admin/audit-ledger");
-      if (lOk && ledgerData.ledger) {
-        setAuditLedger(ledgerData.ledger);
+      if (lRes.status === "fulfilled" && lRes.value.ok && lRes.value.data?.ledger) {
+        setAuditLedger(lRes.value.data.ledger);
       }
 
-      // Recent Filings with Verification and Rejection metadata
-      const { ok: fOk, data: filingsData } = await secureApiCall("/api/v1/filings/recent");
-      if (fOk && filingsData.filings) {
-        setShiftFilings(filingsData.filings.map((f: any) => ({
+      if (fRes.status === "fulfilled" && fRes.value.ok && fRes.value.data?.filings) {
+        setShiftFilings(fRes.value.data.filings.map((f: any) => ({
           id: f.id,
           customer: f.client,
           service: f.service,
@@ -242,7 +245,7 @@ export default function OperatorTerminalPage() {
     const handleUpdate = () => loadOperatorData();
     window.addEventListener("infusetax_wallet_updated", handleUpdate);
     window.addEventListener("focus", handleUpdate);
-    const interval = setInterval(loadOperatorData, 8000);
+    const interval = setInterval(loadOperatorData, 30000);
 
     return () => {
       window.removeEventListener("infusetax_wallet_updated", handleUpdate);

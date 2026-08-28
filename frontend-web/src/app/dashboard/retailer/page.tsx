@@ -256,23 +256,33 @@ export default function RetailerDashboardPage() {
     setLoadingData(true);
 
     try {
-      // 1. Profile
-      const { ok: pOk, data: profileData } = await secureApiCall("/api/v1/auth/profile");
-      if (pOk && profileData.user) {
-        setUserProfile(profileData.user);
-        if (profileData.user.wallet !== undefined && profileData.user.wallet !== null) {
-          setCounterWalletBalance(parseFloat(profileData.user.wallet));
+      const [
+        pRes, fRes, sRes, prRes, aRes, saRes, rRes, lRes
+      ] = await Promise.allSettled([
+        secureApiCall("/api/v1/auth/profile"),
+        secureApiCall("/api/v1/filings/recent"),
+        secureApiCall("/api/v1/retailer/operators"),
+        secureApiCall("/api/v1/pricing"),
+        secureApiCall("/api/v1/announcements"),
+        secureApiCall("/api/v1/service-approvals/list"),
+        secureApiCall("/api/v1/wallet/requests"),
+        secureApiCall("/api/v1/admin/audit-ledger")
+      ]);
+
+      if (pRes.status === "fulfilled" && pRes.value.ok && pRes.value.data?.user) {
+        const u = pRes.value.data.user;
+        setUserProfile(u);
+        if (u.wallet !== undefined && u.wallet !== null) {
+          setCounterWalletBalance(parseFloat(u.wallet));
         }
-        if (profileData.user.enabled_services) {
-          const list = profileData.user.enabled_services.split(",").map((s: string) => s.trim());
+        if (u.enabled_services) {
+          const list = u.enabled_services.split(",").map((s: string) => s.trim());
           setTenantPermissions(list);
         }
       }
 
-      // 2. Recent Filings
-      const { ok: fOk, data: filingsData } = await secureApiCall("/api/v1/filings/recent");
-      if (fOk && filingsData.filings) {
-        setFilings(filingsData.filings.map((f: any) => ({
+      if (fRes.status === "fulfilled" && fRes.value.ok && fRes.value.data?.filings) {
+        setFilings(fRes.value.data.filings.map((f: any) => ({
           id: f.id,
           client: f.client,
           service: f.service,
@@ -288,40 +298,28 @@ export default function RetailerDashboardPage() {
         })));
       }
 
-      // 3. Shop Staff
-      const { ok: sOk, data: staffData } = await secureApiCall("/api/v1/retailer/operators");
-      if (sOk && staffData.operators) {
-        setStaffMembers(staffData.operators);
+      if (sRes.status === "fulfilled" && sRes.value.ok && sRes.value.data?.operators) {
+        setStaffMembers(sRes.value.data.operators);
       }
 
-      // Dynamic 5-Service Pricing Matrix
-      const { ok: prOk, data: priceData } = await secureApiCall("/api/v1/pricing");
-      if (prOk && priceData.pricing) {
-        setPricingList(priceData.pricing);
+      if (prRes.status === "fulfilled" && prRes.value.ok && prRes.value.data?.pricing) {
+        setPricingList(prRes.value.data.pricing);
       }
 
-      // Announcements
-      const { ok: aOk, data: annData } = await secureApiCall("/api/v1/announcements");
-      if (aOk && annData.announcements) {
-        setAnnouncements(annData.announcements);
+      if (aRes.status === "fulfilled" && aRes.value.ok && aRes.value.data?.announcements) {
+        setAnnouncements(aRes.value.data.announcements);
       }
 
-      // 3b. Service Document Approvals
-      const { ok: saOk, data: servData } = await secureApiCall("/api/v1/service-approvals/list");
-      if (saOk && servData.applications) {
-        setServiceApplications(servData.applications);
+      if (saRes.status === "fulfilled" && saRes.value.ok && saRes.value.data?.applications) {
+        setServiceApplications(saRes.value.data.applications);
       }
 
-      // 4. Wallet Requests
-      const { ok: rOk, data: reqData } = await secureApiCall("/api/v1/wallet/requests");
-      if (rOk && reqData.requests) {
-        setOperatorRequests(reqData.requests);
+      if (rRes.status === "fulfilled" && rRes.value.ok && rRes.value.data?.requests) {
+        setOperatorRequests(rRes.value.data.requests);
       }
 
-      // 5. Scoped Ledger
-      const { ok: lOk, data: ledgerData } = await secureApiCall("/api/v1/admin/audit-ledger");
-      if (lOk && ledgerData.ledger) {
-        setAuditLedger(ledgerData.ledger);
+      if (lRes.status === "fulfilled" && lRes.value.ok && lRes.value.data?.ledger) {
+        setAuditLedger(lRes.value.data.ledger);
       }
     } catch (e) {
       console.error("Error loading retailer data:", e);
@@ -336,7 +334,7 @@ export default function RetailerDashboardPage() {
     const handleUpdate = () => loadAllData();
     window.addEventListener("infusetax_wallet_updated", handleUpdate);
     window.addEventListener("focus", handleUpdate);
-    const interval = setInterval(loadAllData, 8000);
+    const interval = setInterval(loadAllData, 30000);
 
     return () => {
       window.removeEventListener("infusetax_wallet_updated", handleUpdate);

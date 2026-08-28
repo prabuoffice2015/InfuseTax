@@ -330,68 +330,68 @@ export default function DistributorDashboardPage() {
     setActiveUser(user);
 
     try {
-      // 1. Fetch Outlets
-      const outletsRes = await secureApiCall("/api/v1/distributor/outlets");
-      if (outletsRes.ok && outletsRes.data?.outlets) {
-        setOutlets(outletsRes.data.outlets);
-        const retCount = outletsRes.data.outlets.filter((o: any) => o.role === 'retailer').length;
-        const opCount = outletsRes.data.outlets.filter((o: any) => o.role === 'operator').length;
-        const totalLiquidity = outletsRes.data.outlets.reduce((acc: number, o: any) => acc + parseFloat(o.wallet || 0), 0);
+      const [
+        outletsRes, pricingRes, auditRes, reqRes, ledgerRes, annRes, profRes, servRes
+      ] = await Promise.allSettled([
+        secureApiCall("/api/v1/distributor/outlets"),
+        secureApiCall("/api/v1/pricing"),
+        secureApiCall("/api/v1/pricing/audit-logs"),
+        secureApiCall("/api/v1/wallet/requests"),
+        secureApiCall("/api/v1/admin/audit-ledger"),
+        secureApiCall("/api/v1/announcements"),
+        secureApiCall("/api/v1/auth/profile"),
+        secureApiCall("/api/v1/service-approvals/list")
+      ]);
+
+      if (outletsRes.status === "fulfilled" && outletsRes.value.ok && outletsRes.value.data?.outlets) {
+        const outList = outletsRes.value.data.outlets;
+        setOutlets(outList);
+        const retCount = outList.filter((o: any) => o.role === 'retailer').length;
+        const opCount = outList.filter((o: any) => o.role === 'operator').length;
+        const totalLiquidity = outList.reduce((acc: number, o: any) => acc + parseFloat(o.wallet || 0), 0);
         setStats(prev => ({
           ...prev,
-          total_outlets: outletsRes.data.outlets.length,
+          total_outlets: outList.length,
           total_retailers: retCount,
           total_operators: opCount,
           downline_liquidity: totalLiquidity
         }));
       }
 
-      // 2. Fetch Pricing
-      const pricingRes = await secureApiCall("/api/v1/pricing");
-      if (pricingRes.ok && pricingRes.data?.pricing) {
-        setDirectPricing(pricingRes.data.pricing);
+      if (pricingRes.status === "fulfilled" && pricingRes.value.ok && pricingRes.value.data?.pricing) {
+        setDirectPricing(pricingRes.value.data.pricing);
       }
 
-      // 3. Fetch Pricing Audit Logs
-      const auditRes = await secureApiCall("/api/v1/pricing/audit-logs");
-      if (auditRes.ok && auditRes.data?.logs) {
-        setPriceAuditLogs(auditRes.data.logs);
+      if (auditRes.status === "fulfilled" && auditRes.value.ok && auditRes.value.data?.logs) {
+        setPriceAuditLogs(auditRes.value.data.logs);
       }
 
-      // 4. Fetch Wallet Requests (T3/T4)
-      const reqRes = await secureApiCall("/api/v1/wallet/requests");
-      if (reqRes.ok && reqRes.data?.requests) {
-        setWalletRequests(reqRes.data.requests);
-        const pendingCount = reqRes.data.requests.filter((r: any) => r.status === 'pending').length;
+      if (reqRes.status === "fulfilled" && reqRes.value.ok && reqRes.value.data?.requests) {
+        const reqList = reqRes.value.data.requests;
+        setWalletRequests(reqList);
+        const pendingCount = reqList.filter((r: any) => r.status === 'pending').length;
         setStats(prev => ({ ...prev, pending_approvals: pendingCount }));
       }
 
-      // 5. Fetch Scoped Audit Ledger
-      const ledgerRes = await secureApiCall("/api/v1/admin/audit-ledger");
-      if (ledgerRes.ok && ledgerRes.data?.ledger) {
-        setMasterLedger(ledgerRes.data.ledger);
+      if (ledgerRes.status === "fulfilled" && ledgerRes.value.ok && ledgerRes.value.data?.ledger) {
+        setMasterLedger(ledgerRes.value.data.ledger);
       }
 
-      // 6. Fetch Announcements
-      const annRes = await secureApiCall("/api/v1/announcements");
-      if (annRes.ok && annRes.data?.announcements) {
-        setAnnouncements(annRes.data.announcements);
+      if (annRes.status === "fulfilled" && annRes.value.ok && annRes.value.data?.announcements) {
+        setAnnouncements(annRes.value.data.announcements);
       }
 
-      // 0. Fetch User Profile and Tenant Permissions
-      const profRes = await secureApiCall("/api/v1/auth/profile");
-      if (profRes.ok && profRes.data?.user) {
-        setActiveUser(profRes.data.user);
-        if (profRes.data.user.enabled_services) {
-          const list = profRes.data.user.enabled_services.split(",").map((s: string) => s.trim());
+      if (profRes.status === "fulfilled" && profRes.value.ok && profRes.value.data?.user) {
+        const u = profRes.value.data.user;
+        setActiveUser(u);
+        if (u.enabled_services) {
+          const list = u.enabled_services.split(",").map((s: string) => s.trim());
           setTenantPermissions(list);
         }
       }
 
-      // 7. Fetch Service Document Approvals (T3 & T4)
-      const servRes = await secureApiCall("/api/v1/service-approvals/list");
-      if (servRes.ok && servRes.data?.applications) {
-        setServiceApplications(servRes.data.applications);
+      if (servRes.status === "fulfilled" && servRes.value.ok && servRes.value.data?.applications) {
+        setServiceApplications(servRes.value.data.applications);
       }
     } catch (err) {
       console.error("Failed to load distributor data:", err);
