@@ -31,7 +31,7 @@ class AuthController {
      */
     public function login(array $body): void {
         // 1. Sanitize Inputs
-        $identifier = Security::sanitizeString($body['identifier'] ?? '');
+        $identifier = Security::sanitizeString($body['identifier'] ?? ($body['email'] ?? ($body['mobile'] ?? '')));
         $password   = $body['password'] ?? '';
         $adminPin   = Security::sanitizeString($body['admin_pin'] ?? '');
 

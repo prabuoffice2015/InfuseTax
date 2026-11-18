@@ -65,13 +65,23 @@ class Router {
         // Transparently handle AES-256 encrypted payload envelopes from frontend
         if (isset($body['_payload']) && is_string($body['_payload'])) {
             $decrypted = Security::decryptPayload($body['_payload']);
-            if ($decrypted !== null) {
+            if ($decrypted !== null && is_array($decrypted)) {
                 $body = $decrypted;
+            } else {
+                $fallback = json_decode($body['_payload'], true);
+                if (is_array($fallback)) {
+                    $body = $fallback;
+                }
             }
         } elseif (isset($body['_encrypted_payload']) && is_string($body['_encrypted_payload'])) {
             $decrypted = Security::decryptPayload($body['_encrypted_payload']);
-            if ($decrypted !== null) {
+            if ($decrypted !== null && is_array($decrypted)) {
                 $body = $decrypted;
+            } else {
+                $fallback = json_decode($body['_encrypted_payload'], true);
+                if (is_array($fallback)) {
+                    $body = $fallback;
+                }
             }
         }
 

@@ -165,8 +165,9 @@ export async function secureApiCall(
   let bodyStr: string | undefined = undefined;
 
   if (options.body !== undefined && options.body !== null) {
+    const hasWebCrypto = typeof window !== "undefined" && !!window.crypto && !!window.crypto.subtle;
     if (typeof options.body === "string") {
-      if (options.encrypt !== false) {
+      if (options.encrypt !== false && hasWebCrypto) {
         try {
           const parsed = JSON.parse(options.body);
           const encrypted = await encryptPayload(parsed);
@@ -178,7 +179,7 @@ export async function secureApiCall(
         bodyStr = options.body;
       }
     } else {
-      if (options.encrypt !== false) {
+      if (options.encrypt !== false && hasWebCrypto) {
         try {
           const encrypted = await encryptPayload(options.body);
           bodyStr = JSON.stringify({ _payload: encrypted });
