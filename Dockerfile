@@ -1,10 +1,11 @@
 # ==============================================================================
 # InfuseTax Enterprise High-Concurrency Cloud Dockerfile (PHP 8.3 FPM + Nginx + OPcache)
+# Hardened Production Security (OWASP Headers, Dotfile Protection, Zero Version Leaks)
 # ==============================================================================
 FROM php:8.3-fpm-alpine
 
-# 1. Install System Dependencies, PostgreSQL Drivers, Nginx & Composer
-RUN apk add --no-cache \
+# 1. Update OS Packages (Patches known Alpine CVEs) & Install Dependencies
+RUN apk update && apk upgrade --no-cache && apk add --no-cache \
     nginx \
     postgresql-dev \
     libzip-dev \
@@ -17,7 +18,7 @@ RUN apk add --no-cache \
     composer \
     && docker-php-ext-install pdo pdo_pgsql pgsql bcmath mbstring gd opcache
 
-# 2. Configure High-Performance PHP OPcache & FPM Pool
+# 2. Configure High-Performance PHP OPcache & Strict Security Controls
 RUN { \
         echo 'opcache.enable=1'; \
         echo 'opcache.memory_consumption=64'; \
@@ -25,6 +26,7 @@ RUN { \
         echo 'opcache.max_accelerated_files=10000'; \
         echo 'opcache.revalidate_freq=0'; \
         echo 'opcache.validate_timestamps=0'; \
+        echo 'expose_php = Off'; \
     } > /usr/local/etc/php/conf.d/opcache-recommended.ini \
     && { \
         echo '[www]'; \
@@ -50,7 +52,7 @@ RUN composer dump-autoload --optimize --no-dev --ignore-platform-reqs \
     && chown -R www-data:www-data /app \
     && chmod -R 755 /app
 
-# 5. Configure Nginx for Dynamic Cloud Port Binding
+# 5. Configure Nginx with OWASP Hardening & Dotfile Protection
 RUN mkdir -p /run/nginx && { \
         echo 'server {'; \
         echo '    listen __PORT__ default_server;'; \
@@ -58,6 +60,11 @@ RUN mkdir -p /run/nginx && { \
         echo '    root /app/public;'; \
         echo '    index index.php index.html;'; \
         echo '    charset utf-8;'; \
+        echo '    server_tokens off;'; \
+        echo '    add_header X-Frame-Options "SAMEORIGIN" always;'; \
+        echo '    add_header X-Content-Type-Options "nosniff" always;'; \
+        echo '    add_header X-XSS-Protection "1; mode=block" always;'; \
+        echo '    add_header Referrer-Policy "strict-origin-when-cross-origin" always;'; \
         echo '    gzip on;'; \
         echo '    gzip_types application/json text/plain text/css application/javascript;'; \
         echo '    client_max_body_size 50M;'; \
@@ -74,7 +81,11 @@ RUN mkdir -p /run/nginx && { \
         echo '        fastcgi_read_timeout 60s;'; \
         echo '        fastcgi_send_timeout 60s;'; \
         echo '    }'; \
-        echo '    location ~ /\.ht { deny all; }'; \
+        echo '    location ~ /\.(?!well-known).* {'; \
+        echo '        deny all;'; \
+        echo '        access_log off;'; \
+        echo '        log_not_found off;'; \
+        echo '    }'; \
         echo '}'; \
     } > /etc/nginx/http.d/default.conf
 
