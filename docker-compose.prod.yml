@@ -1,5 +1,5 @@
 services:
-  # 1. Reverse Proxy Gateway (Nginx) - Port 80 & 443 for Production
+  # 1. Reverse Proxy Gateway (Nginx) - Port 80 & 443
   nginx:
     image: nginx:alpine
     container_name: infusetax_nginx
@@ -10,7 +10,6 @@ services:
     volumes:
       - ./docker/nginx/production.conf:/etc/nginx/conf.d/default.conf
       - ./backend:/var/www/backend:ro
-      - certs_data:/etc/letsencrypt
     depends_on:
       - frontend
       - backend
@@ -30,7 +29,7 @@ services:
     networks:
       - infusetax_network
 
-  # 3. Backend REST API (PHP 8.3-FPM)
+  # 3. Backend REST API (PHP 8.3-FPM) - Reads secrets securely from backend/.env
   backend:
     build:
       context: ./docker/php
@@ -39,16 +38,8 @@ services:
     restart: always
     volumes:
       - ./backend:/var/www/backend
-    environment:
-      DB_CONNECTION: pgsql
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_DATABASE: infusetax_db
-      DB_USERNAME: infusetax_user
-      DB_PASSWORD: infusetax_secure_password
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      APP_URL: https://taxpartner.in
+    env_file:
+      - ./backend/.env
     depends_on:
       - postgres
       - redis
@@ -60,10 +51,12 @@ services:
     image: postgres:16-alpine
     container_name: infusetax_postgres
     restart: always
+    env_file:
+      - ./backend/.env
     environment:
-      POSTGRES_DB: infusetax_db
-      POSTGRES_USER: infusetax_user
-      POSTGRES_PASSWORD: infusetax_secure_password
+      POSTGRES_DB: ${DB_DATABASE:-infusetax_db}
+      POSTGRES_USER: ${DB_USERNAME:-infusetax_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-infusetax_secure_password}
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
@@ -90,4 +83,3 @@ networks:
 volumes:
   postgres_data:
   redis_data:
-  certs_data:
