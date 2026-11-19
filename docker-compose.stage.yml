@@ -1,0 +1,84 @@
+services:
+  # 1. Staging Reverse Proxy Gateway (Nginx) - Port 8081
+  nginx_stage:
+    image: nginx:alpine
+    container_name: infusetax_stage_nginx
+    restart: always
+    ports:
+      - "8081:80"
+    volumes:
+      - ./docker/nginx/staging.conf:/etc/nginx/conf.d/default.conf
+      - ./backend:/var/www/backend:ro
+    depends_on:
+      - frontend_stage
+      - backend_stage
+    networks:
+      - infusetax_stage_network
+
+  # 2. Staging Frontend Web Application (Next.js) - Port 3081 internal
+  frontend_stage:
+    build:
+      context: ./frontend-web
+      dockerfile: Dockerfile
+    container_name: infusetax_stage_frontend
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    networks:
+      - infusetax_stage_network
+
+  # 3. Staging Backend REST API (PHP 8.3-FPM)
+  backend_stage:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: infusetax_stage_backend
+    restart: always
+    volumes:
+      - ./backend:/var/www/backend
+    env_file:
+      - ./backend/.env.stage
+    depends_on:
+      - postgres_stage
+      - redis_stage
+    networks:
+      - infusetax_stage_network
+
+  # 4. Staging PostgreSQL 16 Database - Port 5433
+  postgres_stage:
+    image: postgres:16-alpine
+    container_name: infusetax_stage_postgres
+    restart: always
+    env_file:
+      - ./backend/.env.stage
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-infusetax_stage_db}
+      POSTGRES_USER: ${DB_USERNAME:-infusetax_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-infusetax_secure_password}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres_stage_data:/var/lib/postgresql/data
+    networks:
+      - infusetax_stage_network
+
+  # 5. Staging Redis 7 Cache - Port 6380
+  redis_stage:
+    image: redis:7-alpine
+    container_name: infusetax_stage_redis
+    restart: always
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - redis_stage_data:/data
+    networks:
+      - infusetax_stage_network
+
+networks:
+  infusetax_stage_network:
+    driver: bridge
+
+volumes:
+  postgres_stage_data:
+  redis_stage_data:
