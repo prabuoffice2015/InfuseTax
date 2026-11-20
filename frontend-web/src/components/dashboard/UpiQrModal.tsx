@@ -31,8 +31,8 @@ export default function UpiQrModal({ isOpen, onClose, onSuccess, userRole = "Ret
   const [isPaid, setIsPaid] = useState<boolean>(false);
   const [txnRef, setTxnRef] = useState<string>("");
 
-  const VPA = "infusetax.retail@icici";
-  const PAYEE_NAME = "InfuseTax Technologies Pvt Ltd";
+  const VPA = "taxpartner.retail@icici";
+  const PAYEE_NAME = "TaxPartner Technologies Pvt Ltd";
 
   useEffect(() => {
     if (isOpen) {
@@ -199,7 +199,7 @@ export default function UpiQrModal({ isOpen, onClose, onSuccess, userRole = "Ret
                   <rect x="95" y="75" width="35" height="15" fill="#334155" />
                   <rect x="140" y="70" width="45" height="12" fill="#334155" />
 
-                  {/* Center InfuseTax Logo Badge */}
+                  {/* Center TaxPartner Logo Badge */}
                   <rect x="75" y="75" width="50" height="50" rx="10" fill="#1E40AF" />
                   <text x="100" y="105" fill="white" fontSize="16" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">₹</text>
 

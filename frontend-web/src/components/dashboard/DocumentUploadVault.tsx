@@ -48,7 +48,7 @@ export default function DocumentUploadVault({
       size: "1.4 MB",
       type: "pdf",
       uploadedAt: "23 Aug 2026, 14:15",
-      r2Url: "https://r2.infusetax.com/vault/encrypted_ebill_9081.pdf",
+      r2Url: "https://r2.taxpartner.in/vault/encrypted_ebill_9081.pdf",
       encrypted: true,
     },
     {
@@ -58,7 +58,7 @@ export default function DocumentUploadVault({
       size: "2.8 MB",
       type: "pdf",
       uploadedAt: "23 Aug 2026, 15:30",
-      r2Url: "https://r2.infusetax.com/vault/encrypted_form16_9082.pdf",
+      r2Url: "https://r2.taxpartner.in/vault/encrypted_form16_9082.pdf",
       encrypted: true,
     },
     {
@@ -68,7 +68,7 @@ export default function DocumentUploadVault({
       size: "890 KB",
       type: "image",
       uploadedAt: "23 Aug 2026, 16:05",
-      r2Url: "https://r2.infusetax.com/vault/encrypted_aadhaar_9083.jpg",
+      r2Url: "https://r2.taxpartner.in/vault/encrypted_aadhaar_9083.jpg",
       encrypted: true,
     },
   ]);
@@ -91,7 +91,7 @@ export default function DocumentUploadVault({
         size: `${(Math.random() * 2 + 0.5).toFixed(1)} MB`,
         type: isPdf ? "pdf" : "image",
         uploadedAt: "Just now",
-        r2Url: `https://r2.infusetax.com/vault/encrypted_${fileName}`,
+        r2Url: `https://r2.taxpartner.in/vault/encrypted_${fileName}`,
         encrypted: true,
       };
 

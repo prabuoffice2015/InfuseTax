@@ -281,12 +281,12 @@ export default function CompanySuperAdminPage() {
   // 6. White Labeling & Permissions
   const [selectedBrandingCompanyId, setSelectedBrandingCompanyId] = useState<string>("a0000000-0000-0000-0000-000000000001");
   const [brandingSettings, setBrandingSettings] = useState({
-    company_name: "InfuseTax Technologies Pvt Ltd",
-    domain: "tax.infusetax.com",
-    dlt_sender_id: "INFUST",
-    primary_color: "#1E40AF",
-    secondary_color: "#F59E0B",
-    logo_url: "https://vault.infusetax.com/brand/infusetax_logo.png"
+    company_name: "TaxPartner Technologies Pvt Ltd",
+    domain: "taxpartner.in",
+    dlt_sender_id: "TXPRTN",
+    primary_color: "#2563EB",
+    secondary_color: "#1E293B",
+    logo_url: "/brand/taxpartner_logo_600x200.png"
   });
   const [enabledServices, setEnabledServices] = useState<{ [key: string]: boolean }>({
     gst_registration: true,
@@ -497,7 +497,7 @@ export default function CompanySuperAdminPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `InfuseTax_Master_Audit_Ledger_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute("download", `TaxPartner_Master_Audit_Ledger_${new Date().toISOString().slice(0,10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

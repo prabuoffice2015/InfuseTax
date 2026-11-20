@@ -350,7 +350,7 @@ export default function AnnouncementsDesk({
               <div>
                 <div className="text-[10px] uppercase font-bold text-slate-400">Broadcast Authority</div>
                 <div className="font-extrabold text-slate-800 mt-0.5">
-                  {selectedAnnouncement.company_name || "InfuseTax Network Office"}
+                  {selectedAnnouncement.company_name || "TaxPartner Network Office"}
                 </div>
               </div>
             </div>

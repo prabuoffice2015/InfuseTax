@@ -19,10 +19,10 @@ export default function Footer() {
           {/* Brand Col */}
           <div className="lg:col-span-4 space-y-4">
             <Link href="/" className="inline-block">
-              <div className="relative h-12 w-48 max-w-[200px] max-h-[48px] brightness-0 invert opacity-90">
+              <div className="relative h-12 w-48 max-w-[200px] max-h-[48px] opacity-90">
                 <Image
-                  src="/brand/infusetax_logo_600x200.png"
-                  alt="InfuseTax Logo"
+                  src="/brand/taxpartner_logo_white_600x200.png"
+                  alt="TaxPartner Logo"
                   width={200}
                   height={48}
                   className="object-contain object-left max-h-12 w-auto h-auto"
@@ -30,7 +30,7 @@ export default function Footer() {
               </div>
             </Link>
             <p className="text-slate-400 text-xs leading-relaxed max-w-sm">
-              InfuseTax is a comprehensive AI-powered B2B FinTech, Tax Compliance & E-Governance platform. Enabling retailers, distributors, and enterprises with end-to-end digital filing desks.
+              TaxPartner is a comprehensive AI-powered B2B FinTech, Tax Compliance & E-Governance platform. Enabling retailers, distributors, and enterprises with end-to-end digital filing desks.
             </p>
             <div className="flex items-center space-x-2 text-emerald-400 font-semibold pt-1">
               <ShieldCheck className="w-4 h-4" />
@@ -68,7 +68,7 @@ export default function Footer() {
             <div className="space-y-2.5 text-xs text-slate-300">
               <div className="flex items-start space-x-2.5">
                 <MapPin className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                <span>InfuseTax Headquarters, Financial District, Cyber City, India</span>
+                <span>TaxPartner Headquarters, Financial District, Cyber City, India</span>
               </div>
               <div className="flex items-center space-x-2.5">
                 <Phone className="w-4 h-4 text-amber-400 flex-shrink-0" />
@@ -76,7 +76,7 @@ export default function Footer() {
               </div>
               <div className="flex items-center space-x-2.5">
                 <Mail className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                <span>support@infusetax.com</span>
+                <span>support@taxpartner.in</span>
               </div>
             </div>
 
@@ -100,7 +100,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-slate-900 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-400 text-xs">
           <div>
-            &copy; {new Date().getFullYear()} InfuseTax Technologies Pvt Ltd. All rights reserved.
+            &copy; {new Date().getFullYear()} TaxPartner Technologies Pvt Ltd. All rights reserved.
           </div>
           <div className="flex items-center space-x-6 text-xs">
             <Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link>

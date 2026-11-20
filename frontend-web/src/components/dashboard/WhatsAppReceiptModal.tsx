@@ -31,12 +31,12 @@ export default function WhatsAppReceiptModal({ receipt, onClose, senderId = "INF
 
   if (!receipt) return null;
 
-  const downloadUrl = `https://infusetax.com/verify/receipt?ref=${encodeURIComponent(receipt.id)}`;
+  const downloadUrl = `https://taxpartner.in/verify/receipt?ref=${encodeURIComponent(receipt.id)}`;
 
   // Formatted WhatsApp Compliant Message
   const whatsappMessage = `*Official Tax Compliance Filing Slip* 📄
 ━━━━━━━━━━━━━━━━━━━━
-*InfuseTax E-Governance Network*
+*TaxPartner E-Governance Network*
 
 Dear *${receipt.client}*,
 Your *${receipt.service}* has been processed successfully.
@@ -50,10 +50,10 @@ Your *${receipt.service}* has been processed successfully.
 📥 *Download Official Tax Slip / ARN PDF:*
 ${downloadUrl}
 
-_This is an automated system generated compliance slip. Thank you for choosing InfuseTax!_`;
+_This is an automated system generated compliance slip. Thank you for choosing TaxPartner!_`;
 
   // Formatted DLT Compliant SMS (under 160 chars)
-  const smsMessage = `[INFUST] Dear ${receipt.client}, your ${receipt.service} ARN is ${receipt.id}. Status: ${receipt.status}. Download slip: ${downloadUrl} - InfuseTax`;
+  const smsMessage = `[TXPRTN] Dear ${receipt.client}, your ${receipt.service} ARN is ${receipt.id}. Status: ${receipt.status}. Download slip: ${downloadUrl} - TaxPartner`;
 
   const handleCopy = () => {
     const textToCopy = dispatchType === "whatsapp" ? whatsappMessage : smsMessage;

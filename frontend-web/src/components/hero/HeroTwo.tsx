@@ -40,7 +40,7 @@ export default function HeroTwo() {
 
             {/* Subheading */}
             <p className="text-base sm:text-lg text-slate-300 max-w-2xl leading-relaxed">
-              InfuseTax empowers Distributors, Retailers, and Tax Professionals with instant GST Registration (1a/1b/1c), Income Tax (IT) Return Filing, and GSTR-1 &amp; 3B monthly/quarterly returns.
+              TaxPartner empowers Distributors, Retailers, and Tax Professionals with instant GST Registration (1a/1b/1c), Income Tax (IT) Return Filing, and GSTR-1 &amp; 3B monthly/quarterly returns.
             </p>
 
             {/* Interactive Service Finder Search Bar */}

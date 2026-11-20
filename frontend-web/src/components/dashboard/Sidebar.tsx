@@ -161,10 +161,10 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
         {/* Brand Header */}
         <div className="p-5 border-b border-slate-800">
           <Link href="/" className="block">
-            <div className="relative h-10 w-44 brightness-0 invert opacity-95">
+            <div className="relative h-10 w-44 opacity-95">
               <Image
-                src="/brand/infusetax_logo_600x200.png"
-                alt="InfuseTax Logo"
+                src="/brand/taxpartner_logo_white_600x200.png"
+                alt="TaxPartner Logo"
                 fill
                 className="object-contain object-left"
               />
@@ -217,10 +217,10 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
         {/* Logged In User Profile Info */}
         <div className="px-1">
           <div className="text-xs font-bold text-white truncate">
-            {getAuthUser()?.name || "InfuseTax User"}
+            {getAuthUser()?.name || "TaxPartner User"}
           </div>
           <div className="text-[10px] text-slate-400 font-mono truncate">
-            {getAuthUser()?.email || "user@infusetax.com"}
+            {getAuthUser()?.email || "user@taxpartner.in"}
           </div>
         </div>
 

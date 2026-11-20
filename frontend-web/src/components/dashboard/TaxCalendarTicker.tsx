@@ -258,7 +258,7 @@ export default function TaxCalendarTicker() {
                   <span>Broadcast Node</span>
                 </div>
                 <div className="font-extrabold text-slate-800 mt-0.5 truncate">
-                  {selectedEvent.company_name || "InfuseTax Network Office"}
+                  {selectedEvent.company_name || "TaxPartner Network Office"}
                 </div>
               </div>
             </div>

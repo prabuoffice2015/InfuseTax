@@ -177,10 +177,10 @@ export default function SignInPage() {
           {/* Top Logo & Tagline */}
           <div className="relative z-10 space-y-3">
             <Link href="/">
-              <div className="relative h-12 w-48 brightness-0 invert">
+              <div className="relative h-12 w-48">
                 <Image
-                  src="/brand/infusetax_logo_600x200.png"
-                  alt="InfuseTax Logo"
+                  src="/brand/taxpartner_logo_white_600x200.png"
+                  alt="TaxPartner Logo"
                   fill
                   className="object-contain object-left"
                 />
@@ -220,8 +220,8 @@ export default function SignInPage() {
             <Link href="/">
               <div className="relative h-12 w-44">
                 <Image
-                  src="/brand/infusetax_logo_600x200.png"
-                  alt="InfuseTax Logo"
+                  src="/brand/taxpartner_logo_600x200.png"
+                  alt="TaxPartner Logo"
                   fill
                   className="object-contain"
                 />
@@ -408,7 +408,7 @@ export default function SignInPage() {
                     required
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder="e.g. retailer@infusetax.com"
+                    placeholder="e.g. retailer@taxpartner.in"
                     className="w-full text-xs p-3 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
                   />
                 </div>

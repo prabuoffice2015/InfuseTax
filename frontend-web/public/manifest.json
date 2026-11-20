@@ -1,21 +1,21 @@
 {
-  "name": "InfuseTax Mobile POS",
-  "short_name": "InfuseTax",
+  "name": "TaxPartner Mobile POS",
+  "short_name": "TaxPartner",
   "description": "AI-Powered Tax, GST, ITR & E-Governance Mobile Counter POS",
   "start_url": "/dashboard/retailer",
   "display": "standalone",
   "background_color": "#0F172A",
-  "theme_color": "#1E40AF",
+  "theme_color": "#2563EB",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/brand/infusetax_icon_512x512.png",
+      "src": "/brand/taxpartner_icon_192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/brand/infusetax_icon_512x512.png",
+      "src": "/brand/taxpartner_icon_512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

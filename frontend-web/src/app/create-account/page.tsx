@@ -26,10 +26,10 @@ export default function CreateAccountPage() {
         {/* Brand Logo */}
         <div className="flex justify-center">
           <Link href="/">
-            <div className="relative h-12 w-52 brightness-0 invert">
+            <div className="relative h-12 w-52">
               <Image
-                src="/brand/infusetax_logo_600x200.png"
-                alt="InfuseTax Logo"
+                src="/brand/taxpartner_logo_white_600x200.png"
+                alt="TaxPartner Logo"
                 fill
                 className="object-contain"
               />

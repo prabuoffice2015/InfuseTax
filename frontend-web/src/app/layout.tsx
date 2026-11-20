@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const viewport: Viewport = {
-  themeColor: "#1E40AF",
+  themeColor: "#2563EB",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -10,24 +10,24 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
-  title: "InfuseTax - Modern Tax Compliance, GST & Income Tax Platform",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://taxpartner.in"),
+  title: "TaxPartner - AI-Powered Tax Compliance, GST & Income Tax Platform",
   description: "AI-Powered B2B FinTech Platform for GST Registration, Income Tax (IT) Return Filing, and GSTR-1/3B Compliance.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "InfuseTax POS",
+    title: "TaxPartner POS",
   },
   icons: {
     icon: "/brand/favicon.ico",
     shortcut: "/brand/favicon_32x32.png",
-    apple: "/brand/infusetax_icon_180.png",
+    apple: "/brand/taxpartner_icon_180.png",
   },
   openGraph: {
-    title: "InfuseTax - AI-Powered Tax Compliance Platform",
+    title: "TaxPartner - AI-Powered Tax Compliance Platform",
     description: "Multi-tenant B2B tax compliance for GST Registration, ITR Filing, and GSTR-1/3B Returns.",
-    images: ["/brand/infusetax_og_1200x630.png"],
+    images: ["/brand/taxpartner_og_1200x630.png"],
   },
 };
 

@@ -35,7 +35,7 @@ export default function AiCopilotDrawer({ isOpen, onClose }: AiCopilotDrawerProp
     {
       id: "1",
       sender: "ai",
-      text: "Namaste! I am your InfuseTax AI Compliance Copilot. Ask me anything about Budget 2025-26 Tax Slabs, GST HSN Codes, GSTR-2B ITC Mismatches, or Section 80CCD(1B) deductions.",
+      text: "Namaste! I am your TaxPartner AI Compliance Copilot. Ask me anything about Budget 2025-26 Tax Slabs, GST HSN Codes, GSTR-2B ITC Mismatches, or Section 80CCD(1B) deductions.",
       timestamp: "Just now",
       citation: "CBDT & GSTN Circulars 2025-26",
     },
@@ -90,7 +90,7 @@ export default function AiCopilotDrawer({ isOpen, onClose }: AiCopilotDrawerProp
         citation = "Section 10 CGST Act 2017";
       } else {
         aiReply = `Under Indian taxation rules, your query regarding "${textToSend}" requires reviewing the relevant GSTN / Income Tax portal guidelines. Our automated filing engine applies all validated thresholds with zero penalty risk.`;
-        citation = "InfuseTax Compliance Knowledge Graph";
+        citation = "TaxPartner Compliance Knowledge Graph";
       }
 
       setMessages((prev) => [
@@ -235,7 +235,7 @@ export default function AiCopilotDrawer({ isOpen, onClose }: AiCopilotDrawerProp
             </form>
             <div className="text-[10px] text-slate-400 text-center mt-2 flex items-center justify-center space-x-1">
               <Zap className="w-3 h-3 text-amber-500" />
-              <span>InfuseTax AI Engine • Verified against Income Tax Act 1961 & CGST Rules</span>
+              <span>TaxPartner AI Engine • Verified against Income Tax Act 1961 & CGST Rules</span>
             </div>
           </div>
         </div>

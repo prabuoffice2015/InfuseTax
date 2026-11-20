@@ -40,7 +40,7 @@ export default function WhatsAppConfigDesk() {
   // Test Message State
   const [testMobile, setTestMobile] = useState<string>("+91 98765 43210");
   const [testMessage, setTestMessage] = useState<string>(
-    "Hello from InfuseTax! This is a verified test notification from the WhatsApp Business Gateway."
+    "Hello from TaxPartner! This is a verified test notification from the WhatsApp Business Gateway."
   );
   const [testResult, setTestResult] = useState<any>(null);
 

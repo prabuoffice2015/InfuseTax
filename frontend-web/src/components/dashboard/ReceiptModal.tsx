@@ -58,7 +58,7 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
           <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between print:hidden">
             <div className="flex items-center space-x-2">
               <ShieldCheck className="w-5 h-5 text-emerald-400" />
-              <span className="text-sm font-bold">Official InfuseTax Transaction Receipt</span>
+              <span className="text-sm font-bold">Official TaxPartner Transaction Receipt</span>
             </div>
 
             <div className="flex items-center space-x-2.5">
@@ -120,7 +120,7 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
                       IT
                     </div>
                     <span className="text-xl font-extrabold text-slate-950 tracking-tight">
-                      Infuse<span className="text-blue-700">Tax</span>
+                      Tax<span className="text-blue-600">Partner</span>
                     </span>
                   </div>
                   <div className="text-[11px] text-slate-500 mt-1">
@@ -194,7 +194,7 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
                     <span>State GST (SGST @ 9%):</span>
                     <span className="font-mono font-bold text-slate-700">₹{halfTax.toFixed(2)}</span>
                   </div>
-                  <div className="pt-1 text-[10px] text-slate-400">Payment Channel: InfuseTax Instant Wallet Ledger</div>
+                  <div className="pt-1 text-[10px] text-slate-400">Payment Channel: TaxPartner Instant Wallet Ledger</div>
                 </div>
 
                 <div className="w-56 p-3 bg-blue-50 border border-blue-200 rounded-xl space-y-1.5 text-right text-xs">
@@ -238,7 +238,7 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
             /* 80mm Thermal Layout */
             <div className="max-w-xs mx-auto p-4 bg-white border border-slate-300 font-mono text-[11px] leading-relaxed text-slate-900 space-y-3">
               <div className="text-center border-b border-dashed border-slate-400 pb-2">
-                <div className="font-bold text-sm">INfUSETax DIGITAL</div>
+                <div className="font-bold text-sm">TAXPARTNER DIGITAL</div>
                 <div className="text-[10px]">Sri Balaji Digital Seva Desk</div>
                 <div className="text-[10px]">Salem, Tamil Nadu, IN</div>
                 <div className="text-[10px]">GSTIN: 33AAACI1234F1Z5</div>
@@ -275,7 +275,7 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
               <div className="text-center pt-1 space-y-1">
                 <div className="text-[10px]">THANK YOU FOR YOUR VISIT!</div>
                 <div className="text-[9px] text-slate-500">Scan QR on portal for e-filing proof</div>
-                <div className="text-[9px] text-slate-500">Support: support@infusetax.com</div>
+                <div className="text-[9px] text-slate-500">Support: support@taxpartner.in</div>
               </div>
             </div>
           )}

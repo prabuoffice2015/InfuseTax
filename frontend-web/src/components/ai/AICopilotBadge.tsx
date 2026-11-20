@@ -26,7 +26,7 @@ export default function AICopilotBadge() {
           <div className="lg:col-span-6 space-y-6">
             <div className="inline-flex items-center space-x-2 bg-amber-400/10 border border-amber-400/30 rounded-full px-4 py-1.5 text-xs font-bold text-amber-300">
               <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>InfuseTax AI Copilot Engine</span>
+              <span>TaxPartner AI Copilot Engine</span>
             </div>
 
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight">
@@ -34,7 +34,7 @@ export default function AICopilotBadge() {
             </h2>
 
             <p className="text-base text-slate-300 leading-relaxed">
-              InfuseTax integrates state-of-the-art AI vision and intelligent financial reasoning directly into your daily operations. Eliminate manual typing errors and boost customer satisfaction.
+              TaxPartner integrates state-of-the-art AI vision and intelligent financial reasoning directly into your daily operations. Eliminate manual typing errors and boost customer satisfaction.
             </p>
 
             {/* AI Capabilities Checklist */}
@@ -96,7 +96,7 @@ export default function AICopilotBadge() {
                   <span className="w-3 h-3 bg-rose-500 rounded-full" />
                   <span className="w-3 h-3 bg-amber-500 rounded-full" />
                   <span className="w-3 h-3 bg-emerald-500 rounded-full" />
-                  <span className="text-xs font-mono text-slate-400 ml-2">infusetax-copilot.engine</span>
+                  <span className="text-xs font-mono text-slate-400 ml-2">taxpartner-copilot.engine</span>
                 </div>
                 <span className="text-xs font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">
                   Ready
@@ -106,7 +106,7 @@ export default function AICopilotBadge() {
               {/* Simulated Auto-Extraction Step */}
               <div className="space-y-4 text-xs font-mono">
                 <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 text-slate-300">
-                  <span className="text-blue-400">$ infusetax-ai analyze --doc=Form16_AY2025.pdf</span>
+                  <span className="text-blue-400">$ taxpartner-ai analyze --doc=Form16_AY2025.pdf</span>
                   <div className="mt-2 text-emerald-400 flex items-center space-x-1">
                     <Check className="w-3.5 h-3.5" />
                     <span>Document parsed successfully (0.84s)</span>

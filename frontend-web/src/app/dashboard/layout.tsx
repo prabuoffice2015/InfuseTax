@@ -26,7 +26,7 @@ export default function DashboardLayout({
   const getUserDetails = () => {
     switch (role) {
       case "admin":
-        return { name: "InfuseTax Super Admin", code: "SUPER_01", balance: 2500000.00 };
+        return { name: "TaxPartner Super Admin", code: "SUPER_01", balance: 2500000.00 };
       case "distributor":
         return { name: "Apex Zonal Distributor", code: "DIST_882", balance: 450000.00 };
       case "operator":

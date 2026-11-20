@@ -34,7 +34,7 @@ export default function HeaderTwo() {
             </div>
             <div className="flex items-center space-x-2">
               <Mail className="w-3.5 h-3.5 text-amber-400" />
-              <span>support@infusetax.com</span>
+              <span>support@taxpartner.in</span>
             </div>
             <div className="flex items-center space-x-2">
               <Clock className="w-3.5 h-3.5 text-amber-400" />
@@ -58,8 +58,8 @@ export default function HeaderTwo() {
         <Link href="/" className="flex items-center group">
           <div className="relative h-12 w-48 sm:h-14 sm:w-56 max-w-[224px] max-h-[56px] transition-transform duration-200 group-hover:scale-[1.02]">
             <Image
-              src="/brand/infusetax_logo_600x200.png"
-              alt="InfuseTax Logo"
+              src="/brand/taxpartner_logo_600x200.png"
+              alt="TaxPartner Logo"
               width={224}
               height={56}
               priority

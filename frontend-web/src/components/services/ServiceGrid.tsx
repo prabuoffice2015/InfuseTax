@@ -86,7 +86,7 @@ export default function ServiceGrid() {
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-12">
           <div className="inline-flex items-center space-x-2 bg-blue-100/80 border border-blue-200 rounded-full px-4 py-1 text-xs font-bold text-blue-800 uppercase tracking-wider">
             <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-            <span>InfuseTax Core Services</span>
+            <span>TaxPartner Core Services</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
             The 3 Core Tax & Compliance Desks
