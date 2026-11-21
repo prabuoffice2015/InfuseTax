@@ -18,96 +18,23 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
-ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS wallets_user_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS wallets_tenant_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.wallet_requests DROP CONSTRAINT IF EXISTS wallet_requests_tenant_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.wallet_requests DROP CONSTRAINT IF EXISTS wallet_requests_requester_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.wallet_requests DROP CONSTRAINT IF EXISTS wallet_requests_approver_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.utr_requests DROP CONSTRAINT IF EXISTS utr_requests_user_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.utr_requests DROP CONSTRAINT IF EXISTS utr_requests_tenant_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.utr_requests DROP CONSTRAINT IF EXISTS utr_requests_approved_by_fkey;
-ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_tenant_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_parent_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.service_pricings DROP CONSTRAINT IF EXISTS service_pricings_tenant_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.pricing_audit_logs DROP CONSTRAINT IF EXISTS pricing_audit_logs_updated_by_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.pricing_audit_logs DROP CONSTRAINT IF EXISTS pricing_audit_logs_tenant_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.notifications DROP CONSTRAINT IF EXISTS notifications_user_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.notifications DROP CONSTRAINT IF EXISTS notifications_tenant_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.itr_filings DROP CONSTRAINT IF EXISTS itr_filings_tenant_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.itr_filings DROP CONSTRAINT IF EXISTS itr_filings_retailer_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.itr_filings DROP CONSTRAINT IF EXISTS itr_filings_operator_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.itr_filings DROP CONSTRAINT IF EXISTS itr_filings_approver_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.gst_filings DROP CONSTRAINT IF EXISTS gst_filings_tenant_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.gst_filings DROP CONSTRAINT IF EXISTS gst_filings_retailer_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.gst_filings DROP CONSTRAINT IF EXISTS gst_filings_operator_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.gst_filings DROP CONSTRAINT IF EXISTS gst_filings_approver_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.documents DROP CONSTRAINT IF EXISTS documents_user_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.documents DROP CONSTRAINT IF EXISTS documents_tenant_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.audit_ledger DROP CONSTRAINT IF EXISTS audit_ledger_tenant_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.audit_ledger DROP CONSTRAINT IF EXISTS audit_ledger_debit_user_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.audit_ledger DROP CONSTRAINT IF EXISTS audit_ledger_credit_user_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.audit_ledger DROP CONSTRAINT IF EXISTS audit_ledger_actor_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.announcements DROP CONSTRAINT IF EXISTS announcements_tenant_id_fkey;
-DROP INDEX IF EXISTS public.idx_wallets_user_id;
-DROP INDEX IF EXISTS public.idx_wallets_user;
-DROP INDEX IF EXISTS public.idx_wallet_requests_status;
-DROP INDEX IF EXISTS public.idx_utr_requests_status;
-DROP INDEX IF EXISTS public.idx_users_tenant_role;
-DROP INDEX IF EXISTS public.idx_users_tenant;
-DROP INDEX IF EXISTS public.idx_users_email_role;
-DROP INDEX IF EXISTS public.idx_pricing_audit_tenant;
-DROP INDEX IF EXISTS public.idx_pricing_audit_service;
-DROP INDEX IF EXISTS public.idx_notifications_user;
-DROP INDEX IF EXISTS public.idx_notifications_tenant_role;
-DROP INDEX IF EXISTS public.idx_itr_filings_retailer_created;
-DROP INDEX IF EXISTS public.idx_itr_filings_pan;
-DROP INDEX IF EXISTS public.idx_gst_filings_tenant;
-DROP INDEX IF EXISTS public.idx_gst_filings_retailer_created;
-DROP INDEX IF EXISTS public.idx_gst_filings_pan;
-DROP INDEX IF EXISTS public.idx_documents_user_uploaded;
-DROP INDEX IF EXISTS public.idx_documents_user_created;
-DROP INDEX IF EXISTS public.idx_audit_ledger_tenant_created;
-DROP INDEX IF EXISTS public.idx_audit_ledger_created;
-DROP INDEX IF EXISTS public.idx_audit_ledger_actor;
-ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS wallets_user_id_key;
-ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS wallets_pkey;
-ALTER TABLE IF EXISTS ONLY public.wallet_requests DROP CONSTRAINT IF EXISTS wallet_requests_pkey;
-ALTER TABLE IF EXISTS ONLY public.utr_requests DROP CONSTRAINT IF EXISTS utr_requests_utr_number_key;
-ALTER TABLE IF EXISTS ONLY public.utr_requests DROP CONSTRAINT IF EXISTS utr_requests_pkey;
-ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_pkey;
-ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_mobile_key;
-ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_email_key;
-ALTER TABLE IF EXISTS ONLY public.tenants DROP CONSTRAINT IF EXISTS tenants_pkey;
-ALTER TABLE IF EXISTS ONLY public.tenants DROP CONSTRAINT IF EXISTS tenants_domain_key;
-ALTER TABLE IF EXISTS ONLY public.tenants DROP CONSTRAINT IF EXISTS tenants_code_key;
-ALTER TABLE IF EXISTS ONLY public.service_pricings DROP CONSTRAINT IF EXISTS service_pricings_tenant_service_unique;
-ALTER TABLE IF EXISTS ONLY public.service_pricings DROP CONSTRAINT IF EXISTS service_pricings_pkey;
-ALTER TABLE IF EXISTS ONLY public.pricing_audit_logs DROP CONSTRAINT IF EXISTS pricing_audit_logs_pkey;
-ALTER TABLE IF EXISTS ONLY public.notifications DROP CONSTRAINT IF EXISTS notifications_pkey;
-ALTER TABLE IF EXISTS ONLY public.itr_filings DROP CONSTRAINT IF EXISTS itr_filings_pkey;
-ALTER TABLE IF EXISTS ONLY public.itr_filings DROP CONSTRAINT IF EXISTS itr_filings_ack_number_key;
-ALTER TABLE IF EXISTS ONLY public.gst_filings DROP CONSTRAINT IF EXISTS gst_filings_pkey;
-ALTER TABLE IF EXISTS ONLY public.gst_filings DROP CONSTRAINT IF EXISTS gst_filings_arn_key;
-ALTER TABLE IF EXISTS ONLY public.documents DROP CONSTRAINT IF EXISTS documents_pkey;
-ALTER TABLE IF EXISTS ONLY public.audit_ledger DROP CONSTRAINT IF EXISTS audit_ledger_pkey;
-ALTER TABLE IF EXISTS ONLY public.announcements DROP CONSTRAINT IF EXISTS announcements_pkey;
-DROP TABLE IF EXISTS public.wallets;
-DROP TABLE IF EXISTS public.wallet_requests;
-DROP TABLE IF EXISTS public.utr_requests;
-DROP TABLE IF EXISTS public.users;
-DROP TABLE IF EXISTS public.tenants;
-DROP TABLE IF EXISTS public.service_pricings;
-DROP TABLE IF EXISTS public.pricing_audit_logs;
-DROP TABLE IF EXISTS public.notifications;
-DROP TABLE IF EXISTS public.itr_filings;
-DROP TABLE IF EXISTS public.gst_filings;
-DROP TABLE IF EXISTS public.documents;
-DROP TABLE IF EXISTS public.audit_ledger;
-DROP TABLE IF EXISTS public.announcements;
-DROP EXTENSION IF EXISTS "uuid-ossp";
 --
 -- Name: uuid-ossp; Type: EXTENSION; Schema: -; Owner: -
 --
+
+-- ==============================================================================
+-- CRITICAL DATA PROTECTION GUARD: This script will NEVER drop existing data.
+-- If tables already exist, execution will immediately halt with an error.
+-- ==============================================================================
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'users'
+    ) THEN
+        RAISE EXCEPTION 'CRITICAL DATA PROTECTION GUARD: Existing database tables detected. Raw dump execution halted to protect live database records.';
+    END IF;
+END $$;
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 
@@ -127,7 +54,7 @@ SET default_table_access_method = heap;
 -- Name: announcements; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.announcements (
+CREATE TABLE IF NOT EXISTS public.announcements (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     tenant_id uuid,
     title character varying(255) NOT NULL,
@@ -146,7 +73,7 @@ CREATE TABLE public.announcements (
 -- Name: audit_ledger; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.audit_ledger (
+CREATE TABLE IF NOT EXISTS public.audit_ledger (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     tenant_id uuid,
     reference_id character varying(100) NOT NULL,
@@ -165,7 +92,7 @@ CREATE TABLE public.audit_ledger (
 -- Name: documents; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.documents (
+CREATE TABLE IF NOT EXISTS public.documents (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     tenant_id uuid,
     user_id uuid,
@@ -184,7 +111,7 @@ CREATE TABLE public.documents (
 -- Name: gst_filings; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.gst_filings (
+CREATE TABLE IF NOT EXISTS public.gst_filings (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     tenant_id uuid,
     retailer_id uuid,
@@ -214,7 +141,7 @@ CREATE TABLE public.gst_filings (
 -- Name: itr_filings; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.itr_filings (
+CREATE TABLE IF NOT EXISTS public.itr_filings (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     tenant_id uuid,
     retailer_id uuid,
@@ -248,7 +175,7 @@ CREATE TABLE public.itr_filings (
 -- Name: notifications; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.notifications (
+CREATE TABLE IF NOT EXISTS public.notifications (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     tenant_id uuid,
     user_id uuid,
@@ -267,7 +194,7 @@ CREATE TABLE public.notifications (
 -- Name: pricing_audit_logs; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.pricing_audit_logs (
+CREATE TABLE IF NOT EXISTS public.pricing_audit_logs (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     tenant_id uuid,
     service_key character varying(50) NOT NULL,
@@ -292,7 +219,7 @@ CREATE TABLE public.pricing_audit_logs (
 -- Name: service_pricings; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.service_pricings (
+CREATE TABLE IF NOT EXISTS public.service_pricings (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     tenant_id uuid,
     service_key character varying(50) NOT NULL,
@@ -308,7 +235,7 @@ CREATE TABLE public.service_pricings (
 -- Name: tenants; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.tenants (
+CREATE TABLE IF NOT EXISTS public.tenants (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     code character varying(50) NOT NULL,
     company_name character varying(255) NOT NULL,
@@ -330,7 +257,7 @@ CREATE TABLE public.tenants (
 -- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.users (
+CREATE TABLE IF NOT EXISTS public.users (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     tenant_id uuid,
     email character varying(255) NOT NULL,
@@ -356,7 +283,7 @@ CREATE TABLE public.users (
 -- Name: utr_requests; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.utr_requests (
+CREATE TABLE IF NOT EXISTS public.utr_requests (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     tenant_id uuid,
     user_id uuid,
@@ -376,7 +303,7 @@ CREATE TABLE public.utr_requests (
 -- Name: wallet_requests; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.wallet_requests (
+CREATE TABLE IF NOT EXISTS public.wallet_requests (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     tenant_id uuid,
     requester_id uuid,
@@ -400,7 +327,7 @@ CREATE TABLE public.wallet_requests (
 -- Name: wallets; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.wallets (
+CREATE TABLE IF NOT EXISTS public.wallets (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     user_id uuid,
     tenant_id uuid,

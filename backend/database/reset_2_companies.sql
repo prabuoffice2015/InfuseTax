@@ -1,6 +1,18 @@
 -- =========================================================================
 -- COMPLETE MULTI-TENANT DATABASE RESET: EXACTLY 2 COMPANIES
+-- SAFETY GUARD: Aborts immediately if live user data exists!
 -- =========================================================================
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'users'
+    ) THEN
+        IF (SELECT count(*) FROM public.users) > 0 THEN
+            RAISE EXCEPTION 'CRITICAL DATA PROTECTION GUARD: Existing users detected. Manual reset aborted to protect live data.';
+        END IF;
+    END IF;
+END $$;
 
 -- Adjust constraints for multi-tenant pricing
 ALTER TABLE service_pricings DROP CONSTRAINT IF EXISTS service_pricings_service_key_key;

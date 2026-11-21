@@ -3,7 +3,8 @@ set -e
 
 # ==============================================================================
 # TaxPartner Fast Zero-Downtime Code Update Script
-# Updates code & rebuilds containers WITHOUT touching database data or volumes
+# Updates code, rebuilds containers, and applies incremental migrations
+# WITHOUT touching existing database data or volumes.
 # Usage:
 #   ./deploy-update.sh        (Updates Production)
 #   ./deploy-update.sh prod   (Updates Production)
@@ -59,11 +60,10 @@ docker compose -f "$COMPOSE_FILE" up -d "$FRONTEND_SERVICE" "$BACKEND_SERVICE"
 echo "🔄 Gracefully reloading Nginx proxy..."
 docker compose -f "$COMPOSE_FILE" exec -T "$NGINX_SERVICE" nginx -s reload 2>/dev/null || true
 
-# 6. Apply Non-Destructive RLS security policies if present
-if [ -f "supabase_security_fix_rls.sql" ]; then
-    echo "🔒 Verifying Row-Level Security..."
-    docker compose -f "$COMPOSE_FILE" exec -T "$POSTGRES_SERVICE" psql -U infusetax_user -d "$DB_NAME" < supabase_security_fix_rls.sql 2>/dev/null || true
-fi
+# 6. Execute Incremental Migrations
+echo "🐘 Checking for Pending Non-Destructive Migrations..."
+chmod +x run-migrations.sh
+./run-migrations.sh "$ENV_TARGET"
 
 echo ""
 echo "===================================================================="
