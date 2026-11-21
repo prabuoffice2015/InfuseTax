@@ -171,8 +171,8 @@ class User extends Model {
             'parent_id'         => $user->parent_id,
             'permissions'       => $user->permissions ?? 'all',
             'wallet_balance'    => $user->wallet ? floatval($user->wallet->balance) : 0.00,
-            'tenant_code'       => $user->tenant ? $user->tenant->code : 'INFUSE',
-            'company_name'      => $user->tenant ? $user->tenant->company_name : 'InfuseTax',
+            'tenant_code'       => $user->tenant ? $user->tenant->code : 'TAXPARTNER',
+            'company_name'      => $user->tenant ? $user->tenant->company_name : 'TaxPartner',
             'tenant_is_active'  => $user->tenant ? $user->tenant->is_active : true,
             'enabled_services'  => $user->tenant ? $user->tenant->enabled_services : 'all',
         ];

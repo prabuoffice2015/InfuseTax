@@ -64,7 +64,7 @@ class AuthController {
 
         $role = $user['role'] ?? 'retailer';
         $userId = $user['id'] ?? 'b0000000-0000-0000-0000-000000000003';
-        $tenantCode = $user['tenant_code'] ?? 'INFUSE';
+        $tenantCode = $user['tenant_code'] ?? 'TAXPARTNER';
 
         // 4b. Enforce Company Active State Check (Only Active Companies allow Downline access)
         if ($role !== 'super_admin') {
@@ -152,8 +152,8 @@ class AuthController {
                 'state'            => $userModel->state,
                 'wallet'           => $userModel->wallet ? floatval($userModel->wallet->balance) : 0.00,
                 'wallet_balance'   => $userModel->wallet ? floatval($userModel->wallet->balance) : 0.00,
-                'tenant_code'      => $userModel->tenant ? $userModel->tenant->code : 'INFUSE',
-                'tenant_name'      => $userModel->tenant ? $userModel->tenant->company_name : 'InfuseTax',
+                'tenant_code'      => $userModel->tenant ? $userModel->tenant->code : 'TAXPARTNER',
+                'tenant_name'      => $userModel->tenant ? $userModel->tenant->company_name : 'TaxPartner',
                 'permissions'      => $effectivePerms,
                 'enabled_services' => implode(',', $effectivePerms),
             ];

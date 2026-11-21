@@ -326,7 +326,7 @@ export default function Navbar({
         <div className="flex items-center space-x-3 sm:space-x-4">
           <div className="flex items-center space-x-2 px-3 py-1.5 bg-blue-50 border border-blue-200/80 rounded-xl">
             <Building2 className="w-4 h-4 text-blue-700" />
-            <span className="text-xs font-bold text-blue-900 font-mono">Tenant: {activeUser?.tenant || "INFUSE"}</span>
+            <span className="text-xs font-bold text-blue-900 font-mono">Tenant: {activeUser?.tenant || "TAXPARTNER"}</span>
           </div>
 
           <div 

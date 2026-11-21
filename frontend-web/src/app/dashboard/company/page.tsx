@@ -483,7 +483,7 @@ export default function CompanySuperAdminPage() {
     const headers = ["Transaction ID", "Company Node", "Date & Time", "Entity / User", "Action Type", "Debit (INR)", "Credit (INR)", "Balance After (INR)", "Narration"];
     const rows = filteredLedger.map(tx => [
       `"${tx.reference_id || tx.id}"`,
-      `"${tx.tenant_code || 'INFUSE'}"`,
+      `"${tx.tenant_code || 'TAXPARTNER'}"`,
       `"${tx.date || tx.created_at}"`,
       `"${(tx.entity || 'Platform').replace(/"/g, '""')}"`,
       `"${tx.type}"`,
@@ -513,7 +513,7 @@ export default function CompanySuperAdminPage() {
     const headers = ["User ID", "Company Node", "Full Name / Firm", "Role Tier", "Email", "Contact Mobile", "Parent Master", "City", "State", "Wallet Balance (INR)", "Status"];
     const rows = filteredUsers.map(u => [
       `"${u.id}"`,
-      `"${u.tenant_code || 'INFUSE'}"`,
+      `"${u.tenant_code || 'TAXPARTNER'}"`,
       `"${u.name.replace(/"/g, '""')}"`,
       `"Tier ${u.tier} (${u.role})"`,
       `"${u.email}"`,
@@ -1693,7 +1693,7 @@ export default function CompanySuperAdminPage() {
                                     ? "bg-blue-50 text-blue-800 border-blue-200" 
                                     : "bg-rose-50 text-rose-800 border-rose-200"
                                 }`}>
-                                  {u.tenant_code || "INFUSE"}
+                                  {u.tenant_code || "TAXPARTNER"}
                                 </span>
                                 <span className={`w-2 h-2 rounded-full ${isCompActive ? 'bg-emerald-500' : 'bg-rose-500'}`} title={isCompActive ? 'Company Active' : 'Company Suspended'} />
                               </div>
@@ -2288,7 +2288,7 @@ export default function CompanySuperAdminPage() {
                         </td>
                         <td className="py-4 px-4">
                           <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-blue-50 text-blue-800 border border-blue-200 rounded-md">
-                            {req.tenant_code || "INFUSE"}
+                            {req.tenant_code || "TAXPARTNER"}
                           </span>
                         </td>
                         <td className="py-4 px-4">
@@ -2677,7 +2677,7 @@ export default function CompanySuperAdminPage() {
                         <td className="py-4 px-4 font-mono font-bold text-slate-900">{tx.reference_id || tx.id}</td>
                         <td className="py-4 px-4">
                           <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-blue-50 text-blue-800 border border-blue-200 rounded-md">
-                            {tx.tenant_code || "INFUSE"}
+                            {tx.tenant_code || "TAXPARTNER"}
                           </span>
                         </td>
                         <td className="py-4 px-4 font-mono text-[11px] text-slate-500">{tx.date || tx.created_at}</td>

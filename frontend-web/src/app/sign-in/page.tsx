@@ -23,7 +23,7 @@ import { secureApiCall } from "@/lib/crypto";
 export default function SignInPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [companyCode, setCompanyCode] = useState("INFUSE");
+  const [companyCode, setCompanyCode] = useState("TAXPARTNER");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [adminPin, setAdminPin] = useState("");

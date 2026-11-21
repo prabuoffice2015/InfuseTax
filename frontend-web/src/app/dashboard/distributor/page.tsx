@@ -1051,7 +1051,7 @@ export default function DistributorDashboardPage() {
             <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 border border-blue-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
               Tier 2 Master Distributor Hub
             </span>
-            <span className="text-xs text-slate-400">Node: {activeUser?.tenant || "INFUSE"}</span>
+            <span className="text-xs text-slate-400">Node: {activeUser?.tenant || "TAXPARTNER"}</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">Master Distributor Operations & Liquidity</h1>
           <p className="text-xs text-slate-500">Manage downline retailer networks, approve operator shift floats, set Tier 3 wholesale pricing, and track margins.</p>

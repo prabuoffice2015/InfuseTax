@@ -749,7 +749,7 @@ export default function OperatorTerminalPage() {
             {userProfile?.name || "Counter Staff (Operator Terminal)"}
           </h1>
           <p className="text-xs text-slate-300 mt-1">
-            Active Shift Desk: {userProfile?.city || "Store Counter"} • Company: <span className="text-amber-300 font-bold">{userProfile?.tenant || "INFUSE"}</span>
+            Active Shift Desk: {userProfile?.city || "Store Counter"} • Company: <span className="text-amber-300 font-bold">{userProfile?.tenant || "TAXPARTNER"}</span>
           </p>
         </div>
 

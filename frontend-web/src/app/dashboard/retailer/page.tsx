@@ -1104,7 +1104,7 @@ export default function RetailerDashboardPage() {
             {userProfile?.name || "Retailer Store POS"}
           </h1>
           <p className="text-xs text-slate-300 mt-1">
-            Store Location: {userProfile?.city || "Tamil Nadu"} • Company Node: <span className="text-blue-300 font-bold">{userProfile?.tenant || "INFUSE"}</span>
+            Store Location: {userProfile?.city || "Tamil Nadu"} • Company Node: <span className="text-blue-300 font-bold">{userProfile?.tenant || "TAXPARTNER"}</span>
           </p>
         </div>
 
