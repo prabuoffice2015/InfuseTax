@@ -642,6 +642,9 @@ export default function ServiceApprovalModal({ item, onClose, onSuccess, readOnl
                           type="file"
                           accept=".pdf,image/*"
                           className="hidden"
+                          onClick={(e) => {
+                            (e.target as HTMLInputElement).value = "";
+                          }}
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
@@ -658,7 +661,6 @@ export default function ServiceApprovalModal({ item, onClose, onSuccess, readOnl
                               setIsReadingProof(false);
                             };
                             reader.readAsDataURL(file);
-                            e.target.value = "";
                           }}
                         />
                       </label>

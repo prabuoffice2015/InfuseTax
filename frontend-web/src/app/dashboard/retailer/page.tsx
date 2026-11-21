@@ -52,6 +52,14 @@ import ServiceApprovalModal, { ServiceApprovalItem } from "@/components/dashboar
 import UpiQrModal from "@/components/dashboard/UpiQrModal";
 import DocumentUploadVault from "@/components/dashboard/DocumentUploadVault";
 import TaxCalendarTicker from "@/components/dashboard/TaxCalendarTicker";
+import { 
+  DocumentSlotItem, 
+  BulkUploadZone, 
+  SOLE_PROP_SLOTS, 
+  PVT_LTD_SLOTS, 
+  PARTNERSHIP_SLOTS, 
+  ITR_SLOTS 
+} from "@/components/dashboard/BulkUploadDesk";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getAuthToken, getAuthUser } from "@/lib/auth";
 import { secureApiCall } from "@/lib/crypto";
@@ -201,7 +209,7 @@ export default function RetailerDashboardPage() {
   const [spAadhaar, setSpAadhaar] = useState("");
   const [spMobile, setSpMobile] = useState("");
   const [spEmail, setSpEmail] = useState("");
-  const [spDocs, setSpDocs] = useState<{ [key: string]: boolean }>({});
+  const [spDocs, setSpDocs] = useState<{ [key: string]: any }>({});
 
   // 1b: Private Limited State (15 Fields/Uploads)
   const [pvtCompanyName, setPvtCompanyName] = useState("");
@@ -209,7 +217,7 @@ export default function RetailerDashboardPage() {
   const [pvtMobile, setPvtMobile] = useState("");
   const [pvtEmail, setPvtEmail] = useState("");
   const [pvtAuthSignatory, setPvtAuthSignatory] = useState("");
-  const [pvtDocs, setPvtDocs] = useState<{ [key: string]: boolean }>({});
+  const [pvtDocs, setPvtDocs] = useState<{ [key: string]: any }>({});
 
   // 1c: Partnership / LLP State (17 Fields/Uploads)
   const [firmName, setFirmName] = useState("");
@@ -217,7 +225,7 @@ export default function RetailerDashboardPage() {
   const [firmMobile, setFirmMobile] = useState("");
   const [firmEmail, setFirmEmail] = useState("");
   const [firmAuthSignatory, setFirmAuthSignatory] = useState("");
-  const [firmDocs, setFirmDocs] = useState<{ [key: string]: boolean }>({});
+  const [firmDocs, setFirmDocs] = useState<{ [key: string]: any }>({});
 
   // -------------------------------------------------------------
   // CORE SERVICE 2: IT FILING (Individual & Business Person - 9 Fields)
@@ -233,7 +241,7 @@ export default function RetailerDashboardPage() {
   const [itMobile, setItMobile] = useState("");
   const [itEmail, setItEmail] = useState("");
   const [itBankPeriod, setItBankPeriod] = useState("01st Apr to 31st Mar (Full Financial Year)");
-  const [itDocs, setItDocs] = useState<{ [key: string]: boolean }>({});
+  const [itDocs, setItDocs] = useState<{ [key: string]: any }>({});
   const [isItSubmitting, setIsItSubmitting] = useState(false);
 
   // -------------------------------------------------------------
@@ -970,48 +978,16 @@ export default function RetailerDashboardPage() {
   };
 
   // Document Upload Slot Helper Component
-  const DocumentSlot = ({ label, code, stateMap, setStateMap, required = true }: { label: string; code: string; stateMap: any; setStateMap: any; required?: boolean }) => {
-    const isUploaded = !!stateMap[code];
-    return (
-      <div className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
-        isUploaded ? "bg-emerald-50/70 border-emerald-300 text-emerald-950" : "bg-slate-50 border-slate-200 text-slate-700 hover:border-blue-300"
-      }`}>
-        <div className="flex items-center space-x-2.5 overflow-hidden">
-          <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 font-bold text-xs ${
-            isUploaded ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-600"
-          }`}>
-            {isUploaded ? <Check className="w-4 h-4" /> : <FileUp className="w-3.5 h-3.5" />}
-          </div>
-          <div className="truncate">
-            <div className="text-xs font-bold truncate flex items-center space-x-1.5">
-              <span>{label}</span>
-              {required && <span className="text-rose-500 text-[10px]">*</span>}
-            </div>
-            <div className="text-[10px] text-slate-400 font-medium">
-              {isUploaded ? "✓ Scanned Color Copy Attached" : "PDF / JPG / PNG (Max 5MB)"}
-            </div>
-          </div>
-        </div>
-
-        <label className={`px-2.5 py-1 text-[11px] font-bold rounded-lg cursor-pointer transition-all shrink-0 ${
-          isUploaded ? "bg-emerald-100 hover:bg-emerald-200 text-emerald-800" : "bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
-        }`}>
-          <span>{isUploaded ? "Replace" : "Upload"}</span>
-          <input
-            type="file"
-            accept="image/*,.pdf"
-            className="hidden"
-            onChange={(e) => {
-              if (e.target.files && e.target.files.length > 0) {
-                setStateMap((prev: any) => ({ ...prev, [code]: true }));
-                showToast(`✓ ${label} uploaded successfully!`);
-              }
-            }}
-          />
-        </label>
-      </div>
-    );
-  };
+  const DocumentSlot = ({ label, code, stateMap, setStateMap, required = true }: { label: string; code: string; stateMap: any; setStateMap: any; required?: boolean }) => (
+    <DocumentSlotItem
+      label={label}
+      code={code}
+      stateMap={stateMap}
+      setStateMap={setStateMap}
+      required={required}
+      onToast={showToast}
+    />
+  );
 
   return (
     <div className="space-y-6">
@@ -1326,10 +1302,24 @@ export default function RetailerDashboardPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-3">
-                      Mandatory Scanned Color Copy Uploads (11 Items Checklist)
-                    </h3>
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                        Mandatory Scanned Color Copy Uploads (11 Items Checklist)
+                      </h3>
+                      <span className="text-[11px] font-bold text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                        {Object.keys(spDocs).length} of 9 Documents Attached
+                      </span>
+                    </div>
+
+                    <BulkUploadZone
+                      slots={SOLE_PROP_SLOTS}
+                      stateMap={spDocs}
+                      setStateMap={setSpDocs}
+                      theme="blue"
+                      onToast={showToast}
+                    />
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       <DocumentSlot label="1) PAN Card (Color Copy)" code="sp_pan_doc" stateMap={spDocs} setStateMap={setSpDocs} />
                       <DocumentSlot label="2) Aadhaar Card (Color Copy)" code="sp_aadhaar_doc" stateMap={spDocs} setStateMap={setSpDocs} />
@@ -1406,10 +1396,24 @@ export default function RetailerDashboardPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-3">
-                      Mandatory Scanned Color Copy Uploads (15 Items Checklist)
-                    </h3>
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                        Mandatory Scanned Color Copy Uploads (15 Items Checklist)
+                      </h3>
+                      <span className="text-[11px] font-bold text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                        {Object.keys(pvtDocs).length} of 12 Documents Attached
+                      </span>
+                    </div>
+
+                    <BulkUploadZone
+                      slots={PVT_LTD_SLOTS}
+                      stateMap={pvtDocs}
+                      setStateMap={setPvtDocs}
+                      theme="blue"
+                      onToast={showToast}
+                    />
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       <DocumentSlot label="1) Incorporation Certificate (COI)" code="pvt_coi" stateMap={pvtDocs} setStateMap={setPvtDocs} />
                       <DocumentSlot label="2) PAN Card for Both Directors" code="pvt_dir_pan" stateMap={pvtDocs} setStateMap={setPvtDocs} />
@@ -1491,10 +1495,24 @@ export default function RetailerDashboardPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-3">
-                      Mandatory Scanned Color Copy Uploads (17 Items Checklist)
-                    </h3>
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                        Mandatory Scanned Color Copy Uploads (17 Items Checklist)
+                      </h3>
+                      <span className="text-[11px] font-bold text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                        {Object.keys(firmDocs).length} of 13 Documents Attached
+                      </span>
+                    </div>
+
+                    <BulkUploadZone
+                      slots={PARTNERSHIP_SLOTS}
+                      stateMap={firmDocs}
+                      setStateMap={setFirmDocs}
+                      theme="blue"
+                      onToast={showToast}
+                    />
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       <DocumentSlot label="1) Partnership Deed / LLP Agreement" code="firm_deed" stateMap={firmDocs} setStateMap={setFirmDocs} />
                       <DocumentSlot label="2) Partnership Registration Certificate" code="firm_reg_cert" stateMap={firmDocs} setStateMap={setFirmDocs} />
@@ -1693,10 +1711,24 @@ export default function RetailerDashboardPage() {
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-3">
-                  9) Bank Statements & Color Documents Upload
-                </h3>
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                    9) Bank Statements & Color Documents Upload
+                  </h3>
+                  <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    {Object.keys(itDocs).length} of 5 Documents Attached
+                  </span>
+                </div>
+
+                <BulkUploadZone
+                  slots={ITR_SLOTS}
+                  stateMap={itDocs}
+                  setStateMap={setItDocs}
+                  theme="emerald"
+                  onToast={showToast}
+                />
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   <DocumentSlot label="3) PAN Card Scanned Copy" code="it_pan_doc" stateMap={itDocs} setStateMap={setItDocs} />
                   <DocumentSlot label="4) Aadhaar Card Scanned Copy" code="it_aadhaar_doc" stateMap={itDocs} setStateMap={setItDocs} />
