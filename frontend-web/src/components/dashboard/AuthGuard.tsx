@@ -40,6 +40,17 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         router.replace(allowedUrl);
         return;
       }
+    } else if (pathname.startsWith("/dashboard/retailer")) {
+      // Customer should not access retailer POS
+      if (role.includes("customer")) {
+        const allowedUrl = getRoleDashboardUrl(role);
+        router.replace(allowedUrl);
+        return;
+      }
+    } else if (pathname.startsWith("/dashboard/operator")) {
+      // Forward operator path to customer
+      router.replace("/dashboard/customer");
+      return;
     }
 
     setIsAuthorized(true);

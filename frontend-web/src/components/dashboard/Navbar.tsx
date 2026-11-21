@@ -15,7 +15,6 @@ import {
   Globe
 } from "lucide-react";
 
-import AiCopilotDrawer from "@/components/dashboard/AiCopilotDrawer";
 import { Language, languageNames } from "@/lib/i18n";
 import { getAuthUser, getAuthToken, clearAuthSession } from "@/lib/auth";
 import { secureApiCall } from "@/lib/crypto";
@@ -68,7 +67,6 @@ export default function Navbar({
   const [showTopupModal, setShowTopupModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileTab, setProfileTab] = useState<"profile" | "password" | "pin">("profile");
-  const [showAiDrawer, setShowAiDrawer] = useState(false);
   const [currentLang, setCurrentLang] = useState<Language>("en");
   const [activeUser, setActiveUser] = useState<{ name: string; email: string; role: string; wallet?: number; mobile?: string; city?: string; state?: string; tenant?: string } | null>(null);
   const [utrAmount, setUtrAmount] = useState("");
@@ -315,9 +313,9 @@ export default function Navbar({
     }
   };
 
-  // Check if current user is Retailer or Customer/Operator (Only they require wallet balance & topup)
+  // Check if current user is Retailer (Only retailer POS requires wallet balance & topup)
   const currentRole = (activeUser?.role || "").toLowerCase();
-  const showWalletBadge = currentRole.includes("retailer") || currentRole.includes("operator") || currentRole.includes("customer");
+  const showWalletBadge = currentRole.includes("retailer");
 
   return (
     <>
@@ -865,12 +863,6 @@ export default function Navbar({
           </div>
         </div>
       )}
-
-      {/* AI Tax Copilot Assistant Drawer */}
-      <AiCopilotDrawer 
-        isOpen={showAiDrawer} 
-        onClose={() => setShowAiDrawer(false)} 
-      />
 
       {/* Global Command Search Modal */}
       {showSearchModal && (

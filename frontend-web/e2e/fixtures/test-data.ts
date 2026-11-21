@@ -23,12 +23,19 @@ export const TEST_USERS = {
     role: 'retailer',
     expectedPath: '/dashboard/retailer',
   },
+  customer: {
+    email: 'counter@infusetax.com',
+    password: 'Admin@123',
+    name: 'Ligadesshwaren p (Customer Client)',
+    role: 'customer',
+    expectedPath: '/dashboard/customer',
+  },
   operator: {
     email: 'counter@infusetax.com',
     password: 'Admin@123',
-    name: 'Ligadesshwaren p (Counter Staff)',
-    role: 'operator',
-    expectedPath: '/dashboard/operator',
+    name: 'Ligadesshwaren p (Customer Client)',
+    role: 'customer',
+    expectedPath: '/dashboard/customer',
   },
 };
 

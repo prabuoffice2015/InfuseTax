@@ -53,6 +53,12 @@ import {
 
 export default function OperatorTerminalPage() {
   const router = useRouter();
+
+  // Forward legacy operator route to Customer portal
+  useEffect(() => {
+    router.replace("/dashboard/customer");
+  }, [router]);
+
   const searchParams = useSearchParams();
   const currentDeskParam = searchParams.get("desk") || "gst_reg";
 

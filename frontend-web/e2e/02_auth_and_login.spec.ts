@@ -21,12 +21,12 @@ test.describe('02 - Authentication & Multi-Role Access Control', () => {
     await expect(errorMsg.first()).toBeVisible({ timeout: 10000 });
   });
 
-  test('should authenticate Operator and redirect to /dashboard/operator', async ({ page }) => {
-    await loginAs(page, 'operator');
-    await expect(page).toHaveURL(/\/dashboard\/operator/);
+  test('should authenticate Customer and redirect to /dashboard/customer', async ({ page }) => {
+    await loginAs(page, 'customer');
+    await expect(page).toHaveURL(/\/dashboard\/customer/);
     
-    // Check Operator Desk heading / indicators
-    const heading = page.locator('h1, h2, div').filter({ hasText: /Operator|Counter Desk|Shift/i });
+    // Check Customer Client Portal heading / indicators
+    const heading = page.locator('h1, h2, div').filter({ hasText: /Customer|Welcome|Portal|Filings/i });
     await expect(heading.first()).toBeVisible();
   });
 

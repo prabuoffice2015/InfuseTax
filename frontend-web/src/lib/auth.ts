@@ -61,7 +61,7 @@ export function getRoleDashboardUrl(role?: string): string {
   } else if (normalized === "admin" || normalized.includes("distributor")) {
     return "/dashboard/distributor";
   } else if (normalized === "customer" || normalized.includes("customer") || normalized.includes("operator") || normalized.includes("employee")) {
-    return "/dashboard/operator";
+    return "/dashboard/customer";
   }
   return "/dashboard/retailer";
 }

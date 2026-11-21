@@ -119,10 +119,10 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
     } else if (role.includes("customer") || role.includes("operator") || role.includes("employee")) {
       return [
         { label: "Dashboard", href: "/dashboard/customer?tab=overview", tabKey: "overview", icon: LayoutDashboard },
-        { label: "My Filings", href: "/dashboard/customer?tab=my_filings", tabKey: "my_filings", icon: FileCheck, permKey: "my_filings" },
-        { label: "My Credentials", href: "/dashboard/customer?tab=credentials", tabKey: "credentials", icon: ShieldAlert, permKey: "credentials" },
-        { label: "Document Vault", href: "/dashboard/customer?tab=documents", tabKey: "documents", icon: ShieldCheck, permKey: "vault" },
-        { label: "Receipts", href: "/dashboard/customer?tab=receipts", tabKey: "receipts", icon: Receipt, permKey: "receipts" },
+        { label: "My Filings", href: "/dashboard/customer?tab=my_filings", tabKey: "my_filings", icon: FileCheck },
+        { label: "My Credentials", href: "/dashboard/customer?tab=credentials", tabKey: "credentials", icon: ShieldAlert },
+        { label: "Document Vault", href: "/dashboard/customer?tab=documents", tabKey: "documents", icon: ShieldCheck },
+        { label: "Receipts", href: "/dashboard/customer?tab=receipts", tabKey: "receipts", icon: Receipt },
       ];
     } else {
       // Retailer Store POS (Tier 3)

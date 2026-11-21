@@ -15,9 +15,10 @@ export default function DashboardLayout({
   const pathname = usePathname();
 
   const getRoleFromPath = () => {
-    if (pathname.includes("/dashboard/company")) return "admin";
-    if (pathname.includes("/dashboard/distributor")) return "distributor";
-    if (pathname.includes("/dashboard/operator")) return "operator";
+    if (pathname.includes("/dashboard/company")) return "super_admin";
+    if (pathname.includes("/dashboard/distributor") || pathname.includes("/dashboard/admin")) return "admin";
+    if (pathname.includes("/dashboard/customer")) return "customer";
+    if (pathname.includes("/dashboard/operator")) return "customer";
     return "retailer";
   };
 
@@ -25,12 +26,12 @@ export default function DashboardLayout({
 
   const getUserDetails = () => {
     switch (role) {
-      case "admin":
+      case "super_admin":
         return { name: "TaxPartner Super Admin", code: "SUPER_01", balance: 2500000.00 };
-      case "distributor":
-        return { name: "Apex Zonal Distributor", code: "DIST_882", balance: 450000.00 };
-      case "operator":
-        return { name: "Counter Staff (Operator)", code: "EMP_09", balance: 15400.00 };
+      case "admin":
+        return { name: "Apex Zonal Admin", code: "ADM_882", balance: 450000.00 };
+      case "customer":
+        return { name: "Customer Client Portal", code: "CUST_01", balance: 0.00 };
       case "retailer":
       default:
         return { name: "Ramesh Digital Seva", code: "RET_1029", balance: 48750.00 };
