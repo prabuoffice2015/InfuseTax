@@ -383,15 +383,15 @@ class DashboardController {
                 );
             }
 
-            Notification::create(
-                tenantId: $tenantId,
-                title: "User Onboarded (" . $fullName . ")",
-                message: "New " . strtoupper($role) . " outlet '" . $fullName . "' registered.",
-                category: "system",
-                userId: null,
-                targetRole: "all",
-                referenceId: $newUserId
-            );
+            Notification::create([
+                'tenant_id'    => $tenantId,
+                'title'        => "User Onboarded (" . $fullName . ")",
+                'message'      => "New " . strtoupper($role) . " outlet '" . $fullName . "' registered.",
+                'category'     => "system",
+                'user_id'      => null,
+                'target_role'  => "all",
+                'reference_id' => $newUserId,
+            ]);
 
             $pdo->commit();
 
@@ -1420,15 +1420,15 @@ class DashboardController {
                 ]);
                 $id = $stmt->fetchColumn();
 
-                Notification::create(
-                    tenantId: $tenantId ?? 'a0000000-0000-0000-0000-000000000001',
-                    title: "Broadcast: " . $title,
-                    message: $message,
-                    category: "announcement",
-                    userId: null,
-                    targetRole: "all",
-                    referenceId: (string)$id
-                );
+                Notification::create([
+                    'tenant_id'    => $tenantId ?? 'a0000000-0000-0000-0000-000000000001',
+                    'title'        => "Broadcast: " . $title,
+                    'message'      => $message,
+                    'category'     => "announcement",
+                    'user_id'      => null,
+                    'target_role'  => "all",
+                    'reference_id' => (string)$id,
+                ]);
 
                 Response::json([
                     'status'  => 'success',
@@ -1665,15 +1665,15 @@ class DashboardController {
                 narration: $remarks
             );
 
-            Notification::create(
-                tenantId: $actor['tenant_id'] ?? 'a0000000-0000-0000-0000-000000000001',
-                title: "Shift Float " . ($type === 'credit' ? 'Credited' : 'Reclaimed'),
-                message: "Shift float of ₹" . number_format($amount, 2) . " " . ($type === 'credit' ? 'allocated to' : 'reclaimed from') . " " . ($op['full_name'] ?? 'Operator') . ".",
-                category: "wallet",
-                userId: $operatorId,
-                targetRole: "all",
-                referenceId: $operatorId
-            );
+            Notification::create([
+                'tenant_id'    => $actor['tenant_id'] ?? 'a0000000-0000-0000-0000-000000000001',
+                'title'        => "Shift Float " . ($type === 'credit' ? 'Credited' : 'Reclaimed'),
+                'message'      => "Shift float of ₹" . number_format($amount, 2) . " " . ($type === 'credit' ? 'allocated to' : 'reclaimed from') . " " . ($op['full_name'] ?? 'Operator') . ".",
+                'category'     => "wallet",
+                'user_id'      => $operatorId,
+                'target_role'  => "all",
+                'reference_id' => $operatorId,
+            ]);
 
             $pdo->commit();
 

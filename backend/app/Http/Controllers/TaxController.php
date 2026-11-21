@@ -148,15 +148,15 @@ class TaxController {
                 narration: "GST Registration ({$regType}) for {$tradeName} - Status: {$status} (ARN: {$arn})"
             );
 
-            Notification::create(
-                tenantId: $tenantId,
-                title: "GST Registration Filed (" . $arn . ")",
-                message: "New application for '" . $tradeName . "' submitted for compliance verification.",
-                category: "filing",
-                userId: $userId,
-                targetRole: "all",
-                referenceId: $arn
-            );
+            Notification::create([
+                'tenant_id'    => $tenantId,
+                'title'        => "GST Registration Filed (" . $arn . ")",
+                'message'      => "New application for '" . $tradeName . "' submitted for compliance verification.",
+                'category'     => "filing",
+                'user_id'      => $userId,
+                'target_role'  => "all",
+                'reference_id' => $arn,
+            ]);
 
             $pdo->commit();
 
@@ -280,15 +280,15 @@ class TaxController {
                 narration: "Income Tax Return ({$filerType}) for {$customerName} - Status: {$status} (Ack: {$ack})"
             );
 
-            Notification::create(
-                tenantId: $tenantId,
-                title: "ITR Filing Filed (" . $ack . ")",
-                message: "Income Tax return for '" . $customerName . "' (PAN: " . $pan . ") filed successfully.",
-                category: "filing",
-                userId: $userId,
-                targetRole: "all",
-                referenceId: $ack
-            );
+            Notification::create([
+                'tenant_id'    => $tenantId,
+                'title'        => "ITR Filing Filed (" . $ack . ")",
+                'message'      => "Income Tax return for '" . $customerName . "' (PAN: " . $pan . ") filed successfully.",
+                'category'     => "filing",
+                'user_id'      => $userId,
+                'target_role'  => "all",
+                'reference_id' => $ack,
+            ]);
 
             $pdo->commit();
 
@@ -412,15 +412,17 @@ class TaxController {
                 amount: $portalFee,
                 balanceAfter: $newBalance,
                 narration: "GST Return ({$returnType} {$period}) for {$gstin} - Status: {$status} (ARN: {$arn})"
-            );            Notification::create(
-                tenantId: $tenantId,
-                title: "GST Return Filed (" . $arn . ")",
-                message: $returnType . " return for '" . $gstin . "' (" . $period . ") processed.",
-                category: "filing",
-                userId: $userId,
-                targetRole: "all",
-                referenceId: $arn
             );
+
+            Notification::create([
+                'tenant_id'    => $tenantId,
+                'title'        => "GST Return Filed (" . $arn . ")",
+                'message'      => $returnType . " return for '" . $gstin . "' (" . $period . ") processed.",
+                'category'     => "filing",
+                'user_id'      => $userId,
+                'target_role'  => "all",
+                'reference_id' => $arn,
+            ]);
 
             $pdo->commit();
 
@@ -734,15 +736,15 @@ class TaxController {
                 );
             }
 
-            Notification::create(
-                tenantId: $tenantId ?? 'a0000000-0000-0000-0000-000000000001',
-                title: "Application Rejected (" . $appId . ")",
-                message: "Application (" . $appId . ") rejected: " . $rejectionRemarks . ". Fee of ₹" . $feeToRefund . " refunded to wallet.",
-                category: "approval",
-                userId: $userIdToRefund,
-                targetRole: "all",
-                referenceId: $appId
-            );
+            Notification::create([
+                'tenant_id'    => $tenantId ?? 'a0000000-0000-0000-0000-000000000001',
+                'title'        => "Application Rejected (" . $appId . ")",
+                'message'      => "Application (" . $appId . ") rejected: " . $rejectionRemarks . ". Fee of ₹" . $feeToRefund . " refunded to wallet.",
+                'category'     => "approval",
+                'user_id'      => $userIdToRefund,
+                'target_role'  => "all",
+                'reference_id' => $appId,
+            ]);
 
             $pdo->commit();
 
