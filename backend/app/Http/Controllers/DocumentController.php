@@ -32,6 +32,13 @@ class DocumentController {
     }
 
     /**
+     * Alias for list() to match router mapping
+     */
+    public function listDocuments(): void {
+        $this->list();
+    }
+
+    /**
      * Uploads and registers a new document in the vault.
      */
     public function upload(array $body): void {
@@ -65,5 +72,12 @@ class DocumentController {
             'message'  => 'Document uploaded and encrypted in vault.',
             'document' => $doc
         ], 201);
+    }
+
+    /**
+     * Alias for upload() to match router mapping
+     */
+    public function uploadDocument(array $body): void {
+        $this->upload($body);
     }
 }
