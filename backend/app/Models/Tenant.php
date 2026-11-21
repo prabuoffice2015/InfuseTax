@@ -41,7 +41,11 @@ class Tenant extends Model {
     }
 
     public function distributors() {
-        return $this->hasMany(User::class, 'tenant_id', 'id')->where('role', 'distributor');
+        return $this->hasMany(User::class, 'tenant_id', 'id')->whereIn('role', ['admin', 'distributor']);
+    }
+
+    public function admins() {
+        return $this->hasMany(User::class, 'tenant_id', 'id')->whereIn('role', ['admin', 'distributor']);
     }
 
     public function retailers() {
@@ -49,7 +53,11 @@ class Tenant extends Model {
     }
 
     public function operators() {
-        return $this->hasMany(User::class, 'tenant_id', 'id')->where('role', 'operator');
+        return $this->hasMany(User::class, 'tenant_id', 'id')->whereIn('role', ['customer', 'operator']);
+    }
+
+    public function customers() {
+        return $this->hasMany(User::class, 'tenant_id', 'id')->whereIn('role', ['customer', 'operator']);
     }
 
     public function gstFilings() {

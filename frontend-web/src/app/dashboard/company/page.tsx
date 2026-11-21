@@ -238,7 +238,7 @@ export default function CompanySuperAdminPage() {
   const [walletAdjData, setWalletAdjData] = useState({ amount: "", direction: "CREDIT" as "CREDIT" | "DEBIT", remarks: "" });
 
   const [newUser, setNewUser] = useState({
-    role: "distributor",
+    role: "admin",
     full_name: "",
     email: "",
     mobile: "",
@@ -692,7 +692,7 @@ export default function CompanySuperAdminPage() {
         showToast(`User '${newUser.full_name}' onboarded successfully!`);
         setShowOnboardUserModal(false);
         setNewUser({
-          role: "distributor", full_name: "", email: "", mobile: "",
+          role: "admin", full_name: "", email: "", mobile: "",
           parent_id: "", city: "Chennai", state: "Tamil Nadu", password: "", initial_wallet: "0"
         });
         loadAllData();
@@ -1108,7 +1108,11 @@ export default function CompanySuperAdminPage() {
       } else if (userCompanyFilter !== "all") {
         matchesCompany = u.tenant_id === userCompanyFilter;
       }
-      const matchesRole = userRoleFilter === "all" || u.role?.toLowerCase() === userRoleFilter?.toLowerCase();
+      const r = u.role?.toLowerCase() || "";
+      const matchesRole = userRoleFilter === "all" || 
+        r === userRoleFilter.toLowerCase() ||
+        (userRoleFilter === "admin" && (r === "admin" || r === "distributor")) ||
+        (userRoleFilter === "customer" && (r === "customer" || r === "operator"));
       const matchesSearch = !userSearchQuery || 
         u.name?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
         u.email?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
@@ -1621,7 +1625,7 @@ export default function CompanySuperAdminPage() {
 
                 {/* Role Filter Pills */}
                 <div className="flex items-center space-x-1 overflow-x-auto pb-1 sm:pb-0">
-                  {["all", "distributor", "retailer", "operator"].map((roleKey) => (
+                  {["all", "admin", "retailer", "customer"].map((roleKey) => (
                     <button
                       key={roleKey}
                       onClick={() => { setUserRoleFilter(roleKey); setUsersPage(1); }}
@@ -1631,7 +1635,7 @@ export default function CompanySuperAdminPage() {
                           : "text-slate-600 hover:bg-slate-200/60"
                       }`}
                     >
-                      {roleKey === "all" ? "All Tiers" : roleKey === "distributor" ? "Tier 2 Master" : roleKey === "retailer" ? "Tier 3 Retailer" : "Tier 4 Operator"}
+                      {roleKey === "all" ? "All Tiers" : roleKey === "admin" ? "Tier 2 Admin" : roleKey === "retailer" ? "Tier 3 Retailer" : "Tier 4 Customer"}
                     </button>
                   ))}
                 </div>
@@ -1702,7 +1706,7 @@ export default function CompanySuperAdminPage() {
                             u.tier === 3 ? 'bg-blue-100 text-blue-800 border-blue-200' :
                             'bg-amber-100 text-amber-800 border-amber-200'
                           }`}>
-                            Tier {u.tier}: {u.role?.toUpperCase()}
+                            Tier {u.tier}: {(u.role?.toLowerCase() === 'distributor' ? 'ADMIN' : u.role?.toLowerCase() === 'operator' ? 'CUSTOMER' : u.role?.toUpperCase())}
                           </span>
                         </td>
                         <td className="py-4 px-4 text-slate-600 font-medium">
@@ -3077,9 +3081,9 @@ export default function CompanySuperAdminPage() {
                     onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
                     className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-purple-600"
                   >
-                    <option value="distributor">Tier 2: Master Distributor</option>
+                    <option value="admin">Tier 2: Admin</option>
                     <option value="retailer">Tier 3: Retailer Outlet POS</option>
-                    <option value="operator">Tier 4: Operator Counter Staff</option>
+                    <option value="customer">Tier 4: Customer</option>
                   </select>
                 </div>
 

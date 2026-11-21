@@ -4,7 +4,7 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  role: "super_admin" | "distributor" | "retailer" | "operator" | string;
+  role: "super_admin" | "admin" | "distributor" | "retailer" | "customer" | "operator" | string;
   tenant?: string;
   mobile?: string;
   city?: string;
@@ -55,12 +55,12 @@ export function isUserAuthenticated(): boolean {
 }
 
 export function getRoleDashboardUrl(role?: string): string {
-  const normalized = (role || "").toLowerCase();
-  if (normalized.includes("admin")) {
+  const normalized = (role || "").toLowerCase().trim();
+  if (normalized === "super_admin" || normalized.includes("super_admin") || normalized.includes("company")) {
     return "/dashboard/company";
-  } else if (normalized.includes("distributor")) {
+  } else if (normalized === "admin" || normalized.includes("distributor")) {
     return "/dashboard/distributor";
-  } else if (normalized.includes("operator") || normalized.includes("employee")) {
+  } else if (normalized === "customer" || normalized.includes("customer") || normalized.includes("operator") || normalized.includes("employee")) {
     return "/dashboard/operator";
   }
   return "/dashboard/retailer";

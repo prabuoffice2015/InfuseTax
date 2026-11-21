@@ -52,9 +52,9 @@ class DashboardController {
             $gstCount  = GstFiling::count();
             $itrCount  = ItrFiling::count();
             $userCount = User::where('role', '!=', 'super_admin')->count();
-            $distCount = User::where('role', 'distributor')->count();
+            $distCount = User::whereIn('role', ['distributor', 'admin'])->count();
             $retCount  = User::where('role', 'retailer')->count();
-            $opCount   = User::where('role', 'operator')->count();
+            $opCount   = User::whereIn('role', ['operator', 'customer'])->count();
             $poolBal   = (float) Wallet::sum('balance');
             $pendingUtrs = WalletRequest::where('status', 'pending')->count();
 
@@ -542,12 +542,12 @@ class DashboardController {
                     FROM users u
                     LEFT JOIN wallets w ON u.id = w.user_id
                     LEFT JOIN tenants t ON u.tenant_id = t.id
-                    WHERE u.role IN ('retailer', 'operator')
+                    WHERE u.role IN ('retailer', 'operator', 'customer')
                 ";
                 $params = [];
 
                 if (($actor['role'] ?? '') === 'retailer') {
-                    $sql .= " AND (u.parent_id = :did OR u.tenant_id = :dtid) AND u.role = 'operator'";
+                    $sql .= " AND (u.parent_id = :did OR u.tenant_id = :dtid) AND (u.role = 'operator' OR u.role = 'customer')";
                     $params['did'] = $distId;
                     $params['dtid'] = $distTenantId;
                 } elseif (!empty($distId)) {
@@ -691,7 +691,7 @@ class DashboardController {
             'tenant_id'            => $tenantId,
             'requester_id'         => $userId,
             'requester_role'       => $userRole,
-            'target_approver_role' => ($userRole === 'operator' ? 'retailer' : 'super_admin'),
+            'target_approver_role' => (($userRole === 'operator' || $userRole === 'customer') ? 'retailer' : 'super_admin'),
             'amount'               => $amount,
             'payment_mode'         => $payMode,
             'reference_no'         => $refNo,
@@ -814,11 +814,11 @@ class DashboardController {
                     $sql .= " AND (al.reference_id ILIKE :search OR al.narration ILIKE :search OR cu.full_name ILIKE :search OR du.full_name ILIKE :search OR au.full_name ILIKE :search)";
                     $params['search'] = "%{$search}%";
                 }
-                if (($actor['role'] ?? '') === 'distributor') {
+                if (($actor['role'] ?? '') === 'distributor' || ($actor['role'] ?? '') === 'admin') {
                     $distId = $actor['sub'] ?? $actor['id'] ?? '';
                     $sql .= " AND (al.actor_id = :did OR al.credit_user_id = :did OR al.debit_user_id = :did OR al.credit_user_id IN (SELECT id FROM users WHERE parent_id = :did) OR al.debit_user_id IN (SELECT id FROM users WHERE parent_id = :did))";
                     $params['did'] = $distId;
-                } elseif (($actor['role'] ?? '') === 'retailer' || ($actor['role'] ?? '') === 'operator') {
+                } elseif (($actor['role'] ?? '') === 'retailer' || ($actor['role'] ?? '') === 'operator' || ($actor['role'] ?? '') === 'customer') {
                     $uId = $actor['sub'] ?? $actor['id'] ?? '';
                     $sql .= " AND (al.actor_id = :uid OR al.credit_user_id = :uid OR al.debit_user_id = :uid OR al.credit_user_id IN (SELECT id FROM users WHERE parent_id = :uid) OR al.debit_user_id IN (SELECT id FROM users WHERE parent_id = :uid))";
                     $params['uid'] = $uId;
@@ -1348,7 +1348,7 @@ class DashboardController {
                         $sql .= " AND (a.tenant_id = :tid OR a.tenant_id IS NULL)";
                         $params['tid'] = $tenantFilter;
                     }
-                } elseif ($role === 'distributor') {
+                } elseif ($role === 'distributor' || $role === 'admin') {
                     $sql .= " AND (a.tenant_id = :tid OR a.tenant_id IS NULL)";
                     $params['tid'] = $userTenantId;
                 } else {
@@ -1387,7 +1387,7 @@ class DashboardController {
         $pdo = Database::getConnection();
 
         $tenantId = null;
-        if ($actor['role'] === 'distributor') {
+        if ($actor['role'] === 'distributor' || $actor['role'] === 'admin') {
             $tenantId = $actor['tenant_id'] ?? null;
             if (empty($tenantId) && $pdo && !empty($actor['sub'])) {
                 $stmt = $pdo->prepare("SELECT tenant_id FROM users WHERE id = :id");
@@ -1575,7 +1575,7 @@ class DashboardController {
                        to_char(u.created_at, 'DD Mon YYYY') as onboarded_date
                 FROM users u
                 LEFT JOIN wallets w ON u.id = w.user_id
-                WHERE u.role = 'operator'
+                WHERE (u.role = 'operator' OR u.role = 'customer')
                   AND (u.parent_id = :rid OR u.tenant_id = :tid)
                 ORDER BY u.created_at DESC
             ");
@@ -1612,8 +1612,8 @@ class DashboardController {
         try {
             $pdo->beginTransaction();
 
-            // Check operator
-            $stmtOp = $pdo->prepare("SELECT u.id, u.full_name, w.balance FROM users u LEFT JOIN wallets w ON u.id = w.user_id WHERE u.id = :id AND u.role = 'operator' FOR UPDATE");
+            // Check operator/customer
+            $stmtOp = $pdo->prepare("SELECT u.id, u.full_name, w.balance FROM users u LEFT JOIN wallets w ON u.id = w.user_id WHERE u.id = :id AND (u.role = 'operator' OR u.role = 'customer') FOR UPDATE");
             $stmtOp->execute(['id' => $operatorId]);
             $op = $stmtOp->fetch(PDO::FETCH_ASSOC);
             if (!$op) {
@@ -1718,12 +1718,12 @@ class DashboardController {
         }
 
         if ($actorRole !== 'super_admin') {
-            if ($actorRole === 'distributor') {
-                if ($targetUser['parent_id'] !== $actorId && $targetUser['role'] !== 'retailer' && $targetUser['role'] !== 'operator') {
+            if ($actorRole === 'distributor' || $actorRole === 'admin') {
+                if ($targetUser['parent_id'] !== $actorId && $targetUser['role'] !== 'retailer' && $targetUser['role'] !== 'operator' && $targetUser['role'] !== 'customer') {
                     Response::error('Unauthorized: You can only update permissions for outlets in your downline.', 403);
                 }
             } elseif ($actorRole === 'retailer') {
-                if ($targetUser['parent_id'] !== $actorId && $targetUser['role'] !== 'operator') {
+                if ($targetUser['parent_id'] !== $actorId && $targetUser['role'] !== 'operator' && $targetUser['role'] !== 'customer') {
                     Response::error('Unauthorized: You can only update permissions for staff in your shop.', 403);
                 }
             } else {

@@ -86,7 +86,7 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
   const getRoleNavItems = () => {
     const role = (activeUserRole || currentRole).toLowerCase();
 
-    if (role.includes("admin") || role.includes("super_admin") || role === "company") {
+    if (role === "super_admin" || role.includes("super_admin") || role === "company") {
       return [
         { label: "Platform Overview", href: "/dashboard/company?tab=overview", tabKey: "overview", icon: LayoutDashboard },
         { label: "Company Creation", href: "/dashboard/company?tab=companies", tabKey: "companies", icon: Building },
@@ -98,9 +98,9 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
         { label: "💬 WhatsApp Gateway & Alerts", href: "/dashboard/company?tab=whatsapp", tabKey: "whatsapp", icon: MessageSquare },
         { label: "Master Audit Ledger", href: "/dashboard/company?tab=ledger", tabKey: "ledger", icon: History },
       ];
-    } else if (role.includes("distributor")) {
+    } else if (role === "admin" || role.includes("distributor")) {
       return [
-        { label: "Distributor Dashboard", href: "/dashboard/distributor?tab=overview", tabKey: "overview", icon: LayoutDashboard, permKey: "overview" },
+        { label: "Admin Dashboard", href: "/dashboard/distributor?tab=overview", tabKey: "overview", icon: LayoutDashboard, permKey: "overview" },
         { label: "📋 Service Approvals (T3 & T4)", href: "/dashboard/distributor?tab=service-approvals", tabKey: "service-approvals", icon: FileCheck, permKey: "service_approvals" },
         { label: "💳 Wallet Approvals (T3 & T4)", href: "/dashboard/distributor?tab=approvals", tabKey: "approvals", icon: CheckSquare, permKey: "float_approvals" },
         { label: "Tier 3 Pricing Setup", href: "/dashboard/distributor?tab=pricing", tabKey: "pricing", icon: Sliders, permKey: "pricing" },
@@ -108,12 +108,12 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
         { label: "Company Announcements", href: "/dashboard/distributor?tab=announcements", tabKey: "announcements", icon: Megaphone, permKey: "announcements" },
         { label: "Wallet & Master Reports", href: "/dashboard/distributor?tab=reports", tabKey: "reports", icon: History, permKey: "reports" },
       ];
-    } else if (role.includes("operator") || role.includes("employee")) {
+    } else if (role.includes("customer") || role.includes("operator") || role.includes("employee")) {
       return [
         { label: "GST Registration Desk", href: "/dashboard/operator?desk=gst_reg", deskKey: "gst_reg", icon: Building, permKey: "gst_registration" },
         { label: "IT Filing Desk", href: "/dashboard/operator?desk=itr", deskKey: "itr", icon: FileText, permKey: "itr_filing" },
         { label: "GST Return Filing", href: "/dashboard/operator?desk=gstr_filing", deskKey: "gstr_filing", icon: FileSpreadsheet, permKey: "gstr_filing" },
-        { label: "Shift Wallet Report", href: "/dashboard/operator?desk=reports", deskKey: "reports", icon: History, permKey: "reports" },
+        { label: "Wallet Report", href: "/dashboard/operator?desk=reports", deskKey: "reports", icon: History, permKey: "reports" },
       ];
     } else {
       // Retailer Store POS (Tier 3)
@@ -123,7 +123,7 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
         { label: "GST Return Filing", href: "/dashboard/retailer?desk=gstr_filing", deskKey: "gstr_filing", icon: FileSpreadsheet, permKey: "gstr_filing" },
         { label: "Company Announcements", href: "/dashboard/retailer?desk=announcements", deskKey: "announcements", icon: Megaphone, permKey: "announcements" },
         { label: "Document Vault & AI", href: "/dashboard/retailer?desk=vault", deskKey: "vault", icon: ShieldCheck, permKey: "vault" },
-        { label: "Shop Staff (Tier 4)", href: "/dashboard/retailer?desk=staff", deskKey: "staff", icon: Users, permKey: "staff" },
+        { label: "Customer Staff (Tier 4)", href: "/dashboard/retailer?desk=staff", deskKey: "staff", icon: Users, permKey: "staff" },
         { label: "📋 Service Approvals (Tier 4)", href: "/dashboard/retailer?desk=service-approvals", deskKey: "service-approvals", icon: FileCheck, permKey: "service_approvals" },
         { label: "💳 Float Approvals (Tier 4)", href: "/dashboard/retailer?desk=approvals", deskKey: "approvals", icon: CheckSquare, permKey: "float_approvals" },
         { label: "Store Audit Ledger", href: "/dashboard/retailer?desk=reports", deskKey: "reports", icon: History, permKey: "reports" },
@@ -139,15 +139,15 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
   });
 
   const getRoleBadge = () => {
-    const role = (activeUserRole || currentRole).toLowerCase();
-    if (role.includes("admin")) {
+    const role = (activeUserRole || currentRole).toLowerCase().trim();
+    if (role === "super_admin" || role.includes("super_admin") || role === "company") {
       return { name: "Super Admin", color: "bg-purple-100 text-purple-800 border-purple-200", tier: 1 };
-    } else if (role.includes("distributor")) {
-      return { name: "Distributor", color: "bg-blue-100 text-blue-800 border-blue-200", tier: 2 };
-    } else if (role.includes("operator")) {
-      return { name: "Counter Staff", color: "bg-amber-100 text-amber-800 border-amber-200", tier: 4 };
+    } else if (role === "admin" || role.includes("distributor")) {
+      return { name: "Admin", color: "bg-blue-100 text-blue-800 border-blue-200", tier: 2 };
+    } else if (role === "customer" || role.includes("customer") || role.includes("operator")) {
+      return { name: "Customer", color: "bg-amber-100 text-amber-800 border-amber-200", tier: 4 };
     } else {
-      return { name: "Retailer POS", color: "bg-emerald-100 text-emerald-800 border-emerald-200", tier: 3 };
+      return { name: "Retailer", color: "bg-emerald-100 text-emerald-800 border-emerald-200", tier: 3 };
     }
   };
 

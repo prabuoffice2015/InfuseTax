@@ -347,7 +347,7 @@ export default function DistributorDashboardPage() {
         const outList = outletsRes.value.data.outlets;
         setOutlets(outList);
         const retCount = outList.filter((o: any) => o.role === 'retailer').length;
-        const opCount = outList.filter((o: any) => o.role === 'operator').length;
+        const opCount = outList.filter((o: any) => o.role === 'operator' || o.role === 'customer').length;
         const totalLiquidity = outList.reduce((acc: number, o: any) => acc + parseFloat(o.wallet || 0), 0);
         setStats(prev => ({
           ...prev,

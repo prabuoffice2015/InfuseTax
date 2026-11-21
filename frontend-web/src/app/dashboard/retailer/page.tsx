@@ -939,7 +939,7 @@ export default function RetailerDashboardPage() {
         }
       });
       if (ok && data.status === "success") {
-        showToast(`✓ Shift Float of ₹${selectedWalletRequest.amount} approved and credited to ${selectedWalletRequest.requester_name || 'operator'}!`);
+        showToast(`✓ Shift Float of ₹${selectedWalletRequest.amount} approved and credited to ${selectedWalletRequest.requester_name || 'customer'}!`);
         setShowWalletActionModal(false);
         loadAllData();
       } else {

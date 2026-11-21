@@ -65,7 +65,7 @@ class TaxController {
         }
 
         // Multi-tier document approval workflow: All filings require approval from Distributor (Tier 2) or Retailer (Tier 3)
-        $isOperator = ($role === 'operator' || $role === 'employee');
+        $isOperator = in_array($role, ['operator', 'customer', 'employee']);
         $status     = 'PENDING_APPROVAL';
 
                 $serviceKey = match($regType) {
@@ -212,7 +212,7 @@ class TaxController {
             Response::error("Valid PAN is mandatory for IT return filing.", 422);
         }
 
-        $isOperator = ($role === 'operator' || $role === 'employee');
+        $isOperator = in_array($role, ['operator', 'customer', 'employee']);
         $status     = 'PENDING_APPROVAL';
 
         $portalFee  = self::getServiceRate($pdo, $tenantId, 'itr_filing', 550.00);
@@ -348,7 +348,7 @@ class TaxController {
             Response::error("Valid taxable turnover amount is mandatory.", 422);
         }
 
-        $isOperator = ($role === 'operator' || $role === 'employee');
+        $isOperator = in_array($role, ['operator', 'customer', 'employee']);
         $status     = 'PENDING_APPROVAL';
 
         $portalFee  = self::getServiceRate($pdo, $tenantId, 'gstr_filing', 350.00);
@@ -471,7 +471,7 @@ class TaxController {
                     ORDER BY g.created_at DESC
                 ");
                 $stmtGst->execute();
-            } else if ($role === 'distributor') {
+            } else if ($role === 'distributor' || $role === 'admin') {
                 $stmtGst = $pdo->prepare("
                     SELECT g.id, 'gst' as service_category, g.arn, g.trade_name as client_name, g.entity_type, g.pan, 
                            g.portal_fee as amount, g.status, g.documents_payload, g.verified_doc_url, g.rejection_remarks,
@@ -518,7 +518,7 @@ class TaxController {
                     ORDER BY i.created_at DESC
                 ");
                 $stmtItr->execute();
-            } else if ($role === 'distributor') {
+            } else if ($role === 'distributor' || $role === 'admin') {
                 $stmtItr = $pdo->prepare("
                     SELECT i.id, 'itr' as service_category, i.ack_number as arn, i.client_name, i.itr_form as entity_type, i.pan, 
                            i.portal_fee as amount, i.status, i.documents_payload, i.verified_doc_url, i.rejection_remarks,
@@ -799,7 +799,7 @@ class TaxController {
                         ORDER BY date DESC
                         LIMIT 50
                     ")->fetchAll(PDO::FETCH_ASSOC);
-                } else if ($role === 'operator' || $role === 'employee') {
+                } else if ($role === 'operator' || $role === 'customer' || $role === 'employee') {
                     $stmt = $pdo->prepare("
                         SELECT * FROM (
                             SELECT g.id as uuid, g.arn as id, g.arn, g.trade_name as client, g.trade_name as client_name, 'gst' as service_category,

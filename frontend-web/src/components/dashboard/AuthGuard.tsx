@@ -28,14 +28,14 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     // 2. Role-Based Route Protection
     if (pathname.startsWith("/dashboard/company")) {
       // Super Admin Only
-      if (!role.includes("admin") && !role.includes("super_admin")) {
+      if (role !== "super_admin" && !role.includes("super_admin")) {
         const allowedUrl = getRoleDashboardUrl(role);
         router.replace(allowedUrl);
         return;
       }
-    } else if (pathname.startsWith("/dashboard/distributor")) {
-      // Distributor or Admin
-      if (!role.includes("distributor") && !role.includes("admin")) {
+    } else if (pathname.startsWith("/dashboard/distributor") || pathname.startsWith("/dashboard/admin")) {
+      // Tier 2 Admin or Super Admin
+      if (role !== "admin" && !role.includes("distributor") && role !== "super_admin") {
         const allowedUrl = getRoleDashboardUrl(role);
         router.replace(allowedUrl);
         return;

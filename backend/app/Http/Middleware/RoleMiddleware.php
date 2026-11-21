@@ -25,7 +25,20 @@ class RoleMiddleware {
         $user = AuthMiddleware::authenticate();
         $userRole = $user['role'] ?? '';
 
-        if (!in_array($userRole, $allowedRoles, true)) {
+        // Normalize role aliases for forward/backward compatibility:
+        // 'distributor' <=> 'admin'
+        // 'operator'    <=> 'customer'
+        $normalizedAllowed = [];
+        foreach ($allowedRoles as $role) {
+            $normalizedAllowed[] = $role;
+            if ($role === 'distributor') $normalizedAllowed[] = 'admin';
+            if ($role === 'admin')       $normalizedAllowed[] = 'distributor';
+            if ($role === 'operator')    $normalizedAllowed[] = 'customer';
+            if ($role === 'customer')    $normalizedAllowed[] = 'operator';
+        }
+        $normalizedAllowed = array_unique($normalizedAllowed);
+
+        if (!in_array($userRole, $normalizedAllowed, true)) {
             Response::error(
                 message: "Access Denied: Role '{$userRole}' lacks required permissions for this action.",
                 statusCode: 403,

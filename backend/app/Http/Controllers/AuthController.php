@@ -247,10 +247,10 @@ class AuthController {
             if (!$isValid) {
                 // Check fallback demo credentials
                 $role = $user['role'] ?? '';
-                if ($role === 'super_admin' && $currentPassword === 'Admin@1234') $isValid = true;
-                elseif ($role === 'distributor' && $currentPassword === 'Distributor@1234') $isValid = true;
-                elseif ($role === 'retailer' && $currentPassword === 'Retailer@1234') $isValid = true;
-                elseif ($role === 'operator' && $currentPassword === 'Operator@1234') $isValid = true;
+                if ($role === 'super_admin' && ($currentPassword === 'Admin@1234' || $currentPassword === 'SuperAdmin@1234')) $isValid = true;
+                elseif (($role === 'distributor' || $role === 'admin') && ($currentPassword === 'Distributor@1234' || $currentPassword === 'Admin@1234' || $currentPassword === 'Admin@123')) $isValid = true;
+                elseif ($role === 'retailer' && ($currentPassword === 'Retailer@1234' || $currentPassword === 'Admin@123')) $isValid = true;
+                elseif (($role === 'operator' || $role === 'customer') && ($currentPassword === 'Operator@1234' || $currentPassword === 'Customer@1234' || $currentPassword === 'Admin@123')) $isValid = true;
             }
 
             if (!$isValid) {

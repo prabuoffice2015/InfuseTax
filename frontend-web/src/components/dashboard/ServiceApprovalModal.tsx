@@ -77,7 +77,7 @@ export default function ServiceApprovalModal({ item, onClose, onSuccess, readOnl
   if (!item) return null;
 
   const authUser = typeof window !== 'undefined' ? (function() { try { return JSON.parse(localStorage.getItem('infusetax_user') || '{}'); } catch(e){ return {}; } })() : {};
-  const isOperator = readOnly || authUser?.role === 'operator' || authUser?.role === 'employee';
+  const isOperator = readOnly || authUser?.role === 'operator' || authUser?.role === 'customer' || authUser?.role === 'employee';
   if (!item) return null;
 
   const [activeAction, setActiveAction] = useState<"view" | "approve" | "reject">("view");

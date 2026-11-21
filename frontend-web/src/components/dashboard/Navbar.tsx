@@ -315,9 +315,9 @@ export default function Navbar({
     }
   };
 
-  // Check if current user is Retailer or Operator (Only they require wallet balance & topup)
+  // Check if current user is Retailer or Customer/Operator (Only they require wallet balance & topup)
   const currentRole = (activeUser?.role || "").toLowerCase();
-  const showWalletBadge = currentRole.includes("retailer") || currentRole.includes("operator");
+  const showWalletBadge = currentRole.includes("retailer") || currentRole.includes("operator") || currentRole.includes("customer");
 
   return (
     <>
@@ -487,7 +487,11 @@ export default function Navbar({
                   {activeUser?.name || userTitle}
                 </div>
                 <div className="text-[10px] text-slate-500 font-mono mt-0.5">
-                  {activeUser?.role ? activeUser.role.toUpperCase() : userCode}
+                  {activeUser?.role ? (
+                    activeUser.role.toLowerCase() === 'distributor' ? 'ADMIN' :
+                    activeUser.role.toLowerCase() === 'operator' ? 'CUSTOMER' :
+                    activeUser.role.toUpperCase()
+                  ) : userCode}
                 </div>
               </div>
             </button>

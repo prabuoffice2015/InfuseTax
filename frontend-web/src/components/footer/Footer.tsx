@@ -55,9 +55,9 @@ export default function Footer() {
             <h4 className="text-sm font-bold text-white uppercase tracking-wider">Multi-Tier Network</h4>
             <ul className="space-y-2 text-xs">
               <li><Link href="/sign-in" className="hover:text-amber-400 transition-colors">Tier 1: Company Super Admin</Link></li>
-              <li><Link href="/sign-in" className="hover:text-amber-400 transition-colors">Tier 2: Master Distributor Desk</Link></li>
+              <li><Link href="/sign-in" className="hover:text-amber-400 transition-colors">Tier 2: Admin Desk</Link></li>
               <li><Link href="/sign-in" className="hover:text-amber-400 transition-colors">Tier 3: Retailer Outlet POS</Link></li>
-              <li><Link href="/sign-in" className="hover:text-amber-400 transition-colors">Tier 4: Operator Counter Terminal</Link></li>
+              <li><Link href="/sign-in" className="hover:text-amber-400 transition-colors">Tier 4: Customer Portal & Terminal</Link></li>
               <li><Link href="#pricing" className="hover:text-amber-400 transition-colors">Commercial Pricing Plans</Link></li>
             </ul>
           </div>
