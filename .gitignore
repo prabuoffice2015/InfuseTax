@@ -34,6 +34,12 @@ npm-debug.log*
 .idea/
 .vscode/
 
+# Playwright Test Artifacts
+playwright-report/
+test-results/
+frontend-web/playwright-report/
+frontend-web/test-results/
+
 # Docker volumes
 postgres_data/
 redis_data/
