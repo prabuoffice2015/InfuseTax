@@ -404,6 +404,24 @@ export default function DistributorDashboardPage() {
     loadAllData();
   }, []);
 
+  useEffect(() => {
+    if (tenantPermissions.length > 0 && !tenantPermissions.includes("all")) {
+      const isAllowed = 
+        activeTab === "overview" ||
+        (activeTab === "gst-reg" && tenantPermissions.includes("gst_registration")) ||
+        (activeTab === "gst-filing" && tenantPermissions.includes("gstr_filing")) ||
+        (activeTab === "it-filing" && tenantPermissions.includes("itr_filing")) ||
+        (activeTab === "reports" && tenantPermissions.includes("reports")) ||
+        (activeTab === "pricing" && tenantPermissions.includes("pricing")) ||
+        (activeTab === "outlets" && tenantPermissions.includes("outlets")) ||
+        (activeTab === "announcements" && tenantPermissions.includes("announcements"));
+
+      if (!isAllowed) {
+        switchTab("overview");
+      }
+    }
+  }, [activeTab, tenantPermissions]);
+
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setFeedback({ type, message });
     setTimeout(() => setFeedback(null), 4000);
@@ -1044,93 +1062,48 @@ export default function DistributorDashboardPage() {
         </div>
       )}
 
-      {/* Main Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
+      {/* Admin Operations Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs mb-4">
         <div>
           <div className="flex items-center space-x-2">
             <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 border border-blue-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
-              Tier 2 Master Distributor Hub
+              Admin Operations
             </span>
             <span className="text-xs text-slate-400">Node: {activeUser?.tenant || "TAXPARTNER"}</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">Master Distributor Operations & Liquidity</h1>
-          <p className="text-xs text-slate-500">Manage downline retailer networks, approve operator shift floats, set Tier 3 wholesale pricing, and track margins.</p>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+            {activeTab === "overview" ? "Admin Operations Dashboard" :
+             activeTab === "gst-reg" ? "GST Registration Applications" :
+             activeTab === "gst-filing" ? "GST Return Filings" :
+             activeTab === "it-filing" ? "Income Tax Returns" :
+             activeTab === "reports" ? "Reports & Financial Ledger" :
+             activeTab === "pricing" ? "Tier 3 Pricing Setup" :
+             activeTab === "outlets" ? "Network Outlets" :
+             activeTab === "announcements" ? "Company Announcements" :
+             "Admin Operations"}
+          </h1>
+          <p className="text-xs text-slate-500">
+            {activeTab === "overview" ? "Review service application queues, verify client returns, and audit downline filing activity." :
+             activeTab === "gst-reg" ? "Inspect scanned color document proofs, verify business trade details, and approve or reject GST registrations." :
+             activeTab === "gst-filing" ? "Verify sales and purchase return figures, check ITC claims, and approve GST returns." :
+             activeTab === "it-filing" ? "Inspect AIS, Form 16 computations, and approve ITR submissions." :
+             activeTab === "reports" ? "Audit double-entry financial ledger and track transactional fee settlements." :
+             "Manage assigned admin compliance operations."}
+          </p>
         </div>
 
         <div className="flex items-center space-x-3">
           <button
             onClick={loadAllData}
             disabled={loading}
-            className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors cursor-pointer"
+            className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors cursor-pointer flex items-center space-x-1.5 text-xs font-bold"
             title="Refresh Live Data"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          <button
-            onClick={() => setShowOnboardModal(true)}
-            className="px-4 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-700/20 flex items-center space-x-2 cursor-pointer"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>Onboard Retailer / Staff</span>
+            <span>Refresh</span>
           </button>
         </div>
       </div>
-
-      {/* Horizontal Tab Switcher */}
-      {(() => {
-        const allTabs = [
-          { id: "overview", label: "Dashboard", icon: LayoutDashboard },
-          { id: "gst-reg", label: "GST Registration", icon: Building, badge: `${serviceApplications.filter(a => a.service_category === 'gst_registration' && a.status === 'PENDING_APPROVAL').length} Pending`, permKey: "gst_registration" },
-          { id: "gst-filing", label: "GST Filing", icon: FileSpreadsheet, badge: `${serviceApplications.filter(a => a.service_category === 'gstr_filing' && a.status === 'PENDING_APPROVAL').length} Pending`, permKey: "gstr_filing" },
-          { id: "it-filing", label: "IT Filing", icon: FileText, badge: `${serviceApplications.filter(a => a.service_category === 'itr' && a.status === 'PENDING_APPROVAL').length} Pending`, permKey: "itr_filing" },
-          { id: "reports", label: "Reports", icon: History, permKey: "reports" },
-          { id: "service-approvals", label: "All Service Approvals", icon: FileCheck, badge: `${serviceApplications.filter(a => a.status === 'PENDING_APPROVAL').length} Pending`, permKey: "service_approvals" },
-          { id: "approvals", label: "Wallet Approvals", icon: CheckSquare, badge: `${walletRequests.filter(r => r.status === 'pending').length} Pending`, permKey: "float_approvals" },
-          { id: "pricing", label: "Tier 3 Pricing Setup", icon: Sliders, badge: `${directPricing.length} Services`, permKey: "pricing" },
-          { id: "outlets", label: "Network Outlets", icon: Users, badge: `${outlets.length} Outlets`, permKey: "outlets" },
-          { id: "announcements", label: "Company Announcements", icon: Megaphone, badge: `${announcements.length} Live`, permKey: "announcements" },
-        ];
-
-        const isPermitted = (permKey?: string) => {
-          if (!permKey) return true;
-          if (tenantPermissions.length === 0 || tenantPermissions.includes("all")) return true;
-          return tenantPermissions.includes(permKey);
-        };
-
-        const visibleTabs = allTabs.filter(t => isPermitted(t.permKey));
-
-        return (
-          <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-100/80 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-xs">
-            {visibleTabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => switchTab(tab.id as any)}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                isActive
-                  ? "bg-white text-blue-700 shadow-sm border border-slate-200/80"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-              }`}
-            >
-              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-700' : 'text-slate-500'}`} />
-              <span>{tab.label}</span>
-              {tab.badge && (
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                  tab.badge.includes('Pending') && parseInt(tab.badge) > 0
-                    ? 'bg-amber-100 text-amber-800'
-                    : 'bg-slate-200 text-slate-700'
-                }`}>
-                  {tab.badge}
-                </span>
-              )}
-            </button>
-          );
-        })}
-          </div>
-        );
-      })()}
 
       {/* ========================================================================= */}
       {/* TAB 1: OVERVIEW                                                           */}
@@ -1141,82 +1114,92 @@ export default function DistributorDashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
               <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">Downline Outlets</span>
-                <Users className="w-4 h-4 text-blue-600" />
+                <span className="text-xs font-bold uppercase tracking-wider">GST Registrations</span>
+                <Building className="w-4 h-4 text-blue-600" />
               </div>
-              <div className="text-2xl font-black text-slate-900">{stats.total_outlets}</div>
+              <div className="text-2xl font-black text-slate-900">
+                {serviceApplications.filter(a => a.service_category === 'gst_registration' || (a.service_category === 'gst' && !a.entity_type?.includes('GSTR'))).length}
+              </div>
               <div className="text-[11px] text-slate-500 font-semibold mt-1">
-                {stats.total_retailers} T3 Retailers • {stats.total_operators} T4 Operators
+                {serviceApplications.filter(a => (a.service_category === 'gst_registration' || (a.service_category === 'gst' && !a.entity_type?.includes('GSTR'))) && a.status === 'PENDING_APPROVAL').length} awaiting approval
               </div>
             </div>
 
             <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
               <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">Downline Liquidity</span>
-                <Wallet className="w-4 h-4 text-purple-600" />
+                <span className="text-xs font-bold uppercase tracking-wider">GST Return Filings</span>
+                <FileSpreadsheet className="w-4 h-4 text-indigo-600" />
               </div>
-              <div className="text-2xl font-black font-mono text-purple-700">
-                ₹{stats.downline_liquidity.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              <div className="text-2xl font-black text-slate-900">
+                {serviceApplications.filter(a => a.service_category === 'gstr_filing' || a.entity_type?.includes('GSTR')).length}
               </div>
-              <div className="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center">
-                <TrendingUp className="w-3 h-3 mr-1" /> Network float active
+              <div className="text-[11px] text-slate-500 font-semibold mt-1">
+                {serviceApplications.filter(a => (a.service_category === 'gstr_filing' || a.entity_type?.includes('GSTR')) && a.status === 'PENDING_APPROVAL').length} awaiting approval
               </div>
             </div>
 
             <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
               <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">Pending Float Approvals</span>
-                <CheckSquare className="w-4 h-4 text-amber-600" />
+                <span className="text-xs font-bold uppercase tracking-wider">Income Tax (IT) Filings</span>
+                <FileText className="w-4 h-4 text-purple-600" />
               </div>
-              <div className="text-2xl font-black text-slate-900">{stats.pending_approvals}</div>
-              <div className="text-[11px] text-amber-700 font-semibold mt-1 flex items-center">
-                <Clock className="w-3 h-3 mr-1" /> T3 Retailer & T4 Staff claims
+              <div className="text-2xl font-black text-slate-900">
+                {serviceApplications.filter(a => a.service_category === 'itr').length}
+              </div>
+              <div className="text-[11px] text-slate-500 font-semibold mt-1">
+                {serviceApplications.filter(a => a.service_category === 'itr' && a.status === 'PENDING_APPROVAL').length} awaiting approval
               </div>
             </div>
 
             <div className="bg-slate-900 text-white p-5 rounded-2xl border border-slate-800 shadow-md shadow-slate-900/10">
               <div className="flex items-center justify-between text-slate-400 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">Wholesale Margin Earned</span>
+                <span className="text-xs font-bold uppercase tracking-wider">Total Completed</span>
                 <TrendingUp className="w-4 h-4 text-emerald-400" />
               </div>
               <div className="text-2xl font-black font-mono text-emerald-400">
-                ₹{stats.today_margin_earned.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                {serviceApplications.filter(a => a.status === 'APPROVED' || a.status === 'SUCCESS').length} Approved
               </div>
               <div className="text-[11px] text-slate-300 font-semibold mt-1">
-                Direct wholesale spread from downline filings
+                Verified compliance certifications
               </div>
             </div>
           </div>
 
-          {/* Quick Actions Grid */}
+          {/* Verification Queues Quick Actions Grid */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
-            <h3 className="text-sm font-bold text-slate-900 mb-4">Master Distributor Quick Actions</h3>
+            <h3 className="text-sm font-bold text-slate-900 mb-4">Verification Queues & Compliance Desks</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <button 
-                onClick={() => setShowOnboardModal(true)}
+                onClick={() => switchTab("gst-reg")}
                 className="p-4 rounded-2xl bg-blue-50 hover:bg-blue-100/80 border border-blue-200/60 text-left transition-all cursor-pointer group"
               >
-                <UserPlus className="w-5 h-5 text-blue-700 mb-2 group-hover:scale-110 transition-transform" />
-                <div className="text-xs font-bold text-blue-950">Onboard Downline Outlet</div>
-                <div className="text-[11px] text-blue-800/70 mt-0.5">Deploy new Retailer POS</div>
+                <Building className="w-5 h-5 text-blue-700 mb-2 group-hover:scale-110 transition-transform" />
+                <div className="text-xs font-bold text-blue-950">GST Registration Queue</div>
+                <div className="text-[11px] text-blue-800/70 mt-0.5">
+                  {serviceApplications.filter(a => (a.service_category === 'gst_registration' || (a.service_category === 'gst' && !a.entity_type?.includes('GSTR'))) && a.status === 'PENDING_APPROVAL').length} Pending Review
+                </div>
               </button>
 
               <button 
-                onClick={() => switchTab("approvals")}
-                className="p-4 rounded-2xl bg-amber-50 hover:bg-amber-100/80 border border-amber-200/60 text-left transition-all cursor-pointer group"
+                onClick={() => switchTab("gst-filing")}
+                className="p-4 rounded-2xl bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/60 text-left transition-all cursor-pointer group"
               >
-                <CheckSquare className="w-5 h-5 text-amber-700 mb-2 group-hover:scale-110 transition-transform" />
-                <div className="text-xs font-bold text-amber-950">Review Float Claims</div>
-                <div className="text-[11px] text-amber-800/70 mt-0.5">{stats.pending_approvals} awaiting approval</div>
+                <FileSpreadsheet className="w-5 h-5 text-indigo-700 mb-2 group-hover:scale-110 transition-transform" />
+                <div className="text-xs font-bold text-indigo-950">GST Return Filings</div>
+                <div className="text-[11px] text-indigo-800/70 mt-0.5">
+                  {serviceApplications.filter(a => (a.service_category === 'gstr_filing' || a.entity_type?.includes('GSTR')) && a.status === 'PENDING_APPROVAL').length} Pending Review
+                </div>
               </button>
 
               <button 
-                onClick={() => switchTab("pricing")}
+                onClick={() => switchTab("it-filing")}
                 className="p-4 rounded-2xl bg-purple-50 hover:bg-purple-100/80 border border-purple-200/60 text-left transition-all cursor-pointer group"
               >
-                <Sliders className="w-5 h-5 text-purple-700 mb-2 group-hover:scale-110 transition-transform" />
-                <div className="text-xs font-bold text-purple-950">Tier 3 Wholesale Pricing</div>
-                <div className="text-[11px] text-purple-800/70 mt-0.5">Configure 6 service base rates</div>
+                <FileText className="w-5 h-5 text-purple-700 mb-2 group-hover:scale-110 transition-transform" />
+                <div className="text-xs font-bold text-purple-950">Income Tax (IT) Returns</div>
+                <div className="text-[11px] text-purple-800/70 mt-0.5">
+                  {serviceApplications.filter(a => a.service_category === 'itr' && a.status === 'PENDING_APPROVAL').length} Pending Review
+                </div>
               </button>
 
               <button 
@@ -1224,8 +1207,8 @@ export default function DistributorDashboardPage() {
                 className="p-4 rounded-2xl bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200/60 text-left transition-all cursor-pointer group"
               >
                 <History className="w-5 h-5 text-emerald-700 mb-2 group-hover:scale-110 transition-transform" />
-                <div className="text-xs font-bold text-emerald-950">Master Audit Reports</div>
-                <div className="text-[11px] text-emerald-800/70 mt-0.5">Double-entry downline trail</div>
+                <div className="text-xs font-bold text-emerald-950">Reports & Audit Ledger</div>
+                <div className="text-[11px] text-emerald-800/70 mt-0.5">Double-entry audit trail</div>
               </button>
             </div>
           </div>

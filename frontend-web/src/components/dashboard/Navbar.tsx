@@ -355,18 +355,8 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* Right: Wallet Balance (Retailer/Operator only), AI Status & Profile */}
+        {/* Right: Wallet Balance (Retailer/Operator only) & Profile */}
         <div className="flex items-center space-x-4">
-          {/* Live AI Copilot Status Trigger Button */}
-          <button
-            type="button"
-            onClick={() => setShowAiDrawer(true)}
-            className="hidden sm:flex items-center space-x-1.5 px-3 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 hover:border-amber-300 rounded-full text-xs font-semibold text-amber-800 transition-all cursor-pointer shadow-xs transform hover:scale-105"
-            title="Open AI Tax & Compliance Copilot Assistant"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
-            <span>AI Copilot Active</span>
-          </button>
 
           {/* Wallet Balance Badge - Shown ONLY for Retailer (Tier 3) and Operator (Tier 4) */}
           {showWalletBadge && (

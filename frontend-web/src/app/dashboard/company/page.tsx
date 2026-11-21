@@ -3494,6 +3494,9 @@ export default function CompanySuperAdminPage() {
                         { key: "gstr_filing", label: "GST Return Filing" },
                         { key: "itr_filing", label: "Income Tax (IT) Filing" },
                         { key: "reports", label: "Reports & Ledger" },
+                        { key: "pricing", label: "Tier 3 Pricing Setup" },
+                        { key: "outlets", label: "Network Outlets" },
+                        { key: "announcements", label: "Company Announcements" },
                       ].map((mod) => (
                         <label key={mod.key} className="flex items-center space-x-2 bg-white p-2 rounded-xl border border-slate-200 cursor-pointer">
                           <input
@@ -3735,6 +3738,9 @@ export default function CompanySuperAdminPage() {
                         { key: "gstr_filing", label: "GST Return Filing" },
                         { key: "itr_filing", label: "Income Tax (IT) Filing" },
                         { key: "reports", label: "Reports & Ledger" },
+                        { key: "pricing", label: "Tier 3 Pricing Setup" },
+                        { key: "outlets", label: "Network Outlets" },
+                        { key: "announcements", label: "Company Announcements" },
                       ].map((mod) => (
                         <label key={mod.key} className="flex items-center space-x-2 bg-white p-2 rounded-xl border border-slate-200 cursor-pointer">
                           <input

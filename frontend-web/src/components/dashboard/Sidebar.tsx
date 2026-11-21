@@ -99,13 +99,23 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
         { label: "Reports", href: "/dashboard/company?tab=ledger", tabKey: "ledger", icon: History },
       ];
     } else if (role === "admin" || role.includes("distributor")) {
-      return [
+      const items = [
         { label: "Dashboard", href: "/dashboard/admin?tab=overview", tabKey: "overview", icon: LayoutDashboard, permKey: "overview" },
         { label: "GST Registration", href: "/dashboard/admin?tab=gst-reg", tabKey: "gst-reg", icon: Building, permKey: "gst_registration" },
         { label: "GST Filing", href: "/dashboard/admin?tab=gst-filing", tabKey: "gst-filing", icon: FileSpreadsheet, permKey: "gstr_filing" },
         { label: "IT Filing", href: "/dashboard/admin?tab=it-filing", tabKey: "it-filing", icon: FileText, permKey: "itr_filing" },
         { label: "Reports", href: "/dashboard/admin?tab=reports", tabKey: "reports", icon: History, permKey: "reports" },
       ];
+      if (enabledServices.includes("pricing")) {
+        items.push({ label: "Pricing Setup", href: "/dashboard/admin?tab=pricing", tabKey: "pricing", icon: Sliders, permKey: "pricing" });
+      }
+      if (enabledServices.includes("outlets")) {
+        items.push({ label: "Network Outlets", href: "/dashboard/admin?tab=outlets", tabKey: "outlets", icon: Users, permKey: "outlets" });
+      }
+      if (enabledServices.includes("announcements")) {
+        items.push({ label: "Announcements", href: "/dashboard/admin?tab=announcements", tabKey: "announcements", icon: Megaphone, permKey: "announcements" });
+      }
+      return items;
     } else if (role.includes("customer") || role.includes("operator") || role.includes("employee")) {
       return [
         { label: "Dashboard", href: "/dashboard/customer?tab=overview", tabKey: "overview", icon: LayoutDashboard },
