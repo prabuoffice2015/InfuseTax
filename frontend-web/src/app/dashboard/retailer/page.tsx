@@ -978,7 +978,7 @@ export default function RetailerDashboardPage() {
   };
 
   // Document Upload Slot Helper Component
-  const DocumentSlot = ({ label, code, stateMap, setStateMap, required = true }: { label: string; code: string; stateMap: any; setStateMap: any; required?: boolean }) => (
+  const DocumentSlot = ({ label, code, stateMap, setStateMap, required = true, allSlots }: { label: string; code: string; stateMap: any; setStateMap: any; required?: boolean; allSlots?: any[] }) => (
     <DocumentSlotItem
       label={label}
       code={code}
@@ -986,6 +986,7 @@ export default function RetailerDashboardPage() {
       setStateMap={setStateMap}
       required={required}
       onToast={showToast}
+      allSlots={allSlots || (activeDesk === "itr" ? ITR_SLOTS : gstRegType === "sole_proprietorship" ? SOLE_PROP_SLOTS : gstRegType === "private_limited" ? PVT_LTD_SLOTS : PARTNERSHIP_SLOTS)}
     />
   );
 

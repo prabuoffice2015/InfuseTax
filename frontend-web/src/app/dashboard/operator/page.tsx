@@ -127,7 +127,7 @@ export default function OperatorTerminalPage() {
   const [spAadhaar, setSpAadhaar] = useState("");
   const [spMobile, setSpMobile] = useState("");
   const [spEmail, setSpEmail] = useState("");
-  const [spDocs, setSpDocs] = useState<{ [key: string]: boolean }>({});
+  const [spDocs, setSpDocs] = useState<{ [key: string]: any }>({});
 
   // 1b: Private Limited
   const [pvtCompanyName, setPvtCompanyName] = useState("");
@@ -135,7 +135,7 @@ export default function OperatorTerminalPage() {
   const [pvtMobile, setPvtMobile] = useState("");
   const [pvtEmail, setPvtEmail] = useState("");
   const [pvtAuthSignatory, setPvtAuthSignatory] = useState("");
-  const [pvtDocs, setPvtDocs] = useState<{ [key: string]: boolean }>({});
+  const [pvtDocs, setPvtDocs] = useState<{ [key: string]: any }>({});
 
   // 1c: Partnership / LLP
   const [firmName, setFirmName] = useState("");
@@ -143,7 +143,7 @@ export default function OperatorTerminalPage() {
   const [firmMobile, setFirmMobile] = useState("");
   const [firmEmail, setFirmEmail] = useState("");
   const [firmAuthSignatory, setFirmAuthSignatory] = useState("");
-  const [firmDocs, setFirmDocs] = useState<{ [key: string]: boolean }>({});
+  const [firmDocs, setFirmDocs] = useState<{ [key: string]: any }>({});
 
   // -------------------------------------------------------------
   // CORE SERVICE 2: IT FILING STATE (Individual & Business)
@@ -159,7 +159,7 @@ export default function OperatorTerminalPage() {
   const [itMobile, setItMobile] = useState("");
   const [itEmail, setItEmail] = useState("");
   const [itBankPeriod, setItBankPeriod] = useState("01st Apr to 31st Mar (Full Financial Year)");
-  const [itDocs, setItDocs] = useState<{ [key: string]: boolean }>({});
+  const [itDocs, setItDocs] = useState<{ [key: string]: any }>({});
 
   // -------------------------------------------------------------
   // CORE SERVICE 3: GST RETURN FILING STATE (GSTR-1 & 3B)
@@ -705,7 +705,7 @@ export default function OperatorTerminalPage() {
   }, [shiftFilings, page, perPage]);
 
   // Upgraded Document Slot Item Wrapper
-  const DocumentSlot = ({ label, code, stateMap, setStateMap, required = true }: { label: string; code: string; stateMap: any; setStateMap: any; required?: boolean }) => (
+  const DocumentSlot = ({ label, code, stateMap, setStateMap, required = true, allSlots }: { label: string; code: string; stateMap: any; setStateMap: any; required?: boolean; allSlots?: any[] }) => (
     <DocumentSlotItem
       label={label}
       code={code}
@@ -713,6 +713,7 @@ export default function OperatorTerminalPage() {
       setStateMap={setStateMap}
       required={required}
       onToast={showToast}
+      allSlots={allSlots || (activeDesk === "itr" ? ITR_SLOTS : gstRegType === "sole_proprietorship" ? SOLE_PROP_SLOTS : gstRegType === "private_limited" ? PVT_LTD_SLOTS : PARTNERSHIP_SLOTS)}
     />
   );
 
