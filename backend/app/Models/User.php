@@ -235,6 +235,134 @@ class User extends Model {
     }
 
     public static function recordLoginSuccess(string $userId, string $ipAddress): void {
-        self::where('id', $userId)->update(['updated_at' => now()]);
+        self::where('id', $userId)->update(['updated_at' => date('Y-m-d H:i:s')]);
+    }
+
+    /**
+     * Updates an existing user's profile information.
+     */
+    public static function updateProfile(string $userId, array $data): bool {
+        $user = self::find($userId);
+        if (!$user) {
+            return false;
+        }
+
+        $updates = [];
+        if (!empty($data['full_name'])) {
+            $updates['full_name'] = trim($data['full_name']);
+        }
+        if (!empty($data['email'])) {
+            $updates['email'] = strtolower(trim($data['email']));
+        }
+        if (!empty($data['mobile'])) {
+            $updates['mobile'] = trim($data['mobile']);
+        }
+        if (isset($data['city']) && $data['city'] !== '') {
+            $updates['city'] = trim($data['city']);
+        }
+        if (isset($data['state']) && $data['state'] !== '') {
+            $updates['state'] = trim($data['state']);
+        }
+
+        if (empty($updates)) {
+            return true;
+        }
+
+        try {
+            return (bool) $user->update($updates);
+        } catch (\Throwable $e) {
+            error_log("User::updateProfile error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Resets a user's password with Bcrypt hashing.
+     */
+    public static function resetPassword(string $userId, string $newPassword): bool {
+        $user = self::find($userId);
+        if (!$user) {
+            return false;
+        }
+
+        try {
+            $hash = Security::hashPassword($newPassword);
+            return (bool) $user->update(['password_hash' => $hash]);
+        } catch (\Throwable $e) {
+            error_log("User::resetPassword error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Adjusts a user's wallet balance directly (Credit or Debit) and logs to Audit Ledger.
+     */
+    public static function adjustWallet(string $userId, float $amount, string $direction, ?string $actorId = null, string $remarks = ''): bool {
+        if ($amount <= 0 || !in_array($direction, ['CREDIT', 'DEBIT'])) {
+            return false;
+        }
+
+        $user = self::with('wallet')->find($userId);
+        if (!$user) {
+            return false;
+        }
+
+        try {
+            $wallet = $user->wallet ?: Wallet::where('user_id', $userId)->first();
+            if (!$wallet) {
+                $wallet = Wallet::create([
+                    'user_id'   => $userId,
+                    'tenant_id' => $user->tenant_id,
+                    'balance'   => 0.00
+                ]);
+            }
+
+            if ($direction === 'DEBIT' && floatval($wallet->balance) < $amount) {
+                return false;
+            }
+
+            $prevBal = floatval($wallet->balance);
+            $newBal  = ($direction === 'CREDIT') ? ($prevBal + $amount) : ($prevBal - $amount);
+
+            $wallet->balance = $newBal;
+            $saved = $wallet->save();
+
+            if ($saved) {
+                $refId = 'ADJ-' . strtoupper(bin2hex(random_bytes(4)));
+                AuditLedger::log(
+                    $user->tenant_id,
+                    $refId,
+                    $actorId,
+                    'WALLET_' . $direction,
+                    ($direction === 'DEBIT' ? $userId : null),
+                    ($direction === 'CREDIT' ? $userId : null),
+                    $amount,
+                    $newBal,
+                    $remarks ?: "Admin {$direction} of ₹{$amount}"
+                );
+                return true;
+            }
+            return false;
+        } catch (\Throwable $e) {
+            error_log("User::adjustWallet error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Deletes a user by ID safely (or soft-deletes/suspends if foreign constraints exist).
+     */
+    public static function deleteUser(string $userId): bool {
+        $user = self::find($userId);
+        if (!$user || $user->role === 'super_admin') {
+            return false;
+        }
+
+        try {
+            return (bool) $user->delete();
+        } catch (\Throwable $e) {
+            // Soft delete/suspend if hard delete fails due to foreign key relationships
+            return (bool) $user->update(['status' => 'suspended']);
+        }
     }
 }
