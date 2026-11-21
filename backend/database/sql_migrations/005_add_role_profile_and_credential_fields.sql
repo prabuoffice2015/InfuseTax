@@ -17,7 +17,7 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS enabled_modules JSONB DEFAULT 
 
 -- 2. Create esevai_applications table for E-Sevai services (Income, Nativity, Community, etc.)
 CREATE TABLE IF NOT EXISTS public.esevai_applications (
-    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE,
     retailer_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
     customer_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
