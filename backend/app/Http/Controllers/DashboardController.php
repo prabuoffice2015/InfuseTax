@@ -229,6 +229,9 @@ class DashboardController {
                     SELECT u.id, u.tenant_id, t.company_name as tenant_name, t.code as tenant_code,
                            u.full_name as name, u.email, u.mobile as contact,
                            u.role, u.city, u.state, u.status, u.parent_id,
+                           u.shop_name, u.address, u.address_proof_url, u.bank_details,
+                           u.income_tax_login_id, u.income_tax_password, u.user_code,
+                           u.enabled_modules, COALESCE(u.permissions, 'all') as permissions,
                            p.full_name as parent_name,
                            COALESCE(w.balance, 0.00) as wallet,
                            'VERIFIED' as kyc,
@@ -332,15 +335,25 @@ class DashboardController {
             Response::error("An account with mobile number '{$mobile}' already exists. Please use a different mobile.", 409);
         }
 
+        $shopName       = Security::sanitizeString($body['shop_name'] ?? '');
+        $address        = Security::sanitizeString($body['address'] ?? '');
+        $addressProof   = Security::sanitizeString($body['address_proof_url'] ?? $body['address_proof'] ?? '');
+        $bankDetails    = isset($body['bank_details']) ? (is_array($body['bank_details']) ? json_encode($body['bank_details']) : $body['bank_details']) : '{}';
+        $itLoginId      = Security::sanitizeString($body['income_tax_login_id'] ?? '');
+        $itPassword     = Security::sanitizeString($body['income_tax_password'] ?? '');
+        $userCode       = Security::sanitizeString($body['user_code'] ?? $body['login_id'] ?? '');
+        $enabledModules = isset($body['enabled_modules']) ? (is_array($body['enabled_modules']) ? json_encode($body['enabled_modules']) : $body['enabled_modules']) : (isset($body['services']) ? (is_array($body['services']) ? json_encode($body['services']) : $body['services']) : '[]');
+        $permissions    = Security::sanitizeString($body['permissions'] ?? 'all');
+
         try {
             $pdo->beginTransaction();
 
             $pwdHash = Security::hashPassword($password);
 
             $stmt = $pdo->prepare("
-                INSERT INTO users (tenant_id, full_name, email, mobile, role, parent_id, city, state, password_hash, status)
-                VALUES (:tid, :name, :email, :mobile, :role, :parent_id, :city, :state, :pwd, 'active')
-                RETURNING id, tenant_id, full_name, email, mobile, role, parent_id, city, state, status, created_at
+                INSERT INTO users (tenant_id, full_name, email, mobile, role, parent_id, city, state, password_hash, status, shop_name, address, address_proof_url, bank_details, income_tax_login_id, income_tax_password, user_code, enabled_modules, permissions)
+                VALUES (:tid, :name, :email, :mobile, :role, :parent_id, :city, :state, :pwd, 'active', :shop, :addr, :proof, :bank, :it_user, :it_pwd, :code, :modules, :perms)
+                RETURNING id, tenant_id, full_name, email, mobile, role, parent_id, city, state, status, shop_name, address, address_proof_url, bank_details, income_tax_login_id, user_code, enabled_modules, permissions, created_at
             ");
 
             $stmt->execute([
@@ -352,7 +365,16 @@ class DashboardController {
                 'parent_id' => $parentId,
                 'city'      => $city,
                 'state'     => $state,
-                'pwd'       => $pwdHash
+                'pwd'       => $pwdHash,
+                'shop'      => $shopName,
+                'addr'      => $address,
+                'proof'     => $addressProof,
+                'bank'      => $bankDetails,
+                'it_user'   => $itLoginId,
+                'it_pwd'    => $itPassword,
+                'code'      => $userCode,
+                'modules'   => $enabledModules,
+                'perms'     => $permissions
             ]);
 
             $newUser = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -410,20 +432,32 @@ class DashboardController {
      * Updates an existing User's profile details.
      */
     public function updateUser(array $body): void {
-        RoleMiddleware::authorize(['super_admin', 'distributor']);
+        RoleMiddleware::authorize(['super_admin', 'admin', 'distributor', 'retailer']);
 
-        $userId = Security::sanitizeString($body['user_id'] ?? '');
+        $userId = Security::sanitizeString($body['user_id'] ?? $body['id'] ?? '');
         if (empty($userId)) {
             Response::error('User ID is required.', 422);
         }
 
-        $updated = User::updateProfile($userId, [
-            'full_name' => Security::sanitizeString($body['full_name'] ?? ''),
-            'email'     => Security::sanitizeString($body['email'] ?? ''),
-            'mobile'    => Security::sanitizeString($body['mobile'] ?? ''),
-            'city'      => Security::sanitizeString($body['city'] ?? ''),
-            'state'     => Security::sanitizeString($body['state'] ?? '')
-        ]);
+        $profileData = [
+            'full_name'           => Security::sanitizeString($body['full_name'] ?? $body['name'] ?? ''),
+            'email'               => Security::sanitizeString($body['email'] ?? ''),
+            'mobile'              => Security::sanitizeString($body['mobile'] ?? ''),
+            'city'                => Security::sanitizeString($body['city'] ?? ''),
+            'state'               => Security::sanitizeString($body['state'] ?? ''),
+            'shop_name'           => Security::sanitizeString($body['shop_name'] ?? ''),
+            'address'             => Security::sanitizeString($body['address'] ?? ''),
+            'address_proof_url'   => Security::sanitizeString($body['address_proof_url'] ?? $body['address_proof'] ?? ''),
+            'bank_details'        => $body['bank_details'] ?? null,
+            'income_tax_login_id' => Security::sanitizeString($body['income_tax_login_id'] ?? ''),
+            'income_tax_password' => Security::sanitizeString($body['income_tax_password'] ?? ''),
+            'user_code'           => Security::sanitizeString($body['user_code'] ?? $body['login_id'] ?? ''),
+            'status'              => Security::sanitizeString($body['status'] ?? ''),
+            'enabled_modules'     => $body['enabled_modules'] ?? ($body['services'] ?? null),
+            'permissions'         => $body['permissions'] ?? null
+        ];
+
+        $updated = User::updateProfile($userId, $profileData);
 
         if ($updated) {
             Response::json([
@@ -1570,7 +1604,9 @@ class DashboardController {
 
         try {
             $stmt = $pdo->prepare("
-                SELECT u.id, u.full_name as name, u.email, u.mobile, u.role, u.city, u.state, u.status, COALESCE(u.permissions, 'all') as permissions,
+                SELECT u.id, u.full_name as name, u.email, u.mobile, u.role, u.city, u.state, u.status, 
+                       u.shop_name, u.address, u.address_proof_url, u.income_tax_login_id, u.income_tax_password, u.user_code,
+                       COALESCE(u.permissions, 'all') as permissions,
                        COALESCE(w.balance, 0.00) as wallet,
                        to_char(u.created_at, 'DD Mon YYYY') as onboarded_date
                 FROM users u
@@ -1584,7 +1620,8 @@ class DashboardController {
 
             Response::json([
                 'status'    => 'success',
-                'operators' => $operators
+                'operators' => $operators,
+                'customers' => $operators
             ]);
         } catch (\Throwable $e) {
             Response::error('Failed to retrieve operators: ' . $e->getMessage(), 500);

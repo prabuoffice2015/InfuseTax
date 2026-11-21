@@ -274,6 +274,36 @@ class User extends Model {
         if (isset($data['state']) && $data['state'] !== '') {
             $updates['state'] = trim($data['state']);
         }
+        if (isset($data['shop_name'])) {
+            $updates['shop_name'] = trim($data['shop_name']);
+        }
+        if (isset($data['address'])) {
+            $updates['address'] = trim($data['address']);
+        }
+        if (isset($data['address_proof_url'])) {
+            $updates['address_proof_url'] = trim($data['address_proof_url']);
+        }
+        if (isset($data['bank_details'])) {
+            $updates['bank_details'] = is_array($data['bank_details']) ? json_encode($data['bank_details']) : $data['bank_details'];
+        }
+        if (isset($data['income_tax_login_id'])) {
+            $updates['income_tax_login_id'] = trim($data['income_tax_login_id']);
+        }
+        if (isset($data['income_tax_password'])) {
+            $updates['income_tax_password'] = trim($data['income_tax_password']);
+        }
+        if (isset($data['user_code'])) {
+            $updates['user_code'] = trim($data['user_code']);
+        }
+        if (isset($data['status'])) {
+            $updates['status'] = trim($data['status']);
+        }
+        if (isset($data['enabled_modules'])) {
+            $updates['enabled_modules'] = is_array($data['enabled_modules']) ? json_encode($data['enabled_modules']) : $data['enabled_modules'];
+        }
+        if (isset($data['permissions'])) {
+            $updates['permissions'] = is_array($data['permissions']) ? json_encode($data['permissions']) : $data['permissions'];
+        }
 
         if (empty($updates)) {
             return true;

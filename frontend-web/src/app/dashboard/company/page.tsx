@@ -43,11 +43,13 @@ import {
   ChevronsRight,
   Megaphone,
   MessageSquare,
+  FileText,
   X
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { secureApiCall } from "@/lib/crypto";
 import WhatsAppConfigDesk from "@/components/dashboard/WhatsAppConfigDesk";
+import ServiceApprovalModal, { ServiceApprovalItem } from "@/components/dashboard/ServiceApprovalModal";
 
 // =========================================================================
 // REUSABLE ENTERPRISE PAGINATION CONTROL COMPONENT
@@ -174,6 +176,9 @@ export default function CompanySuperAdminPage() {
   useEffect(() => {
     if (activeTabParam) {
       setActiveTab(activeTabParam);
+      if (activeTabParam === "admins") setUserRoleFilter("admin");
+      else if (activeTabParam === "retailers") setUserRoleFilter("retailer");
+      else if (activeTabParam === "customers") setUserRoleFilter("customer");
     }
   }, [activeTabParam]);
 
@@ -233,9 +238,31 @@ export default function CompanySuperAdminPage() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
 
   // Form states for user actions
-  const [editUserData, setEditUserData] = useState({ full_name: "", email: "", mobile: "", city: "", state: "" });
+  const [editUserData, setEditUserData] = useState({ 
+    full_name: "", 
+    email: "", 
+    mobile: "", 
+    city: "", 
+    state: "",
+    shop_name: "",
+    address: "",
+    address_proof: "",
+    bank_name: "",
+    bank_account: "",
+    bank_ifsc: "",
+    income_tax_login_id: "",
+    income_tax_password: "",
+    status: "active",
+    user_code: "",
+    enabled_modules: [] as string[]
+  });
   const [newPasswordVal, setNewPasswordVal] = useState("");
   const [walletAdjData, setWalletAdjData] = useState({ amount: "", direction: "CREDIT" as "CREDIT" | "DEBIT", remarks: "" });
+  const [filingsList, setFilingsList] = useState<any[]>([]);
+  const [serviceApplications, setServiceApplications] = useState<ServiceApprovalItem[]>([]);
+  const [selectedServiceApproval, setSelectedServiceApproval] = useState<ServiceApprovalItem | null>(null);
+  const [serviceApprovalSubTab, setServiceApprovalSubTab] = useState<"pending" | "approved" | "rejected" | "all">("pending");
+  const [serviceSearchQuery, setServiceSearchQuery] = useState("");
 
   const [newUser, setNewUser] = useState({
     role: "admin",
@@ -246,7 +273,17 @@ export default function CompanySuperAdminPage() {
     city: "Chennai",
     state: "Tamil Nadu",
     password: "",
-    initial_wallet: "0"
+    initial_wallet: "0",
+    shop_name: "",
+    address: "",
+    address_proof: "",
+    bank_account: "",
+    bank_name: "",
+    bank_ifsc: "",
+    income_tax_login_id: "",
+    income_tax_password: "",
+    login_id: "",
+    enabled_modules: ["gst_registration", "gstr_filing", "itr_filing", "reports"] as string[]
   });
 
   // 4. Dynamic Pricing & Custom Service Creation (Scoped Under Company)
@@ -355,7 +392,7 @@ export default function CompanySuperAdminPage() {
     setLoading(true);
     try {
       const [
-        statsRes, compRes, usersRes, pricingRes, logsRes, utrRes, ledgerRes, annRes
+        statsRes, compRes, usersRes, pricingRes, logsRes, utrRes, ledgerRes, annRes, filingsRes, servRes
       ] = await Promise.allSettled([
         secureApiCall("/api/v1/dashboard/stats"),
         secureApiCall("/api/v1/admin/companies"),
@@ -364,8 +401,18 @@ export default function CompanySuperAdminPage() {
         secureApiCall("/api/v1/pricing/audit-logs"),
         secureApiCall("/api/v1/wallet/requests"),
         secureApiCall("/api/v1/admin/audit-ledger"),
-        secureApiCall("/api/v1/announcements")
+        secureApiCall("/api/v1/announcements"),
+        secureApiCall("/api/v1/filings/recent"),
+        secureApiCall("/api/v1/service-approvals/list")
       ]);
+
+      if (filingsRes.status === "fulfilled" && filingsRes.value.ok && filingsRes.value.data?.filings) {
+        setFilingsList(filingsRes.value.data.filings);
+      }
+
+      if (servRes.status === "fulfilled" && servRes.value.ok && servRes.value.data?.applications) {
+        setServiceApplications(servRes.value.data.applications);
+      }
 
       if (statsRes.status === "fulfilled" && statsRes.value.ok && statsRes.value.data?.stats) {
         setStats(statsRes.value.data.stats);
@@ -683,9 +730,18 @@ export default function CompanySuperAdminPage() {
     e.preventDefault();
     setLoading(true);
     try {
+      const payload = {
+        ...newUser,
+        tenant_id: selectedCompanyId,
+        bank_details: {
+          bank_name: newUser.bank_name,
+          account_no: newUser.bank_account,
+          ifsc: newUser.bank_ifsc
+        }
+      };
       const res = await secureApiCall("/api/v1/admin/users/create", {
         method: "POST",
-        body: { ...newUser, tenant_id: selectedCompanyId },
+        body: payload,
         encrypt: true
       });
       if (res.ok && res.data?.status === "success") {
@@ -693,7 +749,11 @@ export default function CompanySuperAdminPage() {
         setShowOnboardUserModal(false);
         setNewUser({
           role: "admin", full_name: "", email: "", mobile: "",
-          parent_id: "", city: "Chennai", state: "Tamil Nadu", password: "", initial_wallet: "0"
+          parent_id: "", city: "Chennai", state: "Tamil Nadu", password: "", initial_wallet: "0",
+          shop_name: "", address: "", address_proof: "",
+          bank_account: "", bank_name: "", bank_ifsc: "",
+          income_tax_login_id: "", income_tax_password: "", login_id: "",
+          enabled_modules: ["gst_registration", "gstr_filing", "itr_filing", "reports"]
         });
         loadAllData();
       } else {
@@ -719,7 +779,21 @@ export default function CompanySuperAdminPage() {
           email: editUserData.email,
           mobile: editUserData.mobile,
           city: editUserData.city,
-          state: editUserData.state
+          state: editUserData.state,
+          shop_name: editUserData.shop_name,
+          address: editUserData.address,
+          address_proof_url: editUserData.address_proof,
+          bank_details: {
+            bank_name: editUserData.bank_name,
+            account_number: editUserData.bank_account,
+            ifsc: editUserData.bank_ifsc
+          },
+          income_tax_login_id: editUserData.income_tax_login_id,
+          income_tax_password: editUserData.income_tax_password,
+          user_code: editUserData.user_code,
+          status: editUserData.status,
+          enabled_modules: editUserData.enabled_modules,
+          permissions: editUserData.enabled_modules
         },
         encrypt: true
       });
@@ -1246,15 +1320,20 @@ export default function CompanySuperAdminPage() {
       {/* Horizontal Sub-Navigation Tab Switcher */}
       <div className="flex items-center space-x-2 border-b border-slate-200 overflow-x-auto pb-2 scrollbar-thin">
         {[
-          { id: "overview", label: "Platform Overview", icon: LayoutDashboard },
+          { id: "overview", label: "Dashboard", icon: LayoutDashboard },
+          { id: "admins", label: "Admin", icon: ShieldCheck },
+          { id: "retailers", label: "Retailer", icon: Building },
+          { id: "customers", label: "Customer", icon: Users },
+          { id: "utr", label: "Wallet Approval", icon: CheckSquare },
+          { id: "gst-reg", label: "GST Registration", icon: Building },
+          { id: "gst-filing", label: "GST Filing", icon: FileSpreadsheet },
+          { id: "it-filing", label: "IT Filing", icon: FileText },
+          { id: "ledger", label: "Reports", icon: History },
           { id: "companies", label: "Companies", icon: Building },
-          { id: "company-users", label: "Company Users", icon: Users },
-          { id: "announcements", label: "📢 Announcements & Broadcasts", icon: Megaphone },
           { id: "pricing", label: "Tier 2 Pricing", icon: Sliders },
-          { id: "utr", label: "UTR Approvals", icon: CheckSquare },
+          { id: "announcements", label: "Announcements", icon: Megaphone },
           { id: "branding", label: "White Labeling", icon: Palette },
-          { id: "whatsapp", label: "💬 WhatsApp Gateway", icon: MessageSquare },
-          { id: "ledger", label: "Master Ledger", icon: History },
+          { id: "whatsapp", label: "WhatsApp Gateway", icon: MessageSquare },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -1573,15 +1652,25 @@ export default function CompanySuperAdminPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 3: COMPANY USERS (Scoped Under Company with Pagination)               */}
+      {/* TAB 3: COMPANY USERS / ROLE DIRECTORIES (Scoped Under Company Node)       */}
       {/* ========================================================================= */}
-      {activeTab === "company-users" && (
+      {(activeTab === "company-users" || activeTab === "admins" || activeTab === "retailers" || activeTab === "customers") && (
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Company Users Directory (Tiers 2, 3 & 4)</h3>
-                <p className="text-xs text-slate-500">Manage Master Distributors, Retailer Counter Outlets, and Operator Staff scoped by Company Node.</p>
+                <h3 className="text-base font-bold text-slate-900">
+                  {activeTab === "admins" ? "Admin Management Directory (Tier 2)" :
+                   activeTab === "retailers" ? "Retailer Outlets Directory (Tier 3)" :
+                   activeTab === "customers" ? "Customer Directory (Tier 4)" :
+                   "Company Users Directory (All Tiers)"}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {activeTab === "admins" ? "Manage Platform Administrators, assign service module permissions, and oversee downlines." :
+                   activeTab === "retailers" ? "Manage Retailer Counter Outlets, store profiles, service accessibility, and counter operations." :
+                   activeTab === "customers" ? "Manage Registered Walk-in and Direct Clients, verify KYC, and manage Income Tax portal credentials." :
+                   "Manage Administrators, Retailer Counter Outlets, and Customer Staff scoped by Company Node."}
+                </p>
               </div>
               <div className="flex items-center space-x-3">
                 <button
@@ -1593,11 +1682,21 @@ export default function CompanySuperAdminPage() {
                   <span>Export Users (.CSV)</span>
                 </button>
                 <button
-                  onClick={() => setShowOnboardUserModal(true)}
+                  onClick={() => {
+                    if (activeTab === "admins") setNewUser(prev => ({ ...prev, role: "admin" }));
+                    else if (activeTab === "retailers") setNewUser(prev => ({ ...prev, role: "retailer" }));
+                    else if (activeTab === "customers") setNewUser(prev => ({ ...prev, role: "customer" }));
+                    setShowOnboardUserModal(true);
+                  }}
                   className="px-4 py-2.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-700/20 flex items-center space-x-2 cursor-pointer"
                 >
                   <UserPlus className="w-4 h-4" />
-                  <span>Onboard Company User</span>
+                  <span>
+                    {activeTab === "admins" ? "Onboard New Admin" :
+                     activeTab === "retailers" ? "Onboard New Retailer" :
+                     activeTab === "customers" ? "Onboard New Customer" :
+                     "Onboard Company User"}
+                  </span>
                 </button>
               </div>
             </div>
@@ -1732,12 +1831,31 @@ export default function CompanySuperAdminPage() {
                             <button
                               onClick={() => {
                                 setSelectedUser(u);
+                                let bDetails = { bank_name: "", account_number: "", ifsc: "" };
+                                try {
+                                  bDetails = typeof u.bank_details === 'string' ? JSON.parse(u.bank_details) : (u.bank_details || {});
+                                } catch (e) {}
+                                let mods: string[] = [];
+                                try {
+                                  mods = typeof u.enabled_modules === 'string' ? JSON.parse(u.enabled_modules) : (Array.isArray(u.enabled_modules) ? u.enabled_modules : (u.enabled_services ? u.enabled_services.split(',').map((s: string) => s.trim()) : []));
+                                } catch (e) {}
                                 setEditUserData({
-                                  full_name: u.name,
-                                  email: u.email,
-                                  mobile: u.contact,
+                                  full_name: u.name || u.full_name || "",
+                                  email: u.email || "",
+                                  mobile: u.contact || u.mobile || "",
                                   city: u.city || "Chennai",
-                                  state: u.state || "Tamil Nadu"
+                                  state: u.state || "Tamil Nadu",
+                                  shop_name: u.shop_name || "",
+                                  address: u.address || "",
+                                  address_proof: u.address_proof_url || "",
+                                  bank_name: bDetails.bank_name || "",
+                                  bank_account: bDetails.account_number || "",
+                                  bank_ifsc: bDetails.ifsc || "",
+                                  income_tax_login_id: u.income_tax_login_id || "",
+                                  income_tax_password: u.income_tax_password || "",
+                                  status: u.status || "active",
+                                  user_code: u.user_code || "",
+                                  enabled_modules: mods
                                 });
                                 setShowEditUserModal(true);
                               }}
@@ -2722,6 +2840,170 @@ export default function CompanySuperAdminPage() {
       )}
 
       {/* ========================================================================= */}
+      {/* TAB: SUPER ADMIN MASTER FILINGS (GST REGISTRATION, GST FILING, IT FILING)  */}
+      {/* ========================================================================= */}
+      {(activeTab === "gst-reg" || activeTab === "gst-filing" || activeTab === "it-filing") && (() => {
+        const categoryFilter = activeTab === "gst-reg" ? "gst_registration" : activeTab === "gst-filing" ? "gstr_filing" : "itr";
+        const pageTitle = activeTab === "gst-reg" 
+          ? "Master GST Registration Queue" 
+          : activeTab === "gst-filing" 
+          ? "Master GST Return Filings Queue" 
+          : "Master Income Tax Return Filings Queue";
+        const pageDesc = activeTab === "gst-reg" 
+          ? "Oversee, inspect scanned proofs, and govern GST registration applications across all company nodes and downline outlets." 
+          : activeTab === "gst-filing" 
+          ? "Audit monthly/quarterly GST returns, monitor ITC claims, and oversee return submissions across the entire platform." 
+          : "Audit AIS, Form 16 computations, inspect uploaded docs, and govern ITR submissions across all retail counters.";
+
+        const matchesCategory = (a: any) => {
+          if (categoryFilter === "gst_registration") {
+            return a.service_category === "gst_registration" || (a.service_category === "gst" && !a.entity_type?.includes("GSTR") && !a.service_name?.toLowerCase().includes("return"));
+          }
+          if (categoryFilter === "gstr_filing") {
+            return a.service_category === "gstr_filing" || a.entity_type?.includes("GSTR") || a.service_name?.toLowerCase().includes("return") || a.service_name?.toLowerCase().includes("gstr");
+          }
+          if (categoryFilter === "itr") {
+            return a.service_category === "itr" || a.service_name?.toLowerCase().includes("itr") || a.service_name?.toLowerCase().includes("income");
+          }
+          return true;
+        };
+
+        const filteredApps = serviceApplications.filter(a => {
+          const matchCat = matchesCategory(a);
+          const matchSearch = serviceSearchQuery === "" ||
+            a.arn?.toLowerCase().includes(serviceSearchQuery.toLowerCase()) ||
+            a.client_name?.toLowerCase().includes(serviceSearchQuery.toLowerCase()) ||
+            a.pan?.toLowerCase().includes(serviceSearchQuery.toLowerCase()) ||
+            a.operator_name?.toLowerCase().includes(serviceSearchQuery.toLowerCase());
+          
+          if (!matchCat || !matchSearch) return false;
+          if (serviceApprovalSubTab === "all") return true;
+          if (serviceApprovalSubTab === "pending") return a.status === "PENDING_APPROVAL" || a.status === "SUBMITTED" || a.status === "pending";
+          if (serviceApprovalSubTab === "approved") return a.status === "APPROVED" || a.status === "SUCCESS";
+          if (serviceApprovalSubTab === "rejected") return a.status === "REJECTED";
+          return true;
+        });
+
+        return (
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">{pageTitle}</h3>
+                  <p className="text-xs text-slate-500">{pageDesc}</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold">
+                    {filteredApps.length} Records
+                  </span>
+                </div>
+              </div>
+
+              {/* Search & Sub-tabs */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-6 bg-slate-50 p-3 rounded-2xl border border-slate-200/60">
+                <div className="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 w-full sm:w-80 shadow-2xs">
+                  <Search className="w-3.5 h-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={serviceSearchQuery}
+                    onChange={(e) => setServiceSearchQuery(e.target.value)}
+                    placeholder="Search by ARN, Client Name, PAN, Operator..."
+                    className="bg-transparent text-xs text-slate-700 focus:outline-none w-full"
+                  />
+                </div>
+
+                <div className="flex items-center space-x-1 overflow-x-auto w-full sm:w-auto">
+                  {(["pending", "approved", "rejected", "all"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setServiceApprovalSubTab(tab)}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-xl capitalize transition-all cursor-pointer ${
+                        serviceApprovalSubTab === tab 
+                          ? "bg-blue-700 text-white shadow-xs" 
+                          : "text-slate-600 hover:bg-slate-200/60"
+                      }`}
+                    >
+                      {tab} ({serviceApplications.filter(a => {
+                        if (!matchesCategory(a)) return false;
+                        if (tab === "all") return true;
+                        if (tab === "pending") return a.status === "PENDING_APPROVAL" || a.status === "SUBMITTED" || a.status === "pending";
+                        if (tab === "approved") return a.status === "APPROVED" || a.status === "SUCCESS";
+                        if (tab === "rejected") return a.status === "REJECTED";
+                        return false;
+                      }).length})
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200/80 text-[11px]">
+                    <tr>
+                      <th className="p-3.5">ARN / Ref</th>
+                      <th className="p-3.5">Customer / Client</th>
+                      <th className="p-3.5">Service & Constitution</th>
+                      <th className="p-3.5">Retailer / Submitter</th>
+                      <th className="p-3.5 text-right">Fee (₹)</th>
+                      <th className="p-3.5">Status</th>
+                      <th className="p-3.5 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                    {filteredApps.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="p-8 text-center text-slate-400 font-bold">
+                          No {serviceApprovalSubTab} applications found for this queue.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredApps.map((app) => (
+                        <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="p-3.5 font-bold font-mono text-[11px] text-blue-700">{app.arn}</td>
+                          <td className="p-3.5">
+                            <div className="font-bold text-slate-900">{app.client_name}</div>
+                            <div className="text-[11px] text-slate-400">{app.submitted_at}</div>
+                          </td>
+                          <td className="p-3.5">
+                            <div className="font-bold text-slate-800">
+                              {app.service_category === 'itr' ? 'Income Tax Return' : app.service_category === 'gstr_filing' ? 'GST Return' : 'GST Registration'}
+                            </div>
+                            <div className="text-[11px] text-slate-500">{app.entity_type}</div>
+                          </td>
+                          <td className="p-3.5 font-medium text-slate-700">{app.operator_name || "Retailer Counter"}</td>
+                          <td className="p-3.5 text-right font-black text-slate-900 font-mono">
+                            ₹{(parseFloat(app.amount as any || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="p-3.5">
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
+                              app.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                              app.status === 'REJECTED' ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
+                            }`}>
+                              {app.status}
+                            </span>
+                          </td>
+                          <td className="p-3.5 text-center">
+                            <button
+                              onClick={() => setSelectedServiceApproval(app)}
+                              className="px-3.5 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-xl font-bold transition-all shadow-xs cursor-pointer inline-flex items-center space-x-1"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>View & Approve</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ========================================================================= */}
       {/* MODALS SECTION                                                            */}
       {/* ========================================================================= */}
 
@@ -3164,6 +3446,174 @@ export default function CompanySuperAdminPage() {
                 </div>
               </div>
 
+              {/* ROLE SPECIFIC FIELDS (Handwritten Note 4) */}
+              {newUser.role === "admin" && (
+                <div className="space-y-3 p-3.5 bg-blue-50/60 rounded-2xl border border-blue-200">
+                  <div className="text-[11px] font-black uppercase text-blue-900">Admin Account & Banking Details</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Bank Name"
+                      value={newUser.bank_name}
+                      onChange={(e) => setNewUser({ ...newUser, bank_name: e.target.value })}
+                      className="text-xs p-2 bg-white border border-slate-300 rounded-xl text-slate-900"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Account No."
+                      value={newUser.bank_account}
+                      onChange={(e) => setNewUser({ ...newUser, bank_account: e.target.value })}
+                      className="text-xs p-2 bg-white border border-slate-300 rounded-xl font-mono text-slate-900"
+                    />
+                    <input
+                      type="text"
+                      placeholder="IFSC Code"
+                      value={newUser.bank_ifsc}
+                      onChange={(e) => setNewUser({ ...newUser, bank_ifsc: e.target.value.toUpperCase() })}
+                      className="text-xs p-2 bg-white border border-slate-300 rounded-xl font-mono uppercase text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Address Proof Document URL"
+                      value={newUser.address_proof}
+                      onChange={(e) => setNewUser({ ...newUser, address_proof: e.target.value })}
+                      className="w-full text-xs p-2 bg-white border border-slate-300 rounded-xl text-slate-900"
+                    />
+                  </div>
+
+                  {/* Services: Enable Modules */}
+                  <div>
+                    <label className="block text-[11px] font-extrabold text-blue-900 mb-1 uppercase tracking-wider">
+                      Services: Enable Modules
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {[
+                        { key: "gst_registration", label: "GST Registration" },
+                        { key: "gstr_filing", label: "GST Return Filing" },
+                        { key: "itr_filing", label: "Income Tax (IT) Filing" },
+                        { key: "reports", label: "Reports & Ledger" },
+                      ].map((mod) => (
+                        <label key={mod.key} className="flex items-center space-x-2 bg-white p-2 rounded-xl border border-slate-200 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={newUser.enabled_modules.includes(mod.key)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setNewUser({ ...newUser, enabled_modules: [...newUser.enabled_modules, mod.key] });
+                              } else {
+                                setNewUser({ ...newUser, enabled_modules: newUser.enabled_modules.filter(m => m !== mod.key) });
+                              }
+                            }}
+                            className="rounded text-blue-600 h-3.5 w-3.5"
+                          />
+                          <span className="font-semibold text-slate-800 text-[11px]">{mod.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {newUser.role === "retailer" && (
+                <div className="space-y-3 p-3.5 bg-emerald-50/60 rounded-2xl border border-emerald-200">
+                  <div className="text-[11px] font-black uppercase text-emerald-900">Retailer Store Profile</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Shop / Center Name"
+                      value={newUser.shop_name}
+                      onChange={(e) => setNewUser({ ...newUser, shop_name: e.target.value })}
+                      className="text-xs p-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-bold"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Address Proof URL"
+                      value={newUser.address_proof}
+                      onChange={(e) => setNewUser({ ...newUser, address_proof: e.target.value })}
+                      className="text-xs p-2 bg-white border border-slate-300 rounded-xl text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <textarea
+                      rows={2}
+                      placeholder="Store Physical Address"
+                      value={newUser.address}
+                      onChange={(e) => setNewUser({ ...newUser, address: e.target.value })}
+                      className="w-full text-xs p-2 bg-white border border-slate-300 rounded-xl text-slate-900"
+                    />
+                  </div>
+
+                  {/* Services: Enable Modules for Retailer */}
+                  <div>
+                    <label className="block text-[11px] font-extrabold text-emerald-900 mb-1 uppercase tracking-wider">
+                      Store Services Enablement (Super Admin RBAC)
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {[
+                        { key: "customer_desk", label: "Customer Desk" },
+                        { key: "gstr_filing", label: "GST Filing" },
+                        { key: "gst_registration", label: "GST Registration" },
+                        { key: "itr_filing", label: "IT Filing" },
+                        { key: "esevai", label: "Eseva Services" },
+                        { key: "pan_card", label: "Pan Card" },
+                        { key: "passport", label: "Passport" },
+                        { key: "wallet", label: "Wallet Top-up" },
+                        { key: "reports", label: "Store Reports" },
+                      ].map((mod) => (
+                        <label key={mod.key} className="flex items-center space-x-2 bg-white p-2 rounded-xl border border-slate-200 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={newUser.enabled_modules.includes(mod.key)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setNewUser({ ...newUser, enabled_modules: [...newUser.enabled_modules, mod.key] });
+                              } else {
+                                setNewUser({ ...newUser, enabled_modules: newUser.enabled_modules.filter(m => m !== mod.key) });
+                              }
+                            }}
+                            className="rounded text-emerald-600 h-3.5 w-3.5"
+                          />
+                          <span className="font-semibold text-slate-800 text-[11px]">{mod.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {newUser.role === "customer" && (
+                <div className="space-y-3 p-3.5 bg-amber-50/60 rounded-2xl border border-amber-200">
+                  <div className="text-[11px] font-black uppercase text-amber-900">Customer Income Tax Portal Logins</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Income Tax Login ID (PAN)"
+                      value={newUser.income_tax_login_id}
+                      onChange={(e) => setNewUser({ ...newUser, income_tax_login_id: e.target.value.toUpperCase() })}
+                      className="text-xs p-2 bg-white border border-slate-300 rounded-xl font-mono uppercase text-slate-900 font-bold"
+                    />
+                    <input
+                      type="password"
+                      placeholder="Income Tax Password"
+                      value={newUser.income_tax_password}
+                      onChange={(e) => setNewUser({ ...newUser, income_tax_password: e.target.value })}
+                      className="text-xs p-2 bg-white border border-slate-300 rounded-xl font-mono text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Address Proof Document Link"
+                      value={newUser.address_proof}
+                      onChange={(e) => setNewUser({ ...newUser, address_proof: e.target.value })}
+                      className="w-full text-xs p-2 bg-white border border-slate-300 rounded-xl text-slate-900"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="pt-4 flex justify-end space-x-3">
                 <button type="button" onClick={() => setShowOnboardUserModal(false)} className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer">Cancel</button>
                 <button type="submit" disabled={loading} className="px-6 py-2.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-60">
@@ -3178,11 +3628,13 @@ export default function CompanySuperAdminPage() {
       {/* 6. EDIT USER PROFILE MODAL */}
       {showEditUserModal && selectedUser && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Edit User Details</h3>
-                <p className="text-xs text-slate-500">Update contact and location information for {selectedUser.name}</p>
+                <h3 className="text-base font-bold text-slate-900">
+                  Edit {selectedUser.role?.toUpperCase()} Profile
+                </h3>
+                <p className="text-xs text-slate-500">Update credentials, profile, and role-based permissions for {selectedUser.name}</p>
               </div>
               <button onClick={() => setShowEditUserModal(false)} className="text-slate-400 hover:text-slate-700 text-sm font-bold cursor-pointer">✕</button>
             </div>
@@ -3222,6 +3674,186 @@ export default function CompanySuperAdminPage() {
                   />
                 </div>
               </div>
+
+              {/* Status Selector */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Account Status</label>
+                <select
+                  value={editUserData.status}
+                  onChange={(e) => setEditUserData({ ...editUserData, status: e.target.value })}
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+              </div>
+
+              {/* ADMIN ROLE FIELDS */}
+              {(selectedUser.role === "admin" || selectedUser.role === "distributor") && (
+                <div className="space-y-3 p-3.5 bg-blue-50/60 rounded-2xl border border-blue-200">
+                  <div className="text-[11px] font-black uppercase text-blue-900">Admin Account & Banking Details</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Bank Name"
+                      value={editUserData.bank_name}
+                      onChange={(e) => setEditUserData({ ...editUserData, bank_name: e.target.value })}
+                      className="text-xs p-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-bold"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Account No."
+                      value={editUserData.bank_account}
+                      onChange={(e) => setEditUserData({ ...editUserData, bank_account: e.target.value })}
+                      className="text-xs p-2 bg-white border border-slate-300 rounded-xl font-mono text-slate-900 font-bold"
+                    />
+                    <input
+                      type="text"
+                      placeholder="IFSC Code"
+                      value={editUserData.bank_ifsc}
+                      onChange={(e) => setEditUserData({ ...editUserData, bank_ifsc: e.target.value.toUpperCase() })}
+                      className="text-xs p-2 bg-white border border-slate-300 rounded-xl font-mono uppercase text-slate-900 font-bold"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Address Proof Document URL"
+                      value={editUserData.address_proof}
+                      onChange={(e) => setEditUserData({ ...editUserData, address_proof: e.target.value })}
+                      className="w-full text-xs p-2 bg-white border border-slate-300 rounded-xl text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-extrabold text-blue-900 mb-1 uppercase tracking-wider">
+                      Services: Enable Modules (Super Admin RBAC)
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {[
+                        { key: "gst_registration", label: "GST Registration" },
+                        { key: "gstr_filing", label: "GST Return Filing" },
+                        { key: "itr_filing", label: "Income Tax (IT) Filing" },
+                        { key: "reports", label: "Reports & Ledger" },
+                      ].map((mod) => (
+                        <label key={mod.key} className="flex items-center space-x-2 bg-white p-2 rounded-xl border border-slate-200 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editUserData.enabled_modules.includes(mod.key)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setEditUserData({ ...editUserData, enabled_modules: [...editUserData.enabled_modules, mod.key] });
+                              } else {
+                                setEditUserData({ ...editUserData, enabled_modules: editUserData.enabled_modules.filter(m => m !== mod.key) });
+                              }
+                            }}
+                            className="rounded text-blue-600 h-3.5 w-3.5"
+                          />
+                          <span className="font-semibold text-slate-800 text-[11px]">{mod.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* RETAILER ROLE FIELDS */}
+              {selectedUser.role === "retailer" && (
+                <div className="space-y-3 p-3.5 bg-emerald-50/60 rounded-2xl border border-emerald-200">
+                  <div className="text-[11px] font-black uppercase text-emerald-900">Retailer Store Profile & Services</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Shop / Center Name"
+                      value={editUserData.shop_name}
+                      onChange={(e) => setEditUserData({ ...editUserData, shop_name: e.target.value })}
+                      className="text-xs p-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-bold"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Address Proof URL"
+                      value={editUserData.address_proof}
+                      onChange={(e) => setEditUserData({ ...editUserData, address_proof: e.target.value })}
+                      className="text-xs p-2 bg-white border border-slate-300 rounded-xl text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <textarea
+                      rows={2}
+                      placeholder="Store Physical Address"
+                      value={editUserData.address}
+                      onChange={(e) => setEditUserData({ ...editUserData, address: e.target.value })}
+                      className="w-full text-xs p-2 bg-white border border-slate-300 rounded-xl text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-extrabold text-emerald-900 mb-1 uppercase tracking-wider">
+                      Store Services Enablement (Super Admin RBAC)
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {[
+                        { key: "customer_desk", label: "Customer Desk" },
+                        { key: "gstr_filing", label: "GST Filing" },
+                        { key: "gst_registration", label: "GST Registration" },
+                        { key: "itr_filing", label: "IT Filing" },
+                        { key: "esevai", label: "Eseva Services" },
+                        { key: "pan_card", label: "Pan Card" },
+                        { key: "passport", label: "Passport" },
+                        { key: "wallet", label: "Wallet Top-up" },
+                        { key: "reports", label: "Store Reports" },
+                      ].map((mod) => (
+                        <label key={mod.key} className="flex items-center space-x-2 bg-white p-2 rounded-xl border border-slate-200 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editUserData.enabled_modules.includes(mod.key)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setEditUserData({ ...editUserData, enabled_modules: [...editUserData.enabled_modules, mod.key] });
+                              } else {
+                                setEditUserData({ ...editUserData, enabled_modules: editUserData.enabled_modules.filter(m => m !== mod.key) });
+                              }
+                            }}
+                            className="rounded text-emerald-600 h-3.5 w-3.5"
+                          />
+                          <span className="font-semibold text-slate-800 text-[11px]">{mod.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* CUSTOMER ROLE FIELDS */}
+              {(selectedUser.role === "customer" || selectedUser.role === "operator") && (
+                <div className="space-y-3 p-3.5 bg-amber-50/60 rounded-2xl border border-amber-200">
+                  <div className="text-[11px] font-black uppercase text-amber-900">Customer Income Tax Portal Credentials</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Income Tax Login ID (PAN)"
+                      value={editUserData.income_tax_login_id}
+                      onChange={(e) => setEditUserData({ ...editUserData, income_tax_login_id: e.target.value.toUpperCase() })}
+                      className="text-xs p-2 bg-white border border-slate-300 rounded-xl font-mono uppercase text-slate-900 font-bold"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Income Tax Password"
+                      value={editUserData.income_tax_password}
+                      onChange={(e) => setEditUserData({ ...editUserData, income_tax_password: e.target.value })}
+                      className="text-xs p-2 bg-white border border-slate-300 rounded-xl font-mono text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Address Proof Document Link"
+                      value={editUserData.address_proof}
+                      onChange={(e) => setEditUserData({ ...editUserData, address_proof: e.target.value })}
+                      className="w-full text-xs p-2 bg-white border border-slate-300 rounded-xl text-slate-900"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -3773,6 +4405,19 @@ export default function CompanySuperAdminPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* SERVICE APPROVAL & DOCUMENT INSPECTION MODAL */}
+      {selectedServiceApproval && (
+        <ServiceApprovalModal
+          item={selectedServiceApproval}
+          onClose={() => setSelectedServiceApproval(null)}
+          onSuccess={(msg) => {
+            showToast(msg || "Service application updated successfully!");
+            setSelectedServiceApproval(null);
+            loadAllData();
+          }}
+        />
       )}
 
     </div>

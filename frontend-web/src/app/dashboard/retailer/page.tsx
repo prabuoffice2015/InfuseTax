@@ -44,7 +44,12 @@ import {
   MapPin,
   FileUp,
   Image as ImageIcon,
-  Building2
+  Building2,
+  LayoutDashboard,
+  Plane,
+  CreditCard,
+  Award,
+  Wallet
 } from "lucide-react";
 import ReceiptModal, { ReceiptData } from "@/components/dashboard/ReceiptModal";
 import AnnouncementsDesk from "@/components/dashboard/AnnouncementsDesk";
@@ -67,21 +72,19 @@ import { secureApiCall } from "@/lib/crypto";
 export default function RetailerDashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const currentDeskParam = searchParams.get("desk") || "gst_reg";
+  const currentDeskParam = searchParams.get("desk") || "overview";
 
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [pricingList, setPricingList] = useState<any[]>([]);
-  const [activeDesk, setActiveDesk] = useState<"gst_reg" | "itr" | "gstr_filing" | "announcements" | "vault" | "staff" | "approvals" | "service-approvals" | "reports">(
-    (["gst_reg", "itr", "gstr_filing", "announcements", "vault", "staff", "approvals", "service-approvals", "reports"].includes(currentDeskParam) ? currentDeskParam : "gst_reg") as any
-  );
+  const [activeDesk, setActiveDesk] = useState<string>(currentDeskParam || "overview");
 
   useEffect(() => {
-    if (currentDeskParam && ["gst_reg", "itr", "gstr_filing", "announcements", "vault", "staff", "approvals", "service-approvals", "reports"].includes(currentDeskParam)) {
-      setActiveDesk(currentDeskParam as any);
+    if (currentDeskParam) {
+      setActiveDesk(currentDeskParam);
     }
   }, [currentDeskParam]);
 
-  const switchDesk = (desk: "gst_reg" | "itr" | "gstr_filing" | "vault" | "staff" | "approvals" | "reports") => {
+  const switchDesk = (desk: string) => {
     setActiveDesk(desk);
     router.push(`/dashboard/retailer?desk=${desk}`);
   };
@@ -125,6 +128,50 @@ export default function RetailerDashboardPage() {
   const [approvalsPerPage, setApprovalsPerPage] = useState<number>(10);
   const [ledgerPage, setLedgerPage] = useState<number>(1);
   const [ledgerPerPage, setLedgerPerPage] = useState<number>(10);
+
+  // Customer Desk States (Handwritten Notes 1, 2 & 4)
+  const [customersList, setCustomersList] = useState<any[]>([]);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+  const [selectedCustomerForFiling, setSelectedCustomerForFiling] = useState<any | null>(null);
+  const [customerForm, setCustomerForm] = useState({
+    name: "",
+    email: "",
+    mobile: "",
+    income_tax_login_id: "",
+    income_tax_password: "",
+    login_id: "",
+    password: "Customer@1234",
+    address_proof: "",
+    address: ""
+  });
+  const [isSavingCustomer, setIsSavingCustomer] = useState(false);
+
+  // E-Sevai Desk States (Handwritten Note 1: Income, Nativity, Community, etc.)
+  const [esevaiType, setEsevaiType] = useState<"income" | "nativity" | "community" | "first_graduate" | "obc">("income");
+  const [esevaiApplicantName, setEsevaiApplicantName] = useState("");
+  const [esevaiMobile, setEsevaiMobile] = useState("");
+  const [esevaiFatherName, setEsevaiFatherName] = useState("");
+  const [esevaiAadhaar, setEsevaiAadhaar] = useState("");
+  const [esevaiAddress, setEsevaiAddress] = useState("");
+  const [isEsevaiSubmitting, setIsEsevaiSubmitting] = useState(false);
+  const [esevaiList, setEsevaiList] = useState<any[]>([]);
+
+  // PAN Card Desk States
+  const [panType, setPanType] = useState<"new_pan" | "correction">("new_pan");
+  const [panApplicantName, setPanApplicantName] = useState("");
+  const [panMobile, setPanMobile] = useState("");
+  const [panAadhaar, setPanAadhaar] = useState("");
+  const [panExistingNo, setPanExistingNo] = useState("");
+  const [isPanSubmitting, setIsPanSubmitting] = useState(false);
+
+  // Passport Desk States
+  const [passportType, setPassportType] = useState<"fresh" | "reissue">("fresh");
+  const [passportUrgency, setPassportUrgency] = useState<"normal" | "tatkaal">("normal");
+  const [passportApplicantName, setPassportApplicantName] = useState("");
+  const [passportMobile, setPassportMobile] = useState("");
+  const [passportDob, setPassportDob] = useState("");
+  const [isPassportSubmitting, setIsPassportSubmitting] = useState(false);
 
   // Staff Modals
   const [showStaffModal, setShowStaffModal] = useState<boolean>(false);
@@ -265,7 +312,7 @@ export default function RetailerDashboardPage() {
 
     try {
       const [
-        pRes, fRes, sRes, prRes, aRes, saRes, rRes, lRes
+        pRes, fRes, sRes, prRes, aRes, saRes, rRes, lRes, esRes
       ] = await Promise.allSettled([
         secureApiCall("/api/v1/auth/profile"),
         secureApiCall("/api/v1/filings/recent"),
@@ -274,8 +321,13 @@ export default function RetailerDashboardPage() {
         secureApiCall("/api/v1/announcements"),
         secureApiCall("/api/v1/service-approvals/list"),
         secureApiCall("/api/v1/wallet/requests"),
-        secureApiCall("/api/v1/admin/audit-ledger")
+        secureApiCall("/api/v1/admin/audit-ledger"),
+        secureApiCall("/api/v1/services/esevai/list")
       ]);
+
+      if (esRes.status === "fulfilled" && esRes.value.ok && esRes.value.data?.applications) {
+        setEsevaiList(esRes.value.data.applications);
+      }
 
       if (pRes.status === "fulfilled" && pRes.value.ok && pRes.value.data?.user) {
         const u = pRes.value.data.user;
@@ -308,6 +360,7 @@ export default function RetailerDashboardPage() {
 
       if (sRes.status === "fulfilled" && sRes.value.ok && sRes.value.data?.operators) {
         setStaffMembers(sRes.value.data.operators);
+        setCustomersList(sRes.value.data.customers || sRes.value.data.operators || []);
       }
 
       if (prRes.status === "fulfilled" && prRes.value.ok && prRes.value.data?.pricing) {
@@ -480,6 +533,95 @@ export default function RetailerDashboardPage() {
     const turnoverNum = parseFloat(gstrTurnover);
     if (isNaN(turnoverNum) || turnoverNum <= 0) return "Valid positive taxable turnover amount is required.";
     return null;
+  };
+
+  const handleCreateCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customerForm.name || !customerForm.mobile || !customerForm.email) {
+      showToast("Please provide customer name, email, and mobile number.", "error");
+      return;
+    }
+    setIsSavingCustomer(true);
+    try {
+      const res = await secureApiCall("/api/v1/retailer/customers/create", {
+        method: "POST",
+        body: {
+          name: customerForm.name,
+          email: customerForm.email,
+          mobile: customerForm.mobile,
+          income_tax_login_id: customerForm.income_tax_login_id,
+          income_tax_password: customerForm.income_tax_password,
+          taxpartner_login_id: customerForm.login_id,
+          password: customerForm.password,
+          address_proof: customerForm.address_proof,
+          address: customerForm.address
+        },
+        encrypt: true
+      });
+      if (res.ok && res.data?.status === "success") {
+        showToast(`✓ Customer '${customerForm.name}' onboarded successfully!`);
+        setShowAddCustomerModal(false);
+        setCustomerForm({
+          name: "",
+          email: "",
+          mobile: "",
+          income_tax_login_id: "",
+          income_tax_password: "",
+          login_id: "",
+          password: "Customer@1234",
+          address_proof: "",
+          address: ""
+        });
+        loadAllData();
+      } else {
+        showToast(res.data?.message || "Failed to create customer", "error");
+      }
+    } catch (err) {
+      showToast("Network error creating customer", "error");
+    } finally {
+      setIsSavingCustomer(false);
+    }
+  };
+
+  const handleEsevaiSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!esevaiApplicantName || !esevaiMobile) {
+      showToast("Please provide applicant name and mobile number.", "error");
+      return;
+    }
+    setIsEsevaiSubmitting(true);
+    try {
+      const res = await secureApiCall("/api/v1/services/esevai/apply", {
+        method: "POST",
+        body: {
+          service_type: esevaiType,
+          applicant_name: esevaiApplicantName,
+          mobile: esevaiMobile,
+          customer_id: selectedCustomerForFiling?.id || null,
+          documents: {
+            father_name: esevaiFatherName,
+            aadhaar_no: esevaiAadhaar,
+            address: esevaiAddress
+          }
+        },
+        encrypt: true
+      });
+      if (res.ok && res.data?.status === "success") {
+        showToast(`✓ ${esevaiType.toUpperCase()} Certificate Application submitted successfully!`);
+        setEsevaiApplicantName("");
+        setEsevaiMobile("");
+        setEsevaiFatherName("");
+        setEsevaiAadhaar("");
+        setEsevaiAddress("");
+        loadAllData();
+      } else {
+        showToast(res.data?.message || "Failed to submit application", "error");
+      }
+    } catch (err) {
+      showToast("Network error submitting application", "error");
+    } finally {
+      setIsEsevaiSubmitting(false);
+    }
   };
 
   const handleGstSubmit = async (e: React.FormEvent) => {
@@ -1129,15 +1271,18 @@ export default function RetailerDashboardPage() {
       {/* Horizontal Sub-Navigation Tab Switcher for 3 Core Services & 4 Utility Desks */}
       {(() => {
         const allDesks = [
-          { id: "gst_reg", label: "1. GST Registration Desk", icon: Building, badge: "1a, 1b, 1c", permKey: "gst_registration" },
-          { id: "itr", label: "2. IT Filing Desk", icon: FileText, badge: "Indiv & Biz", permKey: "itr_filing" },
-          { id: "gstr_filing", label: "3. GST Return Filing", icon: FileSpreadsheet, badge: "GSTR-1 & 3B", permKey: "gstr_filing" },
-          { id: "announcements", label: "Company Announcements", icon: Megaphone, badge: `${announcements.length} Live`, permKey: "announcements" },
-          { id: "vault", label: "Document Vault & AI", icon: ShieldCheck, badge: "Cloud", permKey: "vault" },
-          { id: "staff", label: "Shop Staff (Tier 4)", icon: Users, badge: `${staffMembers.length} Ops`, permKey: "staff" },
-          { id: "service-approvals", label: "Service Approvals", icon: FileCheck, badge: `${serviceApplications.filter(a => a.status === 'PENDING_APPROVAL').length} Pending`, permKey: "service_approvals" },
-          { id: "approvals", label: "Float Approvals", icon: CheckSquare, badge: `${operatorRequests.filter(r => r.status === 'pending').length} Pending`, permKey: "float_approvals" },
-          { id: "reports", label: "Store Audit Ledger", icon: History, badge: "Audit", permKey: "reports" },
+          { id: "overview", label: "Dashboard", icon: LayoutDashboard },
+          { id: "wallet", label: "Wallet", icon: Wallet, badge: `₹${counterWalletBalance.toLocaleString('en-IN')}`, permKey: "wallet" },
+          { id: "customers", label: "Customer Desk", icon: Users, badge: `${customersList.length} Clients`, permKey: "customer_desk" },
+          { id: "gstr_filing", label: "GST Filing", icon: FileSpreadsheet, badge: "GSTR-1 & 3B", permKey: "gstr_filing" },
+          { id: "gst_reg", label: "GST Registration", icon: Building, badge: "1a, 1b, 1c", permKey: "gst_registration" },
+          { id: "itr", label: "IT Filing", icon: FileText, badge: "Indiv & Biz", permKey: "itr_filing" },
+          { id: "esevai", label: "Eseva Services", icon: Award, badge: `${esevaiList.length} Apps`, permKey: "esevai" },
+          { id: "pan", label: "Pan Card", icon: CreditCard, badge: "49A / CSF", permKey: "pan_card" },
+          { id: "passport", label: "Passport", icon: Plane, badge: "Fresh / Reissue", permKey: "passport" },
+          { id: "reports", label: "Store Reports", icon: History, badge: "Ledger", permKey: "reports" },
+          { id: "vault", label: "Document Vault", icon: ShieldCheck, badge: "Cloud", permKey: "vault" },
+          { id: "announcements", label: "Announcements", icon: Megaphone, badge: `${announcements.length} Live`, permKey: "announcements" },
         ];
 
         const isPermitted = (permKey?: string) => {
@@ -1176,10 +1321,638 @@ export default function RetailerDashboardPage() {
       })()}
 
       {/* ========================================================================= */}
+      {/* DESK: RETAILER OVERVIEW                                                   */}
+      {/* ========================================================================= */}
+      {activeDesk === "overview" && (
+        <div className="space-y-6">
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+              <div className="flex items-center justify-between text-slate-500 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider">Store Wallet Float</span>
+                <Wallet className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="text-2xl font-black text-slate-900">₹{counterWalletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+              <button onClick={() => setShowUpiModal(true)} className="text-[11px] text-blue-600 font-bold hover:underline mt-1 flex items-center cursor-pointer">
+                + Top Up Via UPI QR
+              </button>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+              <div className="flex items-center justify-between text-slate-500 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider">Registered Customers</span>
+                <Users className="w-4 h-4 text-blue-600" />
+              </div>
+              <div className="text-2xl font-black text-slate-900">{customersList.length}</div>
+              <button onClick={() => switchDesk("customers")} className="text-[11px] text-blue-600 font-bold hover:underline mt-1 cursor-pointer">
+                View Customer Directory →
+              </button>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+              <div className="flex items-center justify-between text-slate-500 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider">Total Filings</span>
+                <FileCheck className="w-4 h-4 text-purple-600" />
+              </div>
+              <div className="text-2xl font-black text-slate-900">{filings.length}</div>
+              <div className="text-[11px] text-slate-500 font-semibold mt-1">Processed at Counter</div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+              <div className="flex items-center justify-between text-slate-500 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider">E-Sevai Certificates</span>
+                <Award className="w-4 h-4 text-amber-600" />
+              </div>
+              <div className="text-2xl font-black text-slate-900">{esevaiList.length}</div>
+              <div className="text-[11px] text-slate-500 font-semibold mt-1">Income, Nativity, Community</div>
+            </div>
+          </div>
+
+          {/* Quick Launch Services Grid */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900">Quick Launch Counter Services</h3>
+              <p className="text-xs text-slate-500">Initiate compliance filing, onboard customer, or issue government certificates</p>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <button
+                onClick={() => { setShowAddCustomerModal(true); }}
+                className="p-4 rounded-2xl bg-blue-50 hover:bg-blue-100/80 border border-blue-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
+              >
+                <Users className="w-6 h-6 text-blue-700 mb-2 group-hover:scale-110 transition-transform" />
+                <div>
+                  <div className="text-xs font-extrabold text-blue-950">Add Customer</div>
+                  <div className="text-[10px] text-blue-800/70">Onboard walk-in</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => switchDesk("gstr_filing")}
+                className="p-4 rounded-2xl bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
+              >
+                <FileSpreadsheet className="w-6 h-6 text-emerald-700 mb-2 group-hover:scale-110 transition-transform" />
+                <div>
+                  <div className="text-xs font-extrabold text-emerald-950">GST Filing</div>
+                  <div className="text-[10px] text-emerald-800/70">GSTR-1 & 3B</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => switchDesk("gst_reg")}
+                className="p-4 rounded-2xl bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
+              >
+                <Building className="w-6 h-6 text-indigo-700 mb-2 group-hover:scale-110 transition-transform" />
+                <div>
+                  <div className="text-xs font-extrabold text-indigo-950">GST Registration</div>
+                  <div className="text-[10px] text-indigo-800/70">New registration</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => switchDesk("itr")}
+                className="p-4 rounded-2xl bg-purple-50 hover:bg-purple-100/80 border border-purple-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
+              >
+                <FileText className="w-6 h-6 text-purple-700 mb-2 group-hover:scale-110 transition-transform" />
+                <div>
+                  <div className="text-xs font-extrabold text-purple-950">IT Filing</div>
+                  <div className="text-[10px] text-purple-800/70">ITR 1-4 Filing</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => switchDesk("esevai")}
+                className="p-4 rounded-2xl bg-amber-50 hover:bg-amber-100/80 border border-amber-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
+              >
+                <Award className="w-6 h-6 text-amber-700 mb-2 group-hover:scale-110 transition-transform" />
+                <div>
+                  <div className="text-xs font-extrabold text-amber-950">Eseva Services</div>
+                  <div className="text-[10px] text-amber-800/70">Income, Nativity...</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => switchDesk("pan")}
+                className="p-4 rounded-2xl bg-rose-50 hover:bg-rose-100/80 border border-rose-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
+              >
+                <CreditCard className="w-6 h-6 text-rose-700 mb-2 group-hover:scale-110 transition-transform" />
+                <div>
+                  <div className="text-xs font-extrabold text-rose-950">PAN Card</div>
+                  <div className="text-[10px] text-rose-800/70">49A & CSF</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* DESK: WALLET                                                              */}
+      {/* ========================================================================= */}
+      {activeDesk === "wallet" && (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-emerald-900 to-slate-900 p-6 sm:p-8 rounded-3xl text-white shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div>
+              <span className="px-2.5 py-0.5 bg-emerald-400 text-emerald-950 text-[10px] font-black uppercase rounded-full">
+                Counter Liquidity Float
+              </span>
+              <h2 className="text-3xl font-black mt-2 font-mono">
+                ₹{counterWalletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              </h2>
+              <p className="text-xs text-emerald-200 mt-1">Available balance for instant statutory compliance payments</p>
+            </div>
+            <button
+              onClick={() => setShowUpiModal(true)}
+              className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black text-xs rounded-2xl shadow-lg transition-all cursor-pointer flex items-center space-x-2"
+            >
+              <QrCode className="w-4 h-4" />
+              <span>Instant UPI Top-up</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* DESK: CUSTOMER MANAGEMENT DIRECTORY (Handwritten Notes 1, 2, 4)           */}
+      {/* ========================================================================= */}
+      {activeDesk === "customers" && (
+        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 border border-blue-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
+                Retailer Client Management
+              </span>
+              <h2 className="text-xl font-extrabold text-slate-900 mt-1">Customer Directory</h2>
+              <p className="text-xs text-slate-500">Manage onboarded citizens & businesses, track portal credentials, and initiate filings.</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setShowAddCustomerModal(true)}
+                className="px-4 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-2 cursor-pointer"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>+ Add Customer</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Search bar */}
+          <div className="flex items-center space-x-2 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200/80 max-w-md">
+            <Search className="w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              value={customerSearch}
+              onChange={(e) => setCustomerSearch(e.target.value)}
+              placeholder="Search customer by name, mobile, email..."
+              className="bg-transparent text-xs text-slate-800 w-full focus:outline-none font-medium"
+            />
+          </div>
+
+          {/* Customer Table */}
+          <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200/80 text-[11px]">
+                <tr>
+                  <th className="p-3.5">Customer Name</th>
+                  <th className="p-3.5">Contact (Mobile & Email)</th>
+                  <th className="p-3.5">TaxPartner Login ID</th>
+                  <th className="p-3.5">Income Tax Login ID</th>
+                  <th className="p-3.5">Status</th>
+                  <th className="p-3.5 text-center">Filing Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                {customersList
+                  .filter(c => {
+                    if (!customerSearch) return true;
+                    const q = customerSearch.toLowerCase();
+                    return c.name?.toLowerCase().includes(q) || c.mobile?.includes(q) || c.email?.toLowerCase().includes(q);
+                  })
+                  .length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-slate-400 font-bold">
+                        No customers onboarded yet. Click "+ Add Customer" to create your first client profile.
+                      </td>
+                    </tr>
+                  ) : (
+                    customersList
+                      .filter(c => {
+                        if (!customerSearch) return true;
+                        const q = customerSearch.toLowerCase();
+                        return c.name?.toLowerCase().includes(q) || c.mobile?.includes(q) || c.email?.toLowerCase().includes(q);
+                      })
+                      .map((c) => (
+                        <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="p-3.5">
+                            <div className="font-bold text-slate-900">{c.name}</div>
+                            <div className="text-[11px] text-slate-400 font-mono">ID: {c.id?.slice(0, 8)}</div>
+                          </td>
+                          <td className="p-3.5">
+                            <div className="font-mono text-slate-800 font-semibold">{c.mobile}</div>
+                            <div className="text-[11px] text-slate-400">{c.email}</div>
+                          </td>
+                          <td className="p-3.5 font-mono text-blue-700 font-bold">
+                            {c.user_code || c.mobile}
+                          </td>
+                          <td className="p-3.5 font-mono text-purple-700 font-bold">
+                            {c.income_tax_login_id || "Not Linked"}
+                          </td>
+                          <td className="p-3.5">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                              Active
+                            </span>
+                          </td>
+                          <td className="p-3.5 text-center">
+                            <div className="flex items-center justify-center space-x-1.5">
+                              <button
+                                onClick={() => {
+                                  setSelectedCustomerForFiling(c);
+                                  setSpTradeName(c.name || "");
+                                  setSpMobile(c.mobile || "");
+                                  setSpEmail(c.email || "");
+                                  switchDesk("gst_reg");
+                                }}
+                                className="px-2.5 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-[11px] rounded-lg transition-all cursor-pointer"
+                              >
+                                GST Reg
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedCustomerForFiling(c);
+                                  setItCustomerName(c.name || "");
+                                  setItMobile(c.mobile || "");
+                                  setItEmail(c.email || "");
+                                  setItLoginUser(c.income_tax_login_id || "");
+                                  setItLoginPassword(c.income_tax_password || "");
+                                  switchDesk("itr");
+                                }}
+                                className="px-2.5 py-1 bg-purple-50 text-purple-700 hover:bg-purple-100 font-bold text-[11px] rounded-lg transition-all cursor-pointer"
+                              >
+                                File ITR
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedCustomerForFiling(c);
+                                  setEsevaiApplicantName(c.name || "");
+                                  setEsevaiMobile(c.mobile || "");
+                                  switchDesk("esevai");
+                                }}
+                                className="px-2.5 py-1 bg-amber-50 text-amber-700 hover:bg-amber-100 font-bold text-[11px] rounded-lg transition-all cursor-pointer"
+                              >
+                                E-Sevai
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                  )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* DESK: E-SEVAI SERVICES (Handwritten Note 1: Income, Nativity, Community) */}
+      {/* ========================================================================= */}
+      {activeDesk === "esevai" && (
+        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 border border-amber-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
+                Tamil Nadu E-Governance Citizen Services
+              </span>
+              <h2 className="text-xl font-extrabold text-slate-900 mt-1">E-Sevai Certificates Desk</h2>
+              <p className="text-xs text-slate-500">Apply for Revenue Department certificates for citizens with instant application generation.</p>
+            </div>
+          </div>
+
+          {/* Certificate Type Switcher */}
+          <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-2 overflow-x-auto">
+            {[
+              { id: "income", label: "Income Certificate" },
+              { id: "nativity", label: "Nativity Certificate" },
+              { id: "community", label: "Community Certificate" },
+              { id: "first_graduate", label: "First Graduate Certificate" },
+              { id: "obc", label: "OBC / Other Certificates" },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setEsevaiType(tab.id as any)}
+                className={`py-2 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                  esevaiType === tab.id ? "bg-white text-blue-800 shadow-md font-extrabold" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={handleEsevaiSubmit} className="space-y-4 max-w-2xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Applicant Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={esevaiApplicantName}
+                  onChange={(e) => setEsevaiApplicantName(e.target.value)}
+                  placeholder="Applicant Full Name"
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Mobile Number *</label>
+                <input
+                  type="tel"
+                  required
+                  value={esevaiMobile}
+                  onChange={(e) => setEsevaiMobile(e.target.value)}
+                  placeholder="+91 98765 43210"
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Father / Husband Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={esevaiFatherName}
+                  onChange={(e) => setEsevaiFatherName(e.target.value)}
+                  placeholder="Father or Husband Name"
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Aadhaar Number *</label>
+                <input
+                  type="text"
+                  required
+                  value={esevaiAadhaar}
+                  onChange={(e) => setEsevaiAadhaar(e.target.value)}
+                  placeholder="XXXX XXXX XXXX"
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Residential Address *</label>
+              <textarea
+                required
+                rows={2}
+                value={esevaiAddress}
+                onChange={(e) => setEsevaiAddress(e.target.value)}
+                placeholder="Door No, Street, Village, Taluk, District, Pincode"
+                className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-900 focus:outline-none focus:border-blue-600"
+              />
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={isEsevaiSubmitting}
+                className="px-6 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-60"
+              >
+                {isEsevaiSubmitting ? "Submitting Application..." : `Submit ${esevaiType.toUpperCase()} Certificate Application`}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* DESK: PAN CARD DESK (Handwritten Note 1)                                   */}
+      {/* ========================================================================= */}
+      {activeDesk === "pan" && (
+        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-6 max-w-2xl">
+          <div className="border-b border-slate-100 pb-4">
+            <span className="px-2.5 py-0.5 bg-rose-100 text-rose-800 border border-rose-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
+              NSDL / UTIITSL Pan Service Desk
+            </span>
+            <h2 className="text-xl font-extrabold text-slate-900 mt-1">PAN Card Application Desk</h2>
+            <p className="text-xs text-slate-500">Apply for New PAN Card (Form 49A) or Changes / Corrections in existing PAN (CSF).</p>
+          </div>
+
+          <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-2">
+            <button
+              onClick={() => setPanType("new_pan")}
+              className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer text-center ${
+                panType === "new_pan" ? "bg-white text-blue-800 shadow-md font-extrabold" : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              New PAN Card (Form 49A)
+            </button>
+            <button
+              onClick={() => setPanType("correction")}
+              className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer text-center ${
+                panType === "correction" ? "bg-white text-blue-800 shadow-md font-extrabold" : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              PAN Correction / Changes (CSF)
+            </button>
+          </div>
+
+          <form onSubmit={(e) => { e.preventDefault(); showToast("PAN Application submitted for processing."); }} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Applicant Name (As on Aadhaar) *</label>
+              <input
+                type="text"
+                required
+                value={panApplicantName}
+                onChange={(e) => setPanApplicantName(e.target.value)}
+                placeholder="Full Name"
+                className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Mobile Number *</label>
+                <input
+                  type="tel"
+                  required
+                  value={panMobile}
+                  onChange={(e) => setPanMobile(e.target.value)}
+                  placeholder="+91 98765 43210"
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Aadhaar Number *</label>
+                <input
+                  type="text"
+                  required
+                  value={panAadhaar}
+                  onChange={(e) => setPanAadhaar(e.target.value)}
+                  placeholder="12-digit Aadhaar No."
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+            </div>
+
+            {panType === "correction" && (
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Existing PAN Number *</label>
+                <input
+                  type="text"
+                  required
+                  value={panExistingNo}
+                  onChange={(e) => setPanExistingNo(e.target.value.toUpperCase())}
+                  placeholder="ABCDE1234F"
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold uppercase text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+            )}
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
+              >
+                Submit PAN Application
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* DESK: PASSPORT ASSISTANCE DESK (Handwritten Note 1)                       */}
+      {/* ========================================================================= */}
+      {activeDesk === "passport" && (
+        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-6 max-w-2xl">
+          <div className="border-b border-slate-100 pb-4">
+            <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
+              Passport Seva Kendra Assistance
+            </span>
+            <h2 className="text-xl font-extrabold text-slate-900 mt-1">Indian Passport Application Desk</h2>
+            <p className="text-xs text-slate-500">Fresh passport application, reissue/renewal, and PSK appointment booking.</p>
+          </div>
+
+          <form onSubmit={(e) => { e.preventDefault(); showToast("Passport application request booked."); }} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Application Type *</label>
+                <select
+                  value={passportType}
+                  onChange={(e) => setPassportType(e.target.value as any)}
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900"
+                >
+                  <option value="fresh">Fresh Passport</option>
+                  <option value="reissue">Re-issue / Renewal</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Scheme *</label>
+                <select
+                  value={passportUrgency}
+                  onChange={(e) => setPassportUrgency(e.target.value as any)}
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900"
+                >
+                  <option value="normal">Normal (30-45 Days)</option>
+                  <option value="tatkaal">Tatkaal (3-7 Days)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Applicant Name *</label>
+              <input
+                type="text"
+                required
+                value={passportApplicantName}
+                onChange={(e) => setPassportApplicantName(e.target.value)}
+                placeholder="Given Name + Surname"
+                className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Mobile Number *</label>
+                <input
+                  type="tel"
+                  required
+                  value={passportMobile}
+                  onChange={(e) => setPassportMobile(e.target.value)}
+                  placeholder="+91 98765 43210"
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Date of Birth *</label>
+                <input
+                  type="date"
+                  required
+                  value={passportDob}
+                  onChange={(e) => setPassportDob(e.target.value)}
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                className="px-6 py-2.5 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
+              >
+                Submit Passport Application
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
       {/* DESK 1: GST REGISTRATION WORKFLOW (1a Sole Prop / 1b Pvt Ltd / 1c LLP)    */}
       {/* ========================================================================= */}
       {activeDesk === "gst_reg" && (
         <div className="space-y-6">
+          {/* Customer Selector Bar for GST Registration */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center space-x-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shrink-0">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-slate-900">Filing for Customer:</span>
+                <p className="text-[11px] text-slate-500">
+                  {selectedCustomerForFiling ? `Selected: ${selectedCustomerForFiling.name} (${selectedCustomerForFiling.mobile})` : "Select a customer to auto-fill details or onboard a new one"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 w-full sm:w-auto">
+              <select
+                value={selectedCustomerForFiling?.id || ""}
+                onChange={(e) => {
+                  const c = customersList.find(item => item.id === e.target.value);
+                  setSelectedCustomerForFiling(c || null);
+                  if (c) {
+                    setSpTradeName(c.name || "");
+                    setSpMobile(c.mobile || "");
+                    setSpEmail(c.email || "");
+                  }
+                }}
+                className="text-xs p-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none"
+              >
+                <option value="">-- Choose Customer ({customersList.length}) --</option>
+                {customersList.map(c => (
+                  <option key={c.id} value={c.id}>{c.name} ({c.mobile})</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setShowAddCustomerModal(true)}
+                className="px-3 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-xl whitespace-nowrap cursor-pointer"
+              >
+                + New Customer
+              </button>
+            </div>
+          </div>
           {/* Registration Type Switcher (1a, 1b, 1c) */}
           <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-2 max-w-2xl">
             <button
@@ -1555,6 +2328,49 @@ export default function RetailerDashboardPage() {
       {/* ========================================================================= */}
       {activeDesk === "itr" && (
         <div className="space-y-6">
+          {/* Customer Selector Bar for IT Filing */}
+          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200/80 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center space-x-3">
+              <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold shrink-0">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-slate-900">Filing ITR for Customer:</span>
+                <p className="text-[11px] text-slate-500">
+                  {selectedCustomerForFiling ? `Selected: ${selectedCustomerForFiling.name} (${selectedCustomerForFiling.mobile})` : "Select a customer to auto-fill PAN & IT Portal login credentials"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 w-full sm:w-auto">
+              <select
+                value={selectedCustomerForFiling?.id || ""}
+                onChange={(e) => {
+                  const c = customersList.find(item => item.id === e.target.value);
+                  setSelectedCustomerForFiling(c || null);
+                  if (c) {
+                    setItCustomerName(c.name || "");
+                    setItMobile(c.mobile || "");
+                    setItEmail(c.email || "");
+                    setItLoginUser(c.income_tax_login_id || "");
+                    setItLoginPassword(c.income_tax_password || "");
+                  }
+                }}
+                className="text-xs p-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none"
+              >
+                <option value="">-- Choose Customer ({customersList.length}) --</option>
+                {customersList.map(c => (
+                  <option key={c.id} value={c.id}>{c.name} ({c.mobile})</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setShowAddCustomerModal(true)}
+                className="px-3 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold rounded-xl whitespace-nowrap cursor-pointer"
+              >
+                + New Customer
+              </button>
+            </div>
+          </div>
           {/* Filer Type Switcher */}
           <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-2 max-w-md">
             <button
@@ -1760,6 +2576,42 @@ export default function RetailerDashboardPage() {
       {/* ========================================================================= */}
       {activeDesk === "gstr_filing" && (
         <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-6">
+          {/* Customer Selector Bar for GST Filing */}
+          <div className="bg-gradient-to-r from-emerald-50 to-indigo-50 border border-emerald-200/80 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center space-x-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold shrink-0">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-slate-900">Filing GST Return for Customer:</span>
+                <p className="text-[11px] text-slate-500">
+                  {selectedCustomerForFiling ? `Selected: ${selectedCustomerForFiling.name} (${selectedCustomerForFiling.mobile})` : "Select a customer to link their monthly GST return"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 w-full sm:w-auto">
+              <select
+                value={selectedCustomerForFiling?.id || ""}
+                onChange={(e) => {
+                  const c = customersList.find(item => item.id === e.target.value);
+                  setSelectedCustomerForFiling(c || null);
+                }}
+                className="text-xs p-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none"
+              >
+                <option value="">-- Choose Customer ({customersList.length}) --</option>
+                {customersList.map(c => (
+                  <option key={c.id} value={c.id}>{c.name} ({c.mobile})</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setShowAddCustomerModal(true)}
+                className="px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl whitespace-nowrap cursor-pointer"
+              >
+                + New Customer
+              </button>
+            </div>
+          </div>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
             <div>
               <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
@@ -2664,6 +3516,134 @@ export default function RetailerDashboardPage() {
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* ONBOARD NEW CUSTOMER MODAL (Handwritten Notes 1, 2 & 4) */}
+      {showAddCustomerModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div>
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                  Customer Onboarding
+                </span>
+                <h3 className="text-base font-extrabold text-slate-900 mt-1">Add New Customer</h3>
+                <p className="text-xs text-slate-500">Record customer credentials, Income Tax portal logins & address proof</p>
+              </div>
+              <button onClick={() => setShowAddCustomerModal(false)} className="text-slate-400 hover:text-slate-700 text-sm font-bold cursor-pointer">✕</button>
+            </div>
+
+            <form onSubmit={handleCreateCustomer} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Customer Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={customerForm.name}
+                  onChange={(e) => setCustomerForm({ ...customerForm, name: e.target.value })}
+                  placeholder="e.g. Anandha Kumar"
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Email ID *</label>
+                  <input
+                    type="email"
+                    required
+                    value={customerForm.email}
+                    onChange={(e) => setCustomerForm({ ...customerForm, email: e.target.value })}
+                    placeholder="customer@example.com"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Mobile No *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={customerForm.mobile}
+                    onChange={(e) => setCustomerForm({ ...customerForm, mobile: e.target.value })}
+                    placeholder="+91 98765 43210"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Income Tax Login ID (PAN) *</label>
+                  <input
+                    type="text"
+                    value={customerForm.income_tax_login_id}
+                    onChange={(e) => setCustomerForm({ ...customerForm, income_tax_login_id: e.target.value.toUpperCase() })}
+                    placeholder="ABCDE1234F"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold uppercase text-slate-900 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Income Tax Password</label>
+                  <input
+                    type="password"
+                    value={customerForm.income_tax_password}
+                    onChange={(e) => setCustomerForm({ ...customerForm, income_tax_password: e.target.value })}
+                    placeholder="••••••••••••"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">TaxPartner Login ID</label>
+                  <input
+                    type="text"
+                    value={customerForm.login_id}
+                    onChange={(e) => setCustomerForm({ ...customerForm, login_id: e.target.value })}
+                    placeholder="Auto or custom ID"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">TaxPartner Password *</label>
+                  <input
+                    type="password"
+                    required
+                    value={customerForm.password}
+                    onChange={(e) => setCustomerForm({ ...customerForm, password: e.target.value })}
+                    placeholder="••••••••••••"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Address Proof Document URL / Ref</label>
+                <input
+                  type="text"
+                  value={customerForm.address_proof}
+                  onChange={(e) => setCustomerForm({ ...customerForm, address_proof: e.target.value })}
+                  placeholder="e.g. Aadhaar / Voter ID doc link"
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div className="pt-4 flex justify-end space-x-3">
+                <button type="button" onClick={() => setShowAddCustomerModal(false)} className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer">
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingCustomer}
+                  className="px-6 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-60"
+                >
+                  {isSavingCustomer ? "Saving Customer..." : "Onboard Customer"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

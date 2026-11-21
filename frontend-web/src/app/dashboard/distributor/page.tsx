@@ -28,6 +28,8 @@ import {
   CheckSquare,
   MessageSquare,
   Sliders,
+  Building,
+  FileText,
   Sparkles,
   CreditCard,
   Plane,
@@ -172,13 +174,11 @@ export default function DistributorDashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentTabParam = searchParams.get("tab") || "overview";
-  const [activeTab, setActiveTab] = useState<"overview" | "announcements" | "approvals" | "service-approvals" | "pricing" | "outlets" | "reports">(
-    (["overview", "announcements", "approvals", "service-approvals", "pricing", "outlets", "reports"].includes(currentTabParam) ? currentTabParam : "overview") as any
-  );
+  const [activeTab, setActiveTab] = useState<string>(currentTabParam || "overview");
 
   useEffect(() => {
-    if (currentTabParam && ["overview", "announcements", "approvals", "service-approvals", "pricing", "outlets", "reports"].includes(currentTabParam)) {
-      setActiveTab(currentTabParam as any);
+    if (currentTabParam) {
+      setActiveTab(currentTabParam);
     }
   }, [currentTabParam]);
 
@@ -409,9 +409,9 @@ export default function DistributorDashboardPage() {
     setTimeout(() => setFeedback(null), 4000);
   };
 
-  const switchTab = (tab: "overview" | "approvals" | "service-approvals" | "pricing" | "outlets" | "reports") => {
+  const switchTab = (tab: string) => {
     setActiveTab(tab);
-    router.push(`/dashboard/distributor?tab=${tab}`);
+    router.push(`/dashboard/admin?tab=${tab}`);
   };
 
   // ==========================================
@@ -1079,13 +1079,16 @@ export default function DistributorDashboardPage() {
       {/* Horizontal Tab Switcher */}
       {(() => {
         const allTabs = [
-          { id: "overview", label: "Dashboard Overview", icon: LayoutDashboard },
-          { id: "service-approvals", label: "Service Approvals (T3 & T4)", icon: FileCheck, badge: `${serviceApplications.filter(a => a.status === 'PENDING_APPROVAL').length} Pending`, permKey: "service_approvals" },
-          { id: "approvals", label: "Wallet Approvals (T3 & T4)", icon: CheckSquare, badge: `${walletRequests.filter(r => r.status === 'pending').length} Pending`, permKey: "float_approvals" },
+          { id: "overview", label: "Dashboard", icon: LayoutDashboard },
+          { id: "gst-reg", label: "GST Registration", icon: Building, badge: `${serviceApplications.filter(a => a.service_category === 'gst_registration' && a.status === 'PENDING_APPROVAL').length} Pending`, permKey: "gst_registration" },
+          { id: "gst-filing", label: "GST Filing", icon: FileSpreadsheet, badge: `${serviceApplications.filter(a => a.service_category === 'gstr_filing' && a.status === 'PENDING_APPROVAL').length} Pending`, permKey: "gstr_filing" },
+          { id: "it-filing", label: "IT Filing", icon: FileText, badge: `${serviceApplications.filter(a => a.service_category === 'itr' && a.status === 'PENDING_APPROVAL').length} Pending`, permKey: "itr_filing" },
+          { id: "reports", label: "Reports", icon: History, permKey: "reports" },
+          { id: "service-approvals", label: "All Service Approvals", icon: FileCheck, badge: `${serviceApplications.filter(a => a.status === 'PENDING_APPROVAL').length} Pending`, permKey: "service_approvals" },
+          { id: "approvals", label: "Wallet Approvals", icon: CheckSquare, badge: `${walletRequests.filter(r => r.status === 'pending').length} Pending`, permKey: "float_approvals" },
           { id: "pricing", label: "Tier 3 Pricing Setup", icon: Sliders, badge: `${directPricing.length} Services`, permKey: "pricing" },
           { id: "outlets", label: "Network Outlets", icon: Users, badge: `${outlets.length} Outlets`, permKey: "outlets" },
           { id: "announcements", label: "Company Announcements", icon: Megaphone, badge: `${announcements.length} Live`, permKey: "announcements" },
-          { id: "reports", label: "Wallet & Master Reports", icon: History, permKey: "reports" },
         ];
 
         const isPermitted = (permKey?: string) => {
@@ -1773,66 +1776,78 @@ export default function DistributorDashboardPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB: SERVICE APPROVALS (TIER 3 & TIER 4 DOCUMENT VERIFICATION)            */}
+      {/* TAB: SERVICE APPROVALS (GST REGISTRATION, GST FILING, IT FILING TABLES)   */}
       {/* ========================================================================= */}
-      {activeTab === "service-approvals" && (
-        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-            <div>
-              <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 border border-blue-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
-                Tier 2 Multi-Outlet Verification Desk
-              </span>
-              <h2 className="text-xl font-extrabold text-slate-900 mt-1">Network Service Filing Approvals</h2>
-              <p className="text-xs text-slate-500">Inspect scanned color documents from Tier 3 Retailers & Tier 4 Operators, approve with verified proof upload, or reject with mandatory remarks.</p>
-            </div>
-            <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
-              {(["pending", "approved", "rejected"] as const).map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setServiceApprovalSubTab(tab)}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg capitalize transition-all cursor-pointer ${
-                    serviceApprovalSubTab === tab ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  {tab} ({serviceApplications.filter(a => {
-                    if (tab === "pending") return a.status === "PENDING_APPROVAL" || a.status === "WAITING_VERIFICATION";
-                    return a.status?.toLowerCase() === tab;
-                  }).length})
-                </button>
-              ))}
-            </div>
-          </div>
+      {(activeTab === "service-approvals" || activeTab === "gst-reg" || activeTab === "gst-filing" || activeTab === "it-filing") && (() => {
+        const categoryFilter = activeTab === "gst-reg" ? "gst_registration" : activeTab === "gst-filing" ? "gstr_filing" : activeTab === "it-filing" ? "itr" : "all";
+        const pageTitle = activeTab === "gst-reg" ? "GST Registration Applications (View & Approve)" : activeTab === "gst-filing" ? "GST Return Filings (View & Approve)" : activeTab === "it-filing" ? "Income Tax Returns (View & Approve)" : "Network Service Filing Approvals";
+        const pageDesc = activeTab === "gst-reg" ? "Inspect scanned color document proofs, verify business trade details, and approve or reject GST registrations." : activeTab === "gst-filing" ? "Verify sales and purchase return figures, check ITC claims, and approve GST returns." : activeTab === "it-filing" ? "Inspect AIS, Form 16 computations, and approve ITR submissions." : "Inspect scanned color documents from Tier 3 Retailers & Tier 4 Operators, approve with verified proof upload, or reject with mandatory remarks.";
 
-          <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200/80 text-[11px]">
-                <tr>
-                  <th className="p-3.5">ARN / Ref</th>
-                  <th className="p-3.5">Customer / Client</th>
-                  <th className="p-3.5">Service & Constitution</th>
-                  <th className="p-3.5">Operator / Submitter</th>
-                  <th className="p-3.5 text-right">Fee (₹)</th>
-                  <th className="p-3.5">Status</th>
-                  <th className="p-3.5 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                {serviceApplications.filter(a => {
-                  if (serviceApprovalSubTab === "pending") return a.status === "PENDING_APPROVAL" || a.status === "WAITING_VERIFICATION";
-                  return a.status?.toLowerCase() === serviceApprovalSubTab.toLowerCase();
-                }).length === 0 ? (
+        const matchesCategory = (a: any) => {
+          if (categoryFilter === "all") return true;
+          if (categoryFilter === "gst_registration") return a.service_category === "gst_registration" || a.service_name?.toLowerCase().includes("registration");
+          if (categoryFilter === "gstr_filing") return a.service_category === "gstr_filing" || a.service_name?.toLowerCase().includes("return") || a.service_name?.toLowerCase().includes("gstr");
+          if (categoryFilter === "itr") return a.service_category === "itr" || a.service_name?.toLowerCase().includes("itr") || a.service_name?.toLowerCase().includes("income");
+          return true;
+        };
+
+        const filteredApps = serviceApplications.filter(a => {
+          if (!matchesCategory(a)) return false;
+          if (serviceApprovalSubTab === "pending") return a.status === "PENDING_APPROVAL" || a.status === "WAITING_VERIFICATION";
+          return a.status?.toLowerCase() === serviceApprovalSubTab.toLowerCase();
+        });
+
+        return (
+          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 border border-blue-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
+                  Admin Verification Desk (Table View)
+                </span>
+                <h2 className="text-xl font-extrabold text-slate-900 mt-1">{pageTitle}</h2>
+                <p className="text-xs text-slate-500">{pageDesc}</p>
+              </div>
+              <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+                {(["pending", "approved", "rejected"] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setServiceApprovalSubTab(tab)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg capitalize transition-all cursor-pointer ${
+                      serviceApprovalSubTab === tab ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    {tab} ({serviceApplications.filter(a => {
+                      if (!matchesCategory(a)) return false;
+                      if (tab === "pending") return a.status === "PENDING_APPROVAL" || a.status === "WAITING_VERIFICATION";
+                      return a.status?.toLowerCase() === tab;
+                    }).length})
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200/80 text-[11px]">
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-slate-400 font-bold">
-                      No {serviceApprovalSubTab} service applications found for this network.
-                    </td>
+                    <th className="p-3.5">ARN / Ref</th>
+                    <th className="p-3.5">Customer / Client</th>
+                    <th className="p-3.5">Service & Constitution</th>
+                    <th className="p-3.5">Retailer / Submitter</th>
+                    <th className="p-3.5 text-right">Fee (₹)</th>
+                    <th className="p-3.5">Status</th>
+                    <th className="p-3.5 text-center">Action</th>
                   </tr>
-                ) : (
-                  serviceApplications
-                    .filter(a => {
-                      if (serviceApprovalSubTab === "pending") return a.status === "PENDING_APPROVAL" || a.status === "WAITING_VERIFICATION";
-                      return a.status?.toLowerCase() === serviceApprovalSubTab.toLowerCase();
-                    })
-                    .map((app) => (
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                  {filteredApps.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-slate-400 font-bold">
+                        No {serviceApprovalSubTab} applications found for this view.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredApps.map((app) => (
                       <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="p-3.5 font-bold font-mono text-[11px] text-blue-700">{app.arn}</td>
                         <td className="p-3.5">
@@ -1840,10 +1855,10 @@ export default function DistributorDashboardPage() {
                           <div className="text-[11px] text-slate-400">{app.submitted_at}</div>
                         </td>
                         <td className="p-3.5">
-                          <div className="font-bold text-slate-800">{app.service_category === 'itr' ? 'Income Tax Return' : 'GST Registration'}</div>
+                          <div className="font-bold text-slate-800">{app.service_category === 'itr' ? 'Income Tax Return' : app.service_category === 'gstr_filing' ? 'GST Return' : 'GST Registration'}</div>
                           <div className="text-[11px] text-slate-500">{app.entity_type}</div>
                         </td>
-                        <td className="p-3.5 font-medium text-slate-700">{app.operator_name || "Network Staff"}</td>
+                        <td className="p-3.5 font-medium text-slate-700">{app.operator_name || "Retailer Counter"}</td>
                         <td className="p-3.5 text-right font-black text-slate-900 font-mono">
                           ₹{(parseFloat(app.amount as any || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </td>
@@ -1858,20 +1873,21 @@ export default function DistributorDashboardPage() {
                         <td className="p-3.5 text-center">
                           <button
                             onClick={() => setSelectedServiceApproval(app)}
-                            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white font-bold text-xs rounded-xl border border-blue-200 hover:border-transparent transition-all flex items-center space-x-1.5 mx-auto cursor-pointer"
+                            className="px-3.5 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-xl font-bold transition-all shadow-xs cursor-pointer inline-flex items-center space-x-1"
                           >
                             <Eye className="w-3.5 h-3.5" />
-                            <span>Verify & Action</span>
+                            <span>View & Approve</span>
                           </button>
                         </td>
                       </tr>
                     ))
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ========================================================================= */}
       {/* TAB 4: WALLET APPROVALS (T3 & T4 Only)                                    */}
@@ -3080,6 +3096,19 @@ export default function DistributorDashboardPage() {
 
           </div>
         </div>
+      )}
+
+      {/* SERVICE APPROVAL & DOCUMENT INSPECTION MODAL */}
+      {selectedServiceApproval && (
+        <ServiceApprovalModal
+          item={selectedServiceApproval}
+          onClose={() => setSelectedServiceApproval(null)}
+          onSuccess={(msg) => {
+            showToast(msg || "Service application updated successfully!");
+            setSelectedServiceApproval(null);
+            loadAllData();
+          }}
+        />
       )}
 
     </div>

@@ -38,7 +38,7 @@ import { secureApiCall } from "@/lib/crypto";
 
 export interface ServiceApprovalItem {
   id: string;
-  service_category: "gst" | "itr";
+  service_category: "gst" | "itr" | "gst_registration" | "gstr_filing" | string;
   arn: string;
   client_name: string;
   entity_type: string;

@@ -88,45 +88,45 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
 
     if (role === "super_admin" || role.includes("super_admin") || role === "company") {
       return [
-        { label: "Platform Overview", href: "/dashboard/company?tab=overview", tabKey: "overview", icon: LayoutDashboard },
-        { label: "Company Creation", href: "/dashboard/company?tab=companies", tabKey: "companies", icon: Building },
-        { label: "Company Users (T2/T3/T4)", href: "/dashboard/company?tab=company-users", tabKey: "company-users", icon: Users },
-        { label: "Tier 2 Pricing Setup", href: "/dashboard/company?tab=pricing", tabKey: "pricing", icon: Sliders },
-        { label: "UTR Bank Approvals", href: "/dashboard/company?tab=utr", tabKey: "utr", icon: CheckSquare },
-        { label: "Company Announcements", href: "/dashboard/company?tab=announcements", tabKey: "announcements", icon: Megaphone },
-        { label: "White Labeling & Permissions", href: "/dashboard/company?tab=branding", tabKey: "branding", icon: Palette },
-        { label: "💬 WhatsApp Gateway & Alerts", href: "/dashboard/company?tab=whatsapp", tabKey: "whatsapp", icon: MessageSquare },
-        { label: "Master Audit Ledger", href: "/dashboard/company?tab=ledger", tabKey: "ledger", icon: History },
+        { label: "Dashboard", href: "/dashboard/company?tab=overview", tabKey: "overview", icon: LayoutDashboard },
+        { label: "Admin", href: "/dashboard/company?tab=admins", tabKey: "admins", icon: ShieldCheck },
+        { label: "Retailer", href: "/dashboard/company?tab=retailers", tabKey: "retailers", icon: Building },
+        { label: "Customer", href: "/dashboard/company?tab=customers", tabKey: "customers", icon: Users },
+        { label: "Wallet Approval", href: "/dashboard/company?tab=utr", tabKey: "utr", icon: CheckSquare },
+        { label: "GST Registration", href: "/dashboard/company?tab=gst-reg", tabKey: "gst-reg", icon: Building },
+        { label: "GST Filing", href: "/dashboard/company?tab=gst-filing", tabKey: "gst-filing", icon: FileSpreadsheet },
+        { label: "IT Filing", href: "/dashboard/company?tab=it-filing", tabKey: "it-filing", icon: FileText },
+        { label: "Reports", href: "/dashboard/company?tab=ledger", tabKey: "ledger", icon: History },
       ];
     } else if (role === "admin" || role.includes("distributor")) {
       return [
-        { label: "Admin Dashboard", href: "/dashboard/distributor?tab=overview", tabKey: "overview", icon: LayoutDashboard, permKey: "overview" },
-        { label: "📋 Service Approvals (T3 & T4)", href: "/dashboard/distributor?tab=service-approvals", tabKey: "service-approvals", icon: FileCheck, permKey: "service_approvals" },
-        { label: "💳 Wallet Approvals (T3 & T4)", href: "/dashboard/distributor?tab=approvals", tabKey: "approvals", icon: CheckSquare, permKey: "float_approvals" },
-        { label: "Tier 3 Pricing Setup", href: "/dashboard/distributor?tab=pricing", tabKey: "pricing", icon: Sliders, permKey: "pricing" },
-        { label: "Network Outlets (Users)", href: "/dashboard/distributor?tab=outlets", tabKey: "outlets", icon: Users, permKey: "outlets" },
-        { label: "Company Announcements", href: "/dashboard/distributor?tab=announcements", tabKey: "announcements", icon: Megaphone, permKey: "announcements" },
-        { label: "Wallet & Master Reports", href: "/dashboard/distributor?tab=reports", tabKey: "reports", icon: History, permKey: "reports" },
+        { label: "Dashboard", href: "/dashboard/admin?tab=overview", tabKey: "overview", icon: LayoutDashboard, permKey: "overview" },
+        { label: "GST Registration", href: "/dashboard/admin?tab=gst-reg", tabKey: "gst-reg", icon: Building, permKey: "gst_registration" },
+        { label: "GST Filing", href: "/dashboard/admin?tab=gst-filing", tabKey: "gst-filing", icon: FileSpreadsheet, permKey: "gstr_filing" },
+        { label: "IT Filing", href: "/dashboard/admin?tab=it-filing", tabKey: "it-filing", icon: FileText, permKey: "itr_filing" },
+        { label: "Reports", href: "/dashboard/admin?tab=reports", tabKey: "reports", icon: History, permKey: "reports" },
       ];
     } else if (role.includes("customer") || role.includes("operator") || role.includes("employee")) {
       return [
-        { label: "GST Registration Desk", href: "/dashboard/operator?desk=gst_reg", deskKey: "gst_reg", icon: Building, permKey: "gst_registration" },
-        { label: "IT Filing Desk", href: "/dashboard/operator?desk=itr", deskKey: "itr", icon: FileText, permKey: "itr_filing" },
-        { label: "GST Return Filing", href: "/dashboard/operator?desk=gstr_filing", deskKey: "gstr_filing", icon: FileSpreadsheet, permKey: "gstr_filing" },
-        { label: "Wallet Report", href: "/dashboard/operator?desk=reports", deskKey: "reports", icon: History, permKey: "reports" },
+        { label: "Dashboard", href: "/dashboard/customer?tab=overview", tabKey: "overview", icon: LayoutDashboard },
+        { label: "My Filings", href: "/dashboard/customer?tab=my_filings", tabKey: "my_filings", icon: FileCheck, permKey: "my_filings" },
+        { label: "My Credentials", href: "/dashboard/customer?tab=credentials", tabKey: "credentials", icon: ShieldAlert, permKey: "credentials" },
+        { label: "Document Vault", href: "/dashboard/customer?tab=documents", tabKey: "documents", icon: ShieldCheck, permKey: "vault" },
+        { label: "Receipts", href: "/dashboard/customer?tab=receipts", tabKey: "receipts", icon: Receipt, permKey: "receipts" },
       ];
     } else {
       // Retailer Store POS (Tier 3)
       return [
-        { label: "GST Registration Desk", href: "/dashboard/retailer?desk=gst_reg", deskKey: "gst_reg", icon: Building, permKey: "gst_registration" },
-        { label: "IT Filing Desk", href: "/dashboard/retailer?desk=itr", deskKey: "itr", icon: FileText, permKey: "itr_filing" },
-        { label: "GST Return Filing", href: "/dashboard/retailer?desk=gstr_filing", deskKey: "gstr_filing", icon: FileSpreadsheet, permKey: "gstr_filing" },
-        { label: "Company Announcements", href: "/dashboard/retailer?desk=announcements", deskKey: "announcements", icon: Megaphone, permKey: "announcements" },
-        { label: "Document Vault & AI", href: "/dashboard/retailer?desk=vault", deskKey: "vault", icon: ShieldCheck, permKey: "vault" },
-        { label: "Customer Staff (Tier 4)", href: "/dashboard/retailer?desk=staff", deskKey: "staff", icon: Users, permKey: "staff" },
-        { label: "📋 Service Approvals (Tier 4)", href: "/dashboard/retailer?desk=service-approvals", deskKey: "service-approvals", icon: FileCheck, permKey: "service_approvals" },
-        { label: "💳 Float Approvals (Tier 4)", href: "/dashboard/retailer?desk=approvals", deskKey: "approvals", icon: CheckSquare, permKey: "float_approvals" },
-        { label: "Store Audit Ledger", href: "/dashboard/retailer?desk=reports", deskKey: "reports", icon: History, permKey: "reports" },
+        { label: "Dashboard", href: "/dashboard/retailer?desk=overview", deskKey: "overview", icon: LayoutDashboard },
+        { label: "Wallet", href: "/dashboard/retailer?desk=wallet", deskKey: "wallet", icon: Wallet, permKey: "wallet" },
+        { label: "Customer", href: "/dashboard/retailer?desk=customers", deskKey: "customers", icon: Users, permKey: "customer_desk" },
+        { label: "GST Filing", href: "/dashboard/retailer?desk=gstr_filing", deskKey: "gstr_filing", icon: FileSpreadsheet, permKey: "gstr_filing" },
+        { label: "GST Registration", href: "/dashboard/retailer?desk=gst_reg", deskKey: "gst_reg", icon: Building, permKey: "gst_registration" },
+        { label: "IT Filing", href: "/dashboard/retailer?desk=itr", deskKey: "itr", icon: FileText, permKey: "itr_filing" },
+        { label: "Eseva Services", href: "/dashboard/retailer?desk=esevai", deskKey: "esevai", icon: Award, permKey: "esevai" },
+        { label: "Pan Card", href: "/dashboard/retailer?desk=pan", deskKey: "pan", icon: CreditCard, permKey: "pan_card" },
+        { label: "Passport", href: "/dashboard/retailer?desk=passport", deskKey: "passport", icon: Plane, permKey: "passport" },
+        { label: "Report", href: "/dashboard/retailer?desk=reports", deskKey: "reports", icon: History, permKey: "reports" },
       ];
     }
   };
@@ -153,7 +153,7 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
 
   const badge = getRoleBadge();
   const currentTab = searchParams.get("tab") || "overview";
-  const currentDesk = searchParams.get("desk") || "gst_reg";
+  const currentDesk = searchParams.get("desk") || "overview";
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between border-r border-slate-800 shrink-0 min-h-screen sticky top-0">

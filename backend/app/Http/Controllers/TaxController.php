@@ -882,4 +882,97 @@ class TaxController {
             'count'   => count($filings)
         ]);
     }
+
+    /**
+     * Submit an E-Sevai Application (Income, Nativity, Community, etc.)
+     */
+    public function submitEsevaiApplication(array $body): void {
+        $actor = AuthMiddleware::authenticate();
+        $pdo = Database::getConnection();
+        if (!$pdo) Response::error('Database connection unavailable.', 500);
+
+        $retailerId = $actor['sub'] ?? $actor['id'] ?? '';
+        $tenantId   = $actor['tenant_id'] ?? 'a0000000-0000-0000-0000-000000000001';
+
+        $serviceType   = Security::sanitizeString($body['service_type'] ?? 'income');
+        $applicantName = Security::sanitizeString($body['applicant_name'] ?? $body['name'] ?? '');
+        $mobile        = Security::sanitizeString($body['mobile'] ?? '');
+        $customerId    = !empty($body['customer_id']) ? Security::sanitizeString($body['customer_id']) : null;
+        $documents     = isset($body['documents']) ? (is_array($body['documents']) ? json_encode($body['documents']) : $body['documents']) : '{}';
+
+        if (empty($applicantName) || empty($mobile)) {
+            Response::error('Applicant name and mobile number are required.', 422);
+        }
+
+        try {
+            $stmt = $pdo->prepare("
+                INSERT INTO esevai_applications (tenant_id, retailer_id, customer_id, service_type, applicant_name, mobile, status, documents_payload, created_at)
+                VALUES (:tid, :rid, :cid, :stype, :name, :mob, 'SUBMITTED', :docs, NOW())
+                RETURNING id, service_type, applicant_name, mobile, status, created_at
+            ");
+            $stmt->execute([
+                'tid'   => $tenantId,
+                'rid'   => $retailerId,
+                'cid'   => $customerId,
+                'stype' => $serviceType,
+                'name'  => $applicantName,
+                'mob'   => $mobile,
+                'docs'  => $documents
+            ]);
+            $application = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            Response::json([
+                'status'      => 'success',
+                'message'     => 'E-Sevai application submitted successfully.',
+                'application' => $application
+            ], 201);
+        } catch (\Throwable $e) {
+            Response::error('Failed to submit E-Sevai application: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Get list of E-Sevai applications.
+     */
+    public function getEsevaiList(): void {
+        $actor = AuthMiddleware::authenticate();
+        $pdo = Database::getConnection();
+        if (!$pdo) Response::error('Database connection unavailable.', 500);
+
+        $userId = $actor['sub'] ?? $actor['id'] ?? '';
+        $role   = $actor['role'] ?? 'retailer';
+
+        try {
+            if ($role === 'super_admin' || $role === 'admin' || $role === 'distributor') {
+                $stmt = $pdo->prepare("
+                    SELECT e.*, u.full_name as retailer_name, c.full_name as customer_name
+                    FROM esevai_applications e
+                    LEFT JOIN users u ON e.retailer_id = u.id
+                    LEFT JOIN users c ON e.customer_id = c.id
+                    ORDER BY e.created_at DESC
+                    LIMIT 100
+                ");
+                $stmt->execute();
+            } else {
+                $stmt = $pdo->prepare("
+                    SELECT e.*, c.full_name as customer_name
+                    FROM esevai_applications e
+                    LEFT JOIN users c ON e.customer_id = c.id
+                    WHERE e.retailer_id = :uid OR e.customer_id = :uid
+                    ORDER BY e.created_at DESC
+                    LIMIT 100
+                ");
+                $stmt->execute(['uid' => $userId]);
+            }
+            $applications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            Response::json([
+                'status'       => 'success',
+                'applications' => $applications,
+                'count'        => count($applications)
+            ]);
+        } catch (\Throwable $e) {
+            Response::error('Failed to fetch E-Sevai list: ' . $e->getMessage(), 500);
+        }
+    }
 }

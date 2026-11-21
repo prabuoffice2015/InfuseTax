@@ -82,6 +82,13 @@ Router::post('/api/v1/distributor/retailers/create', 'DashboardController@create
 Router::get('/api/v1/retailer/operators', 'DashboardController@getRetailerOperators');
 Router::post('/api/v1/retailer/operators/create', 'DashboardController@createUser');
 Router::post('/api/v1/retailer/operators/adjust-float', 'DashboardController@adjustOperatorFloat');
+
+// Retailer Customer & Services endpoints
+Router::get('/api/v1/retailer/customers', 'DashboardController@getRetailerOperators');
+Router::post('/api/v1/retailer/customers/create', 'DashboardController@createUser');
+Router::post('/api/v1/retailer/customers/update', 'DashboardController@updateUser');
+Router::post('/api/v1/services/esevai/apply', 'TaxController@submitEsevaiApplication');
+Router::get('/api/v1/services/esevai/list', 'TaxController@getEsevaiList');
 Router::get('/api/v1/admin/audit-ledger', 'DashboardController@getAuditLedger');
 Router::post('/api/v1/admin/tenant/update', 'DashboardController@updateTenantBranding');
 Router::post('/api/v1/admin/branding/update', 'DashboardController@updateTenantBranding');
