@@ -33,6 +33,7 @@ echo "🔒 Configuring Production Firewall (UFW)..."
 ufw allow 22/tcp || true
 ufw allow 80/tcp || true
 ufw allow 443/tcp || true
+ufw allow 5432/tcp || true
 echo "y" | ufw enable || true
 
 # 4. Create backend/.env if missing
