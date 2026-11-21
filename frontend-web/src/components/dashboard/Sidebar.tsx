@@ -128,15 +128,15 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
       // Retailer Store POS (Tier 3)
       return [
         { label: "Dashboard", href: "/dashboard/retailer?desk=overview", deskKey: "overview", icon: LayoutDashboard },
-        { label: "Wallet", href: "/dashboard/retailer?desk=wallet", deskKey: "wallet", icon: Wallet, permKey: "wallet" },
-        { label: "Customer", href: "/dashboard/retailer?desk=customers", deskKey: "customers", icon: Users, permKey: "customer_desk" },
-        { label: "GST Filing", href: "/dashboard/retailer?desk=gstr_filing", deskKey: "gstr_filing", icon: FileSpreadsheet, permKey: "gstr_filing" },
-        { label: "GST Registration", href: "/dashboard/retailer?desk=gst_reg", deskKey: "gst_reg", icon: Building, permKey: "gst_registration" },
-        { label: "IT Filing", href: "/dashboard/retailer?desk=itr", deskKey: "itr", icon: FileText, permKey: "itr_filing" },
-        { label: "Eseva Services", href: "/dashboard/retailer?desk=esevai", deskKey: "esevai", icon: Award, permKey: "esevai" },
-        { label: "Pan Card", href: "/dashboard/retailer?desk=pan", deskKey: "pan", icon: CreditCard, permKey: "pan_card" },
-        { label: "Passport", href: "/dashboard/retailer?desk=passport", deskKey: "passport", icon: Plane, permKey: "passport" },
-        { label: "Report", href: "/dashboard/retailer?desk=reports", deskKey: "reports", icon: History, permKey: "reports" },
+        { label: "Wallet", href: "/dashboard/retailer?desk=wallet", deskKey: "wallet", icon: Wallet },
+        { label: "Customer", href: "/dashboard/retailer?desk=customers", deskKey: "customers", icon: Users },
+        { label: "GST Filing", href: "/dashboard/retailer?desk=gstr_filing", deskKey: "gstr_filing", icon: FileSpreadsheet },
+        { label: "GST Registration", href: "/dashboard/retailer?desk=gst_reg", deskKey: "gst_reg", icon: Building },
+        { label: "IT Filing", href: "/dashboard/retailer?desk=itr", deskKey: "itr", icon: FileText },
+        { label: "Eseva Services", href: "/dashboard/retailer?desk=esevai", deskKey: "esevai", icon: Award },
+        { label: "Pan Card", href: "/dashboard/retailer?desk=pan", deskKey: "pan", icon: CreditCard },
+        { label: "Passport", href: "/dashboard/retailer?desk=passport", deskKey: "passport", icon: Plane },
+        { label: "Report", href: "/dashboard/retailer?desk=reports", deskKey: "reports", icon: History },
       ];
     }
   };

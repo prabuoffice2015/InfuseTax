@@ -34,4 +34,32 @@ test.describe('04 - Retailer POS Desk & Wallet Controls', () => {
     const autoFillBtn = page.locator('button').filter({ hasText: /Auto-Fill All Slots/i });
     await expect(autoFillBtn).toHaveCount(0);
   });
+
+  test('should display all 10 counter service and management items in left side menu', async ({ page }) => {
+    const sidebar = page.locator('aside');
+    await expect(sidebar.getByText('Dashboard')).toBeVisible();
+    await expect(sidebar.getByText('Wallet')).toBeVisible();
+    await expect(sidebar.getByText('Customer')).toBeVisible();
+    await expect(sidebar.getByText('GST Filing')).toBeVisible();
+    await expect(sidebar.getByText('GST Registration')).toBeVisible();
+    await expect(sidebar.getByText('IT Filing')).toBeVisible();
+    await expect(sidebar.getByText('Eseva Services')).toBeVisible();
+    await expect(sidebar.getByText('Pan Card')).toBeVisible();
+    await expect(sidebar.getByText('Passport')).toBeVisible();
+    await expect(sidebar.getByText('Report')).toBeVisible();
+  });
+
+  test('should navigate to Customer desk and open Add Customer modal', async ({ page }) => {
+    const sidebar = page.locator('aside');
+    await sidebar.getByText('Customer').click();
+    await page.waitForTimeout(500);
+
+    await expect(page).toHaveURL(/desk=customers/);
+    const addCustBtn = page.locator('button').filter({ hasText: /Add Customer/i });
+    await expect(addCustBtn.first()).toBeVisible();
+
+    await addCustBtn.first().click();
+    const modalHeading = page.locator('text=/Add New Customer/i');
+    await expect(modalHeading.first()).toBeVisible({ timeout: 5000 });
+  });
 });
