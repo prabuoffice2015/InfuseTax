@@ -12,7 +12,6 @@ import {
   FileCheck, 
   CheckCircle2,
   Trash2,
-  Wand2,
   FolderArchive
 } from "lucide-react";
 
@@ -163,23 +162,6 @@ export function distributeFilesToSlots(
   return updates;
 }
 
-/**
- * Generate a clean sample SVG dataUrl for instant testing / demo
- */
-function createSampleDocDataUrl(title: string): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
-    <rect width="800" height="600" fill="#f8fafc"/>
-    <rect x="20" y="20" width="760" height="560" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
-    <rect x="40" y="40" width="720" height="70" rx="12" fill="#1e293b"/>
-    <text x="60" y="82" fill="#ffffff" font-family="sans-serif" font-size="20" font-weight="bold">TAXPARTNER VERIFIED ATTACHMENT</text>
-    <rect x="40" y="140" width="720" height="380" rx="12" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="2"/>
-    <circle cx="400" cy="280" r="50" fill="#10b981"/>
-    <path d="M380 280 l15 15 l30 -30" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
-    <text x="400" y="370" fill="#0f172a" font-family="sans-serif" font-size="22" font-weight="bold" text-anchor="middle">${title}</text>
-    <text x="400" y="405" fill="#64748b" font-family="sans-serif" font-size="14" text-anchor="middle">Official Color Scan Attached • AES-256 Cloud Vault Verified</text>
-  </svg>`;
-  return "data:image/svg+xml;base64," + (typeof window !== "undefined" ? window.btoa(unescape(encodeURIComponent(svg))) : "");
-}
 
 /**
  * Robust Individual Document Slot Component
@@ -488,26 +470,6 @@ export function BulkUploadZone({
     if (onToast) onToast("All attached documents cleared.");
   };
 
-  const handleQuickFillSampleDocs = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const demoUpdates: Record<string, DocumentFileEntry> = {};
-    slots.forEach(slot => {
-      if (!stateMap[slot.code]) {
-        const cleanName = `${slot.code}.png`;
-        demoUpdates[slot.code] = {
-          name: cleanName,
-          type: "image/png",
-          size: "68.4 KB",
-          dataUrl: createSampleDocDataUrl(slot.label),
-          uploadedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-        };
-      }
-    });
-    setStateMap((prev: any) => ({ ...prev, ...demoUpdates }));
-    const count = Object.keys(demoUpdates).length;
-    if (onToast) onToast(`✓ Attached ${count} sample color scans to remaining slots!`, "success");
-  };
-
   const isAmber = theme === "amber";
   const isBlue = theme === "blue";
 
@@ -583,19 +545,6 @@ export function BulkUploadZone({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {!isComplete && (
-            <button
-              type="button"
-              onClick={handleQuickFillSampleDocs}
-              disabled={isProcessing}
-              className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold rounded-xl transition-all flex items-center space-x-1.5 cursor-pointer shadow-xs active:scale-95"
-              title="Auto-fill demo copies for remaining empty slots"
-            >
-              <Wand2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Auto-Fill All Slots</span>
-            </button>
-          )}
-
           {uploadedCount > 0 && (
             <button
               type="button"
