@@ -19,12 +19,17 @@ ALTER TABLE IF EXISTS public.announcements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.audit_ledger ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.notifications ENABLE ROW LEVEL SECURITY;
 
--- 2. Revoke Anonymous / Public access
-REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, public;
-REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, public;
-REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM anon, public;
+-- 2. Revoke Anonymous access safely (only if role 'anon' exists)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+        REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
+        REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon;
+        REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM anon;
+    END IF;
+END $$;
 
--- 3. Grant backend service access
+-- 3. Grant backend service access safely
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
@@ -36,6 +41,11 @@ BEGIN
         GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres;
         GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres;
         GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO postgres;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'infusetax_user') THEN
+        GRANT ALL ON ALL TABLES IN SCHEMA public TO infusetax_user;
+        GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO infusetax_user;
+        GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO infusetax_user;
     END IF;
 END $$;
 

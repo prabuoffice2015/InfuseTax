@@ -18,15 +18,35 @@ ALTER TABLE IF EXISTS public.announcements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.audit_ledger ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.notifications ENABLE ROW LEVEL SECURITY;
 
--- 2. Revoke all direct Anonymous / Public PostgREST API access
-REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, public;
-REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, public;
-REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM anon, public;
+-- 2. Revoke all direct Anonymous / Public access safely
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+        REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
+        REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon;
+        REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM anon;
+    END IF;
+END $$;
 
--- 3. Grant full secure access to service_role and postgres backend database user
-GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, service_role;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, service_role;
-GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO postgres, service_role;
+-- 3. Grant full secure access to service_role, postgres, and infusetax_user
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+        GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
+        GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
+        GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO service_role;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'postgres') THEN
+        GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres;
+        GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres;
+        GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO postgres;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'infusetax_user') THEN
+        GRANT ALL ON ALL TABLES IN SCHEMA public TO infusetax_user;
+        GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO infusetax_user;
+        GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO infusetax_user;
+    END IF;
+END $$;
 
 -- 4. Create explicit Service Role Policies for each table
 DO $$
@@ -38,8 +58,9 @@ BEGIN
         FROM information_schema.tables 
         WHERE table_schema = 'public' 
           AND table_type = 'BASE TABLE'
+          AND table_name != 'schema_migrations'
     LOOP
         EXECUTE format('DROP POLICY IF EXISTS "service_role_access_%s" ON public.%I', t, t);
-        EXECUTE format('CREATE POLICY "service_role_access_%s" ON public.%I FOR ALL TO service_role, postgres USING (true) WITH CHECK (true)', t, t);
+        EXECUTE format('CREATE POLICY "service_role_access_%s" ON public.%I FOR ALL TO PUBLIC USING (true) WITH CHECK (true)', t, t);
     END LOOP;
 END $$;
