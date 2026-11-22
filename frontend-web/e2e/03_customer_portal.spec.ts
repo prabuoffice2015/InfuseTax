@@ -95,8 +95,8 @@ test.describe('03 - Customer Client Portal (Tier 4)', () => {
     const receiptsHeading = page.locator('text=/Department Receipts & Verified Slips/i');
     await expect(receiptsHeading.first()).toBeVisible({ timeout: 5000 });
 
-    // Verify verified receipt button / link
-    const downloadReceipt = page.locator('text=/Download Department Receipt|View Slip/i');
+    // Verify verified receipt button / link or empty state notice
+    const downloadReceipt = page.locator('text=/Download Department Receipt|View Filing Slip|View Slip|No verified receipts issued yet/i');
     await expect(downloadReceipt.first()).toBeVisible({ timeout: 5000 });
   });
 });

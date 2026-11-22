@@ -75,4 +75,33 @@ test.describe('06 - Super Admin & Strict RBAC Route Guards', () => {
     await page.goto('/dashboard/retailer');
     await expect(page).toHaveURL(/\/dashboard\/customer/);
   });
+
+  test('should display Assigned Retailer POS and allow mapping customer to retailer in Super Admin', async ({ page }) => {
+    await loginAs(page, 'superadmin');
+    await page.goto('/dashboard/company?tab=customers');
+    await expect(page).toHaveURL(/\/dashboard\/company\?tab=customers/);
+
+    // Verify Customer Directory header and Assigned Retailer POS column
+    const directoryHeading = page.locator('text=/Customer Directory \\(Tier 4\\)/i');
+    await expect(directoryHeading.first()).toBeVisible({ timeout: 5000 });
+
+    const retailerCol = page.locator('th:has-text("Assigned Retailer POS")');
+    await expect(retailerCol.first()).toBeVisible();
+
+    // Click edit on first customer row if exists
+    const editBtn = page.locator('button[title="Edit User Profile"]').first();
+    if (await editBtn.isVisible()) {
+      await editBtn.click();
+      // Verify Edit CUSTOMER Profile modal has "Assign Under Retailer POS"
+      const modalHeading = page.locator('text=/Edit CUSTOMER Profile/i');
+      await expect(modalHeading.first()).toBeVisible({ timeout: 5000 });
+
+      const retailerDropdownLabel = page.locator('text=/Assign Under Retailer POS/i');
+      await expect(retailerDropdownLabel.first()).toBeVisible();
+
+      // Close modal
+      const cancelBtn = page.locator('button:has-text("Cancel")');
+      await cancelBtn.first().click();
+    }
+  });
 });

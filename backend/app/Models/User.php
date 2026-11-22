@@ -367,6 +367,9 @@ class User extends Model {
         if (isset($data['permissions'])) {
             $updates['permissions'] = is_array($data['permissions']) ? json_encode($data['permissions']) : $data['permissions'];
         }
+        if (array_key_exists('parent_id', $data)) {
+            $updates['parent_id'] = !empty($data['parent_id']) ? trim($data['parent_id']) : null;
+        }
 
         if (empty($updates)) {
             return true;

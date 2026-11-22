@@ -32,13 +32,13 @@ import TaxCalendarTicker from "@/components/dashboard/TaxCalendarTicker";
 import { getAuthToken, getAuthUser } from "@/lib/auth";
 import { secureApiCall } from "@/lib/crypto";
 
-// Generate last 12 calendar/fiscal months for the dropdown
+// Generate last 14 calendar/fiscal months for the dropdown
 const generateMonthOptions = () => {
   const options = [];
   const now = new Date();
   for (let i = 0; i < 14; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = d.toISOString().slice(0, 7); // YYYY-MM
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const label = d.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
     options.push({ key, label });
   }
@@ -79,7 +79,8 @@ export default function CustomerDashboardPage() {
 
   // Month-Wise Daily Invoices State
   const monthOptions = generateMonthOptions();
-  const [selectedMonth, setSelectedMonth] = useState<string>(monthOptions[0]?.key || new Date().toISOString().slice(0, 7));
+  const currentLocalMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+  const [selectedMonth, setSelectedMonth] = useState<string>(monthOptions[0]?.key || currentLocalMonthKey);
   const [monthlyInvoices, setMonthlyInvoices] = useState<any[]>([]);
   const [monthlyFiling, setMonthlyFiling] = useState<any | null>(null);
   const [loadingInvoices, setLoadingInvoices] = useState(false);

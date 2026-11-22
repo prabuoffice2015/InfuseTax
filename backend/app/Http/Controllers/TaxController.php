@@ -992,6 +992,13 @@ class TaxController {
         $role   = $actor['role'] ?? 'customer';
         $month  = Security::sanitizeString($_GET['month'] ?? date('Y-m'));
 
+        $monthClause = "";
+        $monthParams = [];
+        if (!empty($month) && $month !== 'all') {
+            $monthClause = "AND (ci.month = :m OR to_char(ci.invoice_date, 'YYYY-MM') = :m)";
+            $monthParams = ['m' => $month];
+        }
+
         try {
             $isCustomer = in_array($role, ['customer', 'operator', 'employee']);
             $targetCustomerId = $isCustomer ? $userId : Security::sanitizeString($_GET['customer_id'] ?? '');
@@ -1001,11 +1008,11 @@ class TaxController {
                     SELECT id, tenant_id, customer_id, retailer_id, month, 
                            invoice_date, invoice_number, invoice_title, 
                            file_url, file_name, status, notes, created_at
-                    FROM customer_invoices
-                    WHERE customer_id = :cid AND month = :m
-                    ORDER BY invoice_date DESC, created_at DESC
+                    FROM customer_invoices ci
+                    WHERE ci.customer_id = :cid {$monthClause}
+                    ORDER BY ci.invoice_date DESC, ci.created_at DESC
                 ");
-                $stmt->execute(['cid' => $targetCustomerId, 'm' => $month]);
+                $stmt->execute(array_merge(['cid' => $targetCustomerId], $monthParams));
                 $invoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 // Check if filing exists for this customer & month (Check GST filing first, then ITR)
@@ -1016,7 +1023,7 @@ class TaxController {
                       AND (tax_period = :m OR documents_payload->>'month' = :m)
                     ORDER BY created_at DESC LIMIT 1
                 ");
-                $stmtFiling->execute(['cid' => $targetCustomerId, 'm' => $month]);
+                $stmtFiling->execute(['cid' => $targetCustomerId, 'm' => ($month === 'all' ? date('Y-m') : $month)]);
                 $filing = $stmtFiling->fetch(PDO::FETCH_ASSOC) ?: null;
 
                 if (!$filing) {
@@ -1027,7 +1034,7 @@ class TaxController {
                           AND (bank_period = :m OR documents_payload->>'month' = :m)
                         ORDER BY created_at DESC LIMIT 1
                     ");
-                    $stmtFilingItr->execute(['cid' => $targetCustomerId, 'm' => $month]);
+                    $stmtFilingItr->execute(['cid' => $targetCustomerId, 'm' => ($month === 'all' ? date('Y-m') : $month)]);
                     $filing = $stmtFilingItr->fetch(PDO::FETCH_ASSOC) ?: null;
                 }
 
@@ -1045,31 +1052,31 @@ class TaxController {
                         SELECT ci.*, u.full_name as customer_name, u.email as customer_email, u.mobile as customer_mobile
                         FROM customer_invoices ci
                         LEFT JOIN users u ON ci.customer_id = u.id
-                        WHERE ci.customer_id = :cid AND ci.month = :m
+                        WHERE ci.customer_id = :cid {$monthClause}
                         ORDER BY ci.invoice_date DESC, ci.created_at DESC
                     ");
-                    $stmt->execute(['cid' => $targetCustomerId, 'm' => $month]);
+                    $stmt->execute(array_merge(['cid' => $targetCustomerId], $monthParams));
                 } else if ($role === 'super_admin' || $role === 'admin' || $role === 'distributor') {
                     $stmt = $pdo->prepare("
                         SELECT ci.*, u.full_name as customer_name, r.full_name as retailer_name
                         FROM customer_invoices ci
                         LEFT JOIN users u ON ci.customer_id = u.id
                         LEFT JOIN users r ON ci.retailer_id = r.id
-                        WHERE ci.month = :m
+                        WHERE 1=1 {$monthClause}
                         ORDER BY ci.invoice_date DESC, ci.created_at DESC
                         LIMIT 100
                     ");
-                    $stmt->execute(['m' => $month]);
+                    $stmt->execute($monthParams);
                 } else {
                     // Retailer looking at all their customers' invoices for that month
                     $stmt = $pdo->prepare("
                         SELECT ci.*, u.full_name as customer_name
                         FROM customer_invoices ci
                         LEFT JOIN users u ON ci.customer_id = u.id
-                        WHERE (ci.retailer_id = :rid OR u.parent_id = :rid) AND ci.month = :m
+                        WHERE (ci.retailer_id = :rid OR u.parent_id = :rid) {$monthClause}
                         ORDER BY ci.invoice_date DESC, ci.created_at DESC
                     ");
-                    $stmt->execute(['rid' => $userId, 'm' => $month]);
+                    $stmt->execute(array_merge(['rid' => $userId], $monthParams));
                 }
                 $invoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -1082,7 +1089,9 @@ class TaxController {
                           AND (tax_period = :m OR documents_payload->>'month' = :m)
                         ORDER BY created_at DESC LIMIT 1
                     ");
-                    $stmtFiling->execute(['cid' => $targetCustomerId, 'rid' => $userId, 'm' => $month]);
+                    $stmtFiling->execute(['cid' => $targetCustomerId, 'rid' => $userId, 'm' => ($month === 'all' ? date('Y-m') : $month)]);
+                    $filing = $stmtFiling->fetch(PDO::FETCH_ASSOC) ?: null;
+                }
                     $filing = $stmtFiling->fetch(PDO::FETCH_ASSOC) ?: null;
 
                     if (!$filing) {
@@ -1151,8 +1160,11 @@ class TaxController {
             }
         }
 
-        $month         = Security::sanitizeString($body['month'] ?? date('Y-m'));
         $invoiceDate   = Security::sanitizeString($body['invoice_date'] ?? date('Y-m-d'));
+        $month         = Security::sanitizeString($body['month'] ?? '');
+        if (empty($month) || strlen($month) < 7 || $month === 'all') {
+            $month = substr($invoiceDate, 0, 7);
+        }
         $invoiceTitle  = Security::sanitizeString($body['invoice_title'] ?? $body['title'] ?? 'Daily Business Invoice');
         $invoiceNumber = Security::sanitizeString($body['invoice_number'] ?? ('INV-' . date('d') . rand(100, 999)));
         $fileUrl       = trim($body['file_url'] ?? $body['data_url'] ?? '');

@@ -232,7 +232,7 @@ class DashboardController {
                            u.shop_name, u.address, u.address_proof_url, u.bank_details,
                            u.income_tax_login_id, u.income_tax_password, u.user_code,
                            u.enabled_modules, COALESCE(u.permissions, 'all') as permissions,
-                           p.full_name as parent_name,
+                           p.full_name as parent_name, p.shop_name as parent_shop_name, p.email as parent_email,
                            COALESCE(w.balance, 0.00) as wallet,
                            'VERIFIED' as kyc,
                            (SELECT COUNT(*) FROM users d WHERE d.parent_id = u.id) as downlines
@@ -289,8 +289,11 @@ class DashboardController {
         $fullName  = Security::sanitizeString($body['full_name'] ?? $body['name'] ?? '');
         $email     = strtolower(trim(Security::sanitizeString($body['email'] ?? '')));
         $mobile    = trim(Security::sanitizeString($body['mobile'] ?? ''));
-        $role      = Security::sanitizeString($body['role'] ?? 'retailer');
-        $parentId  = !empty($body['parent_id']) ? Security::sanitizeString($body['parent_id']) : ($actor['sub'] ?? $actor['id'] ?? null);
+        $role      = Security::sanitizeString($body['role'] ?? '');
+        if (empty($role)) {
+            $role = ($actor['role'] === 'retailer') ? 'customer' : 'retailer';
+        }
+        $parentId  = !empty($body['parent_id']) ? Security::sanitizeString($body['parent_id']) : ($actor['role'] === 'retailer' ? ($actor['sub'] ?? $actor['id'] ?? null) : null);
         if (!empty($parentId) && strlen($parentId) > 10) {
             $stmtParentChk = $pdo->prepare("SELECT id FROM users WHERE id = :pid LIMIT 1");
             $stmtParentChk->execute(['pid' => $parentId]);
@@ -457,9 +460,26 @@ class DashboardController {
             'permissions'         => $body['permissions'] ?? null
         ];
 
+        if (array_key_exists('parent_id', $body)) {
+            $profileData['parent_id'] = !empty($body['parent_id']) ? Security::sanitizeString($body['parent_id']) : null;
+        }
+
         $updated = User::updateProfile($userId, $profileData);
 
         if ($updated) {
+            // When a customer's retailer mapping (parent_id) is updated, sync their customer_invoices to the new retailer
+            if (array_key_exists('parent_id', $body) && !empty($profileData['parent_id'])) {
+                try {
+                    $pdo = Database::getConnection();
+                    if ($pdo) {
+                        $stmtSync = $pdo->prepare("UPDATE customer_invoices SET retailer_id = :rid, updated_at = NOW() WHERE customer_id = :cid");
+                        $stmtSync->execute(['rid' => $profileData['parent_id'], 'cid' => $userId]);
+                    }
+                } catch (\Throwable $e) {
+                    error_log("Failed to sync customer_invoices retailer_id on update: " . $e->getMessage());
+                }
+            }
+
             Response::json([
                 'status'  => 'success',
                 'message' => 'User profile updated successfully.'
@@ -1607,7 +1627,7 @@ class DashboardController {
                 FROM users u
                 LEFT JOIN wallets w ON u.id = w.user_id
                 WHERE (u.role = 'operator' OR u.role = 'customer')
-                  AND (u.parent_id = :rid OR u.tenant_id = :tid)
+                  AND (u.parent_id = :rid OR u.id IN (SELECT customer_id FROM customer_invoices WHERE retailer_id = :rid) OR u.tenant_id = :tid)
                 ORDER BY u.created_at DESC
             ");
             $stmt->execute(['rid' => $retailerId, 'tid' => $tenantId]);

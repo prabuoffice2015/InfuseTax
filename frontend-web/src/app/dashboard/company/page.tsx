@@ -254,6 +254,7 @@ export default function CompanySuperAdminPage() {
     income_tax_password: "",
     status: "active",
     user_code: "",
+    parent_id: "",
     enabled_modules: [] as string[]
   });
   const [newPasswordVal, setNewPasswordVal] = useState("");
@@ -792,6 +793,7 @@ export default function CompanySuperAdminPage() {
           income_tax_password: editUserData.income_tax_password,
           user_code: editUserData.user_code,
           status: editUserData.status,
+          parent_id: editUserData.parent_id || null,
           enabled_modules: editUserData.enabled_modules,
           permissions: editUserData.enabled_modules
         },
@@ -1722,7 +1724,9 @@ export default function CompanySuperAdminPage() {
                     <th className="py-3.5 px-4">User Details</th>
                     <th className="py-3.5 px-4">Company Node</th>
                     <th className="py-3.5 px-4">Assigned Role Tier</th>
-                    <th className="py-3.5 px-4">Parent Master</th>
+                    <th className="py-3.5 px-4">
+                      {activeTab === "customers" ? "Assigned Retailer POS" : activeTab === "retailers" ? "Assigned Admin Hub" : "Parent Node"}
+                    </th>
                     <th className="py-3.5 px-4">Location</th>
                     <th className="py-3.5 px-4 text-right">Prepaid Wallet</th>
                     <th className="py-3.5 px-4 text-center">Status</th>
@@ -1772,9 +1776,60 @@ export default function CompanySuperAdminPage() {
                         </td>
                         <td className="py-4 px-4 text-slate-600 font-medium">
                           {u.parent_name ? (
-                            <div className="font-bold text-slate-800">{u.parent_name}</div>
+                            <div>
+                              <div className="flex items-center space-x-1.5 font-bold text-slate-800">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                <span>{u.parent_name}</span>
+                              </div>
+                              {(u.parent_shop_name || u.parent_email) && (
+                                <div className="text-[10px] text-slate-500 font-normal">{u.parent_shop_name || u.parent_email}</div>
+                              )}
+                            </div>
                           ) : (
-                            <span className="text-slate-400 italic">Direct Under Company</span>
+                            <div className="flex items-center space-x-1.5">
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                {u.role === 'customer' || u.role === 'operator' ? 'Unassigned Retailer' : 'Direct Under Company'}
+                              </span>
+                              {(u.role === 'customer' || u.role === 'operator' || u.role === 'retailer') && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedUser(u);
+                                    let bDetails = { bank_name: "", account_number: "", ifsc: "" };
+                                    try {
+                                      bDetails = typeof u.bank_details === 'string' ? JSON.parse(u.bank_details) : (u.bank_details || {});
+                                    } catch (e) {}
+                                    let mods: string[] = [];
+                                    try {
+                                      mods = typeof u.enabled_modules === 'string' ? JSON.parse(u.enabled_modules) : (Array.isArray(u.enabled_modules) ? u.enabled_modules : (u.enabled_services ? u.enabled_services.split(',').map((s: string) => s.trim()) : []));
+                                    } catch (e) {}
+                                    setEditUserData({
+                                      full_name: u.name || u.full_name || "",
+                                      email: u.email || "",
+                                      mobile: u.contact || u.mobile || "",
+                                      city: u.city || "Chennai",
+                                      state: u.state || "Tamil Nadu",
+                                      shop_name: u.shop_name || "",
+                                      address: u.address || "",
+                                      address_proof: u.address_proof_url || "",
+                                      bank_name: bDetails.bank_name || "",
+                                      bank_account: bDetails.account_number || "",
+                                      bank_ifsc: bDetails.ifsc || "",
+                                      income_tax_login_id: u.income_tax_login_id || "",
+                                      income_tax_password: u.income_tax_password || "",
+                                      status: u.status || "active",
+                                      user_code: u.user_code || "",
+                                      parent_id: u.parent_id || "",
+                                      enabled_modules: mods
+                                    });
+                                    setShowEditUserModal(true);
+                                  }}
+                                  className="text-[10px] text-blue-600 hover:text-blue-800 underline font-bold cursor-pointer"
+                                >
+                                  Assign
+                                </button>
+                              )}
+                            </div>
                           )}
                         </td>
                         <td className="py-4 px-4 text-slate-600">{u.city || "Chennai"}, {u.state || "Tamil Nadu"}</td>
@@ -1817,6 +1872,7 @@ export default function CompanySuperAdminPage() {
                                   income_tax_password: u.income_tax_password || "",
                                   status: u.status || "active",
                                   user_code: u.user_code || "",
+                                  parent_id: u.parent_id || "",
                                   enabled_modules: mods
                                 });
                                 setShowEditUserModal(true);
@@ -3748,6 +3804,23 @@ export default function CompanySuperAdminPage() {
               {selectedUser.role === "retailer" && (
                 <div className="space-y-3 p-3.5 bg-emerald-50/60 rounded-2xl border border-emerald-200">
                   <div className="text-[11px] font-black uppercase text-emerald-900">Retailer Store Profile & Services</div>
+                  <div>
+                    <label className="block text-[11px] font-black uppercase text-emerald-900 mb-1">
+                      Assign Under Admin / Master Distributor
+                    </label>
+                    <select
+                      value={editUserData.parent_id || ""}
+                      onChange={(e) => setEditUserData({ ...editUserData, parent_id: e.target.value })}
+                      className="w-full text-xs p-2.5 bg-white border border-emerald-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-emerald-600 cursor-pointer"
+                    >
+                      <option value="">-- Direct Under Company (No Distributor) --</option>
+                      {users.filter(u => (u.role || '').toLowerCase() === "admin" || (u.role || '').toLowerCase() === "distributor").map(a => (
+                        <option key={a.id} value={a.id}>
+                          {a.name || a.full_name} ({a.email || a.contact})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="text"
@@ -3813,7 +3886,28 @@ export default function CompanySuperAdminPage() {
               {/* CUSTOMER ROLE FIELDS */}
               {(selectedUser.role === "customer" || selectedUser.role === "operator") && (
                 <div className="space-y-3 p-3.5 bg-amber-50/60 rounded-2xl border border-amber-200">
-                  <div className="text-[11px] font-black uppercase text-amber-900">Customer Income Tax Portal Credentials</div>
+                  <div>
+                    <label className="block text-[11px] font-black uppercase text-amber-900 mb-1">
+                      Assign Under Retailer POS *
+                    </label>
+                    <select
+                      value={editUserData.parent_id || ""}
+                      onChange={(e) => setEditUserData({ ...editUserData, parent_id: e.target.value })}
+                      className="w-full text-xs p-2.5 bg-white border border-amber-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-amber-600 cursor-pointer"
+                    >
+                      <option value="">-- Select Assignee Retailer POS --</option>
+                      {users.filter(u => (u.role || '').toLowerCase() === "retailer").map(r => (
+                        <option key={r.id} value={r.id}>
+                          {r.name || r.full_name} ({r.shop_name || r.email || r.contact})
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-[10px] text-slate-500 mt-1 block">
+                      Maps this customer directly to the selected Retailer POS outlet for GST filings and invoices.
+                    </span>
+                  </div>
+
+                  <div className="text-[11px] font-black uppercase text-amber-900 mt-2">Customer Income Tax Portal Credentials</div>
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="text"

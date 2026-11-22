@@ -243,20 +243,20 @@ export default function RetailerDashboardPage() {
 
   // Month-Wise IT Filing & Invoices State for Retailer
   const retMonthOptions = useMemo(() => {
-    const options = [];
+    const options: { key: string; label: string }[] = [];
     const now = new Date();
     for (let i = 0; i < 14; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = d.toISOString().slice(0, 7); // YYYY-MM
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       const label = d.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
       options.push({ key, label });
     }
+    options.push({ key: "all", label: "All Months (Lifetime Invoices)" });
     return options;
   }, []);
 
-  const [retSelectedMonth, setRetSelectedMonth] = useState<string>(
-    new Date().toISOString().slice(0, 7)
-  );
+  const currentLocalRetMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+  const [retSelectedMonth, setRetSelectedMonth] = useState<string>(currentLocalRetMonth);
   const [retSelectedCustomerForInvoices, setRetSelectedCustomerForInvoices] = useState<any | null>(null);
   const [retCustomerInvoices, setRetCustomerInvoices] = useState<any[]>([]);
   const [retMonthlyFiling, setRetMonthlyFiling] = useState<any | null>(null);
@@ -788,6 +788,8 @@ export default function RetailerDashboardPage() {
       const res = await secureApiCall("/api/v1/retailer/customers/create", {
         method: "POST",
         body: {
+          role: "customer",
+          parent_id: userProfile?.id || "",
           name: customerForm.name,
           email: customerForm.email,
           mobile: customerForm.mobile,
@@ -1822,6 +1824,17 @@ export default function RetailerDashboardPage() {
                               <button
                                 onClick={() => {
                                   setSelectedCustomerForFiling(c);
+                                  setRetSelectedCustomerForInvoices(c);
+                                  loadRetailerCustomerInvoices(c.id, retSelectedMonth);
+                                  switchDesk("gstr_filing");
+                                }}
+                                className="px-2.5 py-1 bg-emerald-100 text-emerald-900 hover:bg-emerald-200 font-bold text-[11px] rounded-lg transition-all cursor-pointer"
+                              >
+                                GST Filing
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedCustomerForFiling(c);
                                   setItCustomerName(c.name || "");
                                   setItMobile(c.mobile || "");
                                   setItEmail(c.email || "");
@@ -2850,6 +2863,10 @@ export default function RetailerDashboardPage() {
                 onChange={(e) => {
                   const c = customersList.find(item => item.id === e.target.value);
                   setSelectedCustomerForFiling(c || null);
+                  setRetSelectedCustomerForInvoices(c || null);
+                  if (c) {
+                    loadRetailerCustomerInvoices(c.id, retSelectedMonth);
+                  }
                 }}
                 className="text-xs p-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none"
               >
@@ -2948,8 +2965,28 @@ export default function RetailerDashboardPage() {
                     </tr>
                   ) : retCustomerInvoices.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="p-6 text-center text-slate-400 font-bold">
-                        No customer invoices uploaded for {retMonthOptions.find(m => m.key === retSelectedMonth)?.label || retSelectedMonth}. Customer can upload daily sales/purchase bills from their Customer Client Portal, or you can attach customer bills using &quot;+ Attach Customer Invoice / Bill&quot;.
+                      <td colSpan={7} className="p-6 text-center text-slate-400 font-bold space-y-2">
+                        <div>
+                          No customer invoices found for {retMonthOptions.find(m => m.key === retSelectedMonth)?.label || retSelectedMonth}.
+                        </div>
+                        <div className="text-[11px] font-normal text-slate-500">
+                          Customer can upload daily sales/purchase bills from their Customer Client Portal, or you can attach bills using &quot;+ Attach Customer Invoice / Bill&quot;.
+                        </div>
+                        {retSelectedMonth !== "all" && (
+                          <div className="pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRetSelectedMonth("all");
+                                const cust = selectedCustomerForFiling || retSelectedCustomerForInvoices;
+                                if (cust) loadRetailerCustomerInvoices(cust.id, "all");
+                              }}
+                              className="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-all cursor-pointer inline-flex items-center space-x-1"
+                            >
+                              <span>🔍 View All Months / Lifetime Invoices</span>
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ) : (
