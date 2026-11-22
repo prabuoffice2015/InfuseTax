@@ -82,6 +82,9 @@ class AuthController {
         }
 
         // 6. Generate RFC 7519 Compliant Signed JWT Token
+        $effectivePerms = User::getEffectivePermissions($userId);
+        $enabledServicesStr = implode(',', $effectivePerms);
+
         $tokenPayload = [
             'sub'        => $userId,
             'email'      => $user['email'] ?? $identifier,
@@ -91,7 +94,8 @@ class AuthController {
             'name'       => $user['full_name'] ?? 'InfuseTax User',
             'city'       => $user['city'] ?? 'Coimbatore',
             'state'      => $user['state'] ?? 'Tamil Nadu',
-            'enabled_services' => $user['enabled_services'] ?? 'all',
+            'enabled_services' => $enabledServicesStr,
+            'permissions'      => $effectivePerms,
             'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',
         ];
 
@@ -117,14 +121,16 @@ class AuthController {
             'token_type' => 'Bearer',
             'expires_in' => (int) (getenv('JWT_EXPIRATION_SECONDS') ?: 86400),
             'user'       => [
-                'id'      => $userId,
-                'name'    => $user['full_name'] ?? 'User',
-                'email'   => $user['email'] ?? $identifier,
-                'role'    => $role,
-                'tenant'  => $tenantCode,
-                'city'    => $user['city'] ?? 'Coimbatore',
-                'state'   => $user['state'] ?? 'Tamil Nadu',
-                'wallet'  => floatval($user['wallet_balance'] ?? 0.00),
+                'id'               => $userId,
+                'name'             => $user['full_name'] ?? 'User',
+                'email'            => $user['email'] ?? $identifier,
+                'role'             => $role,
+                'tenant'           => $tenantCode,
+                'city'             => $user['city'] ?? 'Coimbatore',
+                'state'            => $user['state'] ?? 'Tamil Nadu',
+                'wallet'           => floatval($user['wallet_balance'] ?? 0.00),
+                'permissions'      => $effectivePerms,
+                'enabled_services' => $enabledServicesStr,
             ],
         ]);
     }

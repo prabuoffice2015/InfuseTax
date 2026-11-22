@@ -78,13 +78,34 @@ export default function RetailerDashboardPage() {
   const [pricingList, setPricingList] = useState<any[]>([]);
   const [activeDesk, setActiveDesk] = useState<string>(currentDeskParam || "overview");
 
+  const [tenantPermissions, setTenantPermissions] = useState<string[]>([]);
+
+  const isPermitted = (permKey: string, altKey?: string) => {
+    if (permKey === "overview") return true;
+    if (tenantPermissions.length === 0 || tenantPermissions.includes("all")) return true;
+    return tenantPermissions.includes(permKey) || (altKey ? tenantPermissions.includes(altKey) : false);
+  };
+
   useEffect(() => {
     if (currentDeskParam) {
       setActiveDesk(currentDeskParam);
     }
   }, [currentDeskParam]);
 
+  useEffect(() => {
+    if (tenantPermissions.length > 0 && !tenantPermissions.includes("all")) {
+      if (activeDesk !== "overview" && !isPermitted(activeDesk)) {
+        setActiveDesk("overview");
+        router.push("/dashboard/retailer?desk=overview");
+      }
+    }
+  }, [activeDesk, tenantPermissions]);
+
   const switchDesk = (desk: string) => {
+    if (desk !== "overview" && !isPermitted(desk)) {
+      showToast("Access restricted: This module is not enabled for your store.", "error");
+      return;
+    }
     setActiveDesk(desk);
     router.push(`/dashboard/retailer?desk=${desk}`);
   };
@@ -93,7 +114,6 @@ export default function RetailerDashboardPage() {
   const [showUpiModal, setShowUpiModal] = useState<boolean>(false);
   const [counterWalletBalance, setCounterWalletBalance] = useState<number>(48750.00);
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [tenantPermissions, setTenantPermissions] = useState<string[]>([]);
 
   // -------------------------------------------------------------
   // Data State: Filings, Staff, Approvals, Ledger
@@ -338,6 +358,8 @@ export default function RetailerDashboardPage() {
         if (u.enabled_services) {
           const list = u.enabled_services.split(",").map((s: string) => s.trim());
           setTenantPermissions(list);
+        } else if (Array.isArray(u.permissions)) {
+          setTenantPermissions(u.permissions);
         }
       }
 
@@ -1268,57 +1290,7 @@ export default function RetailerDashboardPage() {
         </div>
       </div>
 
-      {/* Horizontal Sub-Navigation Tab Switcher for 3 Core Services & 4 Utility Desks */}
-      {(() => {
-        const allDesks = [
-          { id: "overview", label: "Dashboard", icon: LayoutDashboard },
-          { id: "wallet", label: "Wallet", icon: Wallet, badge: `₹${counterWalletBalance.toLocaleString('en-IN')}` },
-          { id: "customers", label: "Customer", icon: Users, badge: `${customersList.length} Clients` },
-          { id: "gstr_filing", label: "GST Filing", icon: FileSpreadsheet, badge: "GSTR-1 & 3B", permKey: "gstr_filing" },
-          { id: "gst_reg", label: "GST Registration", icon: Building, badge: "1a, 1b, 1c", permKey: "gst_registration" },
-          { id: "itr", label: "IT Filing", icon: FileText, badge: "Indiv & Biz", permKey: "itr_filing" },
-          { id: "esevai", label: "Eseva Services", icon: Award, badge: `${esevaiList.length} Apps` },
-          { id: "pan", label: "Pan Card", icon: CreditCard, badge: "49A / CSF" },
-          { id: "passport", label: "Passport", icon: Plane, badge: "Fresh / Reissue" },
-          { id: "reports", label: "Store Reports", icon: History, badge: "Ledger", permKey: "reports" },
-          { id: "vault", label: "Document Vault", icon: ShieldCheck, badge: "Cloud", permKey: "vault" },
-          { id: "announcements", label: "Announcements", icon: Megaphone, badge: `${announcements.length} Live`, permKey: "announcements" },
-        ];
 
-        const isPermitted = (permKey?: string) => {
-          if (!permKey) return true;
-          if (tenantPermissions.length === 0 || tenantPermissions.includes("all")) return true;
-          return tenantPermissions.includes(permKey);
-        };
-
-        const visibleDesks = allDesks.filter(d => isPermitted(d.permKey));
-
-        return (
-          <div className="flex items-center space-x-2 border-b border-slate-200 overflow-x-auto pb-2 scrollbar-thin">
-            {visibleDesks.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeDesk === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => switchDesk(tab.id as any)}
-              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                isActive
-                  ? "bg-blue-700 text-white shadow-md shadow-blue-700/20"
-                  : "bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80"
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              <span>{tab.label}</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500 font-mono"}`}>
-                {tab.badge}
-              </span>
-            </button>
-          );
-        })}
-          </div>
-        );
-      })()}
 
       {/* ========================================================================= */}
       {/* DESK: RETAILER OVERVIEW                                                   */}
@@ -1376,71 +1348,122 @@ export default function RetailerDashboardPage() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <button
-                onClick={() => { setShowAddCustomerModal(true); }}
-                className="p-4 rounded-2xl bg-blue-50 hover:bg-blue-100/80 border border-blue-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
-              >
-                <Users className="w-6 h-6 text-blue-700 mb-2 group-hover:scale-110 transition-transform" />
-                <div>
-                  <div className="text-xs font-extrabold text-blue-950">Add Customer</div>
-                  <div className="text-[10px] text-blue-800/70">Onboard walk-in</div>
-                </div>
-              </button>
+              {isPermitted("customer_desk", "customers") && (
+                <button
+                  onClick={() => { setShowAddCustomerModal(true); }}
+                  className="p-4 rounded-2xl bg-blue-50 hover:bg-blue-100/80 border border-blue-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <Users className="w-6 h-6 text-blue-700 mb-2 group-hover:scale-110 transition-transform" />
+                  <div>
+                    <div className="text-xs font-extrabold text-blue-950">Add Customer</div>
+                    <div className="text-[10px] text-blue-800/70">Onboard walk-in</div>
+                  </div>
+                </button>
+              )}
 
-              <button
-                onClick={() => switchDesk("gstr_filing")}
-                className="p-4 rounded-2xl bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
-              >
-                <FileSpreadsheet className="w-6 h-6 text-emerald-700 mb-2 group-hover:scale-110 transition-transform" />
-                <div>
-                  <div className="text-xs font-extrabold text-emerald-950">GST Filing</div>
-                  <div className="text-[10px] text-emerald-800/70">GSTR-1 & 3B</div>
-                </div>
-              </button>
+              {isPermitted("gstr_filing") && (
+                <button
+                  onClick={() => switchDesk("gstr_filing")}
+                  className="p-4 rounded-2xl bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <FileSpreadsheet className="w-6 h-6 text-emerald-700 mb-2 group-hover:scale-110 transition-transform" />
+                  <div>
+                    <div className="text-xs font-extrabold text-emerald-950">GST Filing</div>
+                    <div className="text-[10px] text-emerald-800/70">GSTR-1 & 3B</div>
+                  </div>
+                </button>
+              )}
 
-              <button
-                onClick={() => switchDesk("gst_reg")}
-                className="p-4 rounded-2xl bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
-              >
-                <Building className="w-6 h-6 text-indigo-700 mb-2 group-hover:scale-110 transition-transform" />
-                <div>
-                  <div className="text-xs font-extrabold text-indigo-950">GST Registration</div>
-                  <div className="text-[10px] text-indigo-800/70">New registration</div>
-                </div>
-              </button>
+              {isPermitted("gst_registration", "gst_reg") && (
+                <button
+                  onClick={() => switchDesk("gst_reg")}
+                  className="p-4 rounded-2xl bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <Building className="w-6 h-6 text-indigo-700 mb-2 group-hover:scale-110 transition-transform" />
+                  <div>
+                    <div className="text-xs font-extrabold text-indigo-950">GST Registration</div>
+                    <div className="text-[10px] text-indigo-800/70">New registration</div>
+                  </div>
+                </button>
+              )}
 
-              <button
-                onClick={() => switchDesk("itr")}
-                className="p-4 rounded-2xl bg-purple-50 hover:bg-purple-100/80 border border-purple-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
-              >
-                <FileText className="w-6 h-6 text-purple-700 mb-2 group-hover:scale-110 transition-transform" />
-                <div>
-                  <div className="text-xs font-extrabold text-purple-950">IT Filing</div>
-                  <div className="text-[10px] text-purple-800/70">ITR 1-4 Filing</div>
-                </div>
-              </button>
+              {isPermitted("itr_filing", "itr") && (
+                <button
+                  onClick={() => switchDesk("itr")}
+                  className="p-4 rounded-2xl bg-purple-50 hover:bg-purple-100/80 border border-purple-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <FileText className="w-6 h-6 text-purple-700 mb-2 group-hover:scale-110 transition-transform" />
+                  <div>
+                    <div className="text-xs font-extrabold text-purple-950">IT Filing</div>
+                    <div className="text-[10px] text-purple-800/70">ITR 1-4 Filing</div>
+                  </div>
+                </button>
+              )}
 
-              <button
-                onClick={() => switchDesk("esevai")}
-                className="p-4 rounded-2xl bg-amber-50 hover:bg-amber-100/80 border border-amber-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
-              >
-                <Award className="w-6 h-6 text-amber-700 mb-2 group-hover:scale-110 transition-transform" />
-                <div>
-                  <div className="text-xs font-extrabold text-amber-950">Eseva Services</div>
-                  <div className="text-[10px] text-amber-800/70">Income, Nativity...</div>
-                </div>
-              </button>
+              {isPermitted("esevai") && (
+                <button
+                  onClick={() => switchDesk("esevai")}
+                  className="p-4 rounded-2xl bg-amber-50 hover:bg-amber-100/80 border border-amber-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <Award className="w-6 h-6 text-amber-700 mb-2 group-hover:scale-110 transition-transform" />
+                  <div>
+                    <div className="text-xs font-extrabold text-amber-950">Eseva Services</div>
+                    <div className="text-[10px] text-amber-800/70">Income, Nativity...</div>
+                  </div>
+                </button>
+              )}
 
-              <button
-                onClick={() => switchDesk("pan")}
-                className="p-4 rounded-2xl bg-rose-50 hover:bg-rose-100/80 border border-rose-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
-              >
-                <CreditCard className="w-6 h-6 text-rose-700 mb-2 group-hover:scale-110 transition-transform" />
-                <div>
-                  <div className="text-xs font-extrabold text-rose-950">PAN Card</div>
-                  <div className="text-[10px] text-rose-800/70">49A & CSF</div>
-                </div>
-              </button>
+              {isPermitted("pan_card", "pan") && (
+                <button
+                  onClick={() => switchDesk("pan")}
+                  className="p-4 rounded-2xl bg-rose-50 hover:bg-rose-100/80 border border-rose-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <CreditCard className="w-6 h-6 text-rose-700 mb-2 group-hover:scale-110 transition-transform" />
+                  <div>
+                    <div className="text-xs font-extrabold text-rose-950">PAN Card</div>
+                    <div className="text-[10px] text-rose-800/70">49A & CSF</div>
+                  </div>
+                </button>
+              )}
+
+              {isPermitted("passport") && (
+                <button
+                  onClick={() => switchDesk("passport")}
+                  className="p-4 rounded-2xl bg-cyan-50 hover:bg-cyan-100/80 border border-cyan-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <Plane className="w-6 h-6 text-cyan-700 mb-2 group-hover:scale-110 transition-transform" />
+                  <div>
+                    <div className="text-xs font-extrabold text-cyan-950">Passport</div>
+                    <div className="text-[10px] text-cyan-800/70">Fresh & Reissue</div>
+                  </div>
+                </button>
+              )}
+
+              {isPermitted("wallet") && (
+                <button
+                  onClick={() => switchDesk("wallet")}
+                  className="p-4 rounded-2xl bg-teal-50 hover:bg-teal-100/80 border border-teal-200/60 text-left transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <Wallet className="w-6 h-6 text-teal-700 mb-2 group-hover:scale-110 transition-transform" />
+                  <div>
+                    <div className="text-xs font-extrabold text-teal-950">Wallet Top-up</div>
+                    <div className="text-[10px] text-teal-800/70">Instant UPI load</div>
+                  </div>
+                </button>
+              )}
+
+              {isPermitted("reports") && (
+                <button
+                  onClick={() => switchDesk("reports")}
+                  className="p-4 rounded-2xl bg-slate-100 hover:bg-slate-200/80 border border-slate-300 text-left transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <History className="w-6 h-6 text-slate-700 mb-2 group-hover:scale-110 transition-transform" />
+                  <div>
+                    <div className="text-xs font-extrabold text-slate-950">Store Reports</div>
+                    <div className="text-[10px] text-slate-700">Ledger & Audits</div>
+                  </div>
+                </button>
+              )}
             </div>
           </div>
         </div>

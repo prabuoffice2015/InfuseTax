@@ -1768,11 +1768,13 @@ class DashboardController {
             }
         }
 
-        $permStr = is_array($permissions) ? implode(',', array_map('trim', $permissions)) : trim($permissions);
+        $permArray = is_array($permissions) ? array_values(array_filter(array_map('trim', $permissions))) : array_values(array_filter(array_map('trim', explode(',', $permissions))));
+        $permStr = implode(',', $permArray);
         if (empty($permStr)) $permStr = 'overview,reports';
+        $jsonModules = json_encode($permArray);
 
-        $stmtUp = $pdo->prepare("UPDATE users SET permissions = :p, updated_at = NOW() WHERE id = :id");
-        $ok = $stmtUp->execute(['p' => $permStr, 'id' => $targetUserId]);
+        $stmtUp = $pdo->prepare("UPDATE users SET permissions = :p, enabled_modules = :em, updated_at = NOW() WHERE id = :id");
+        $ok = $stmtUp->execute(['p' => $permStr, 'em' => $jsonModules, 'id' => $targetUserId]);
 
         if ($ok) {
             Response::json([

@@ -10,6 +10,8 @@ export interface AuthUser {
   city?: string;
   state?: string;
   wallet?: number;
+  enabled_services?: string;
+  permissions?: string[];
 }
 
 const TOKEN_KEY = "infusetax_jwt_token";
@@ -59,7 +61,7 @@ export function getRoleDashboardUrl(role?: string): string {
   if (normalized === "super_admin" || normalized.includes("super_admin") || normalized.includes("company")) {
     return "/dashboard/company";
   } else if (normalized === "admin" || normalized.includes("distributor")) {
-    return "/dashboard/distributor";
+    return "/dashboard/admin";
   } else if (normalized === "customer" || normalized.includes("customer") || normalized.includes("operator") || normalized.includes("employee")) {
     return "/dashboard/customer";
   }

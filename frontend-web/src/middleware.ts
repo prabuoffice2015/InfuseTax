@@ -17,21 +17,27 @@ export function middleware(request: NextRequest) {
     // Role-based URL access control
     const getFallbackUrl = () => {
       if (role.includes("customer") || role.includes("operator")) return "/dashboard/customer";
-      if (role === "admin" || role.includes("distributor")) return "/dashboard/distributor";
+      if (role === "admin" || role.includes("distributor")) return "/dashboard/admin";
       if (role === "super_admin" || role.includes("super_admin")) return "/dashboard/company";
       return "/dashboard/retailer";
     };
 
     if (pathname.startsWith("/dashboard/company")) {
+      // Super Admin routes - Admin, Retailer, Customer CANNOT access
       if (role !== "super_admin" && !role.includes("super_admin")) {
         return NextResponse.redirect(new URL(getFallbackUrl(), request.url));
       }
-    } else if (pathname.startsWith("/dashboard/distributor") || pathname.startsWith("/dashboard/admin")) {
+    } else if (pathname.startsWith("/dashboard/distributor")) {
+      // Normalize distributor route to admin route
+      return NextResponse.redirect(new URL("/dashboard/admin", request.url));
+    } else if (pathname.startsWith("/dashboard/admin")) {
+      // Admin routes - Retailer & Customer CANNOT access
       if (role !== "admin" && !role.includes("distributor") && role !== "super_admin" && !role.includes("super_admin")) {
         return NextResponse.redirect(new URL(getFallbackUrl(), request.url));
       }
     } else if (pathname.startsWith("/dashboard/retailer")) {
-      if (role.includes("customer")) {
+      // Retailer routes - Customer & Operator CANNOT access
+      if (role.includes("customer") || role.includes("operator")) {
         return NextResponse.redirect(new URL("/dashboard/customer", request.url));
       }
     }
@@ -43,7 +49,7 @@ export function middleware(request: NextRequest) {
     if (role === "super_admin" || role.includes("super_admin")) {
       dashboardPath = "/dashboard/company";
     } else if (role === "admin" || role.includes("distributor")) {
-      dashboardPath = "/dashboard/distributor";
+      dashboardPath = "/dashboard/admin";
     } else if (role.includes("customer") || role.includes("operator") || role.includes("employee")) {
       dashboardPath = "/dashboard/customer";
     }

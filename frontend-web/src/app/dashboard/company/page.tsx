@@ -1317,45 +1317,7 @@ export default function CompanySuperAdminPage() {
         </div>
       </div>
 
-      {/* Horizontal Sub-Navigation Tab Switcher */}
-      <div className="flex items-center space-x-2 border-b border-slate-200 overflow-x-auto pb-2 scrollbar-thin">
-        {[
-          { id: "overview", label: "Dashboard", icon: LayoutDashboard },
-          { id: "admins", label: "Admin", icon: ShieldCheck },
-          { id: "retailers", label: "Retailer", icon: Building },
-          { id: "customers", label: "Customer", icon: Users },
-          { id: "utr", label: "Wallet Approval", icon: CheckSquare },
-          { id: "gst-reg", label: "GST Registration", icon: Building },
-          { id: "gst-filing", label: "GST Filing", icon: FileSpreadsheet },
-          { id: "it-filing", label: "IT Filing", icon: FileText },
-          { id: "ledger", label: "Reports", icon: History },
-          { id: "companies", label: "Companies", icon: Building },
-          { id: "pricing", label: "Tier 2 Pricing", icon: Sliders },
-          { id: "announcements", label: "Announcements", icon: Megaphone },
-          { id: "branding", label: "White Labeling", icon: Palette },
-          { id: "whatsapp", label: "WhatsApp Gateway", icon: MessageSquare },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => {
-                setActiveTab(tab.id as any);
-                router.push(`/dashboard/company?tab=${tab.id}`);
-              }}
-              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                isActive
-                  ? "bg-blue-700 text-white shadow-md shadow-blue-700/20"
-                  : "bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80"
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
+
 
       {/* ========================================================================= */}
       {/* TAB 1: PLATFORM OVERVIEW (With Matrix Pagination)                         */}

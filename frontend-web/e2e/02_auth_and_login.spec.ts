@@ -39,11 +39,11 @@ test.describe('02 - Authentication & Multi-Role Access Control', () => {
     await expect(walletText.first()).toBeVisible();
   });
 
-  test('should authenticate Master Distributor and redirect to /dashboard/distributor', async ({ page }) => {
+  test('should authenticate Master Distributor and redirect to /dashboard/admin', async ({ page }) => {
     await loginAs(page, 'distributor');
-    await expect(page).toHaveURL(/\/dashboard\/distributor/);
+    await expect(page).toHaveURL(/\/dashboard\/(admin|distributor)/);
 
-    const distHeading = page.locator('text=/Distributor|Zonal|P2P/i');
+    const distHeading = page.locator('text=/Distributor|Zonal|P2P|Admin/i');
     await expect(distHeading.first()).toBeVisible();
   });
 

@@ -27,22 +27,26 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
     // 2. Role-Based Route Protection
     if (pathname.startsWith("/dashboard/company")) {
-      // Super Admin Only
+      // Super Admin Only: Admin, Retailer, Customer cannot access
       if (role !== "super_admin" && !role.includes("super_admin")) {
         const allowedUrl = getRoleDashboardUrl(role);
         router.replace(allowedUrl);
         return;
       }
-    } else if (pathname.startsWith("/dashboard/distributor") || pathname.startsWith("/dashboard/admin")) {
-      // Tier 2 Admin or Super Admin
-      if (role !== "admin" && !role.includes("distributor") && role !== "super_admin") {
+    } else if (pathname.startsWith("/dashboard/distributor")) {
+      // Normalize distributor route to admin
+      router.replace("/dashboard/admin");
+      return;
+    } else if (pathname.startsWith("/dashboard/admin")) {
+      // Tier 2 Admin or Super Admin Only: Retailer & Customer cannot access
+      if (role !== "admin" && !role.includes("distributor") && role !== "super_admin" && !role.includes("super_admin")) {
         const allowedUrl = getRoleDashboardUrl(role);
         router.replace(allowedUrl);
         return;
       }
     } else if (pathname.startsWith("/dashboard/retailer")) {
-      // Customer should not access retailer POS
-      if (role.includes("customer")) {
+      // Customer & Operator cannot access Retailer POS
+      if (role.includes("customer") || role.includes("operator")) {
         const allowedUrl = getRoleDashboardUrl(role);
         router.replace(allowedUrl);
         return;

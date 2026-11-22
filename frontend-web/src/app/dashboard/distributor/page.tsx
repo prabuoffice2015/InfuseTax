@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import ServiceApprovalModal, { ServiceApprovalItem } from "@/components/dashboard/ServiceApprovalModal";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { 
   Users,
   LayoutDashboard,
@@ -172,9 +172,17 @@ function PaginationControls({
 
 export default function DistributorDashboardPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentTabParam = searchParams.get("tab") || "overview";
   const [activeTab, setActiveTab] = useState<string>(currentTabParam || "overview");
+
+  // Normalize route to /dashboard/admin
+  useEffect(() => {
+    if (pathname === "/dashboard/distributor") {
+      router.replace(`/dashboard/admin${currentTabParam ? `?tab=${currentTabParam}` : ""}`);
+    }
+  }, [pathname, currentTabParam, router]);
 
   useEffect(() => {
     if (currentTabParam) {
@@ -189,6 +197,12 @@ export default function DistributorDashboardPage() {
   // Active User Context
   const [activeUser, setActiveUser] = useState<any>(null);
   const [tenantPermissions, setTenantPermissions] = useState<string[]>([]);
+
+  const isPermitted = (permKey: string) => {
+    if (permKey === "overview") return true;
+    if (tenantPermissions.length === 0 || tenantPermissions.includes("all")) return true;
+    return tenantPermissions.includes(permKey);
+  };
 
   // 1. Overview Dynamic Stats
   const [stats, setStats] = useState({
@@ -387,6 +401,8 @@ export default function DistributorDashboardPage() {
         if (u.enabled_services) {
           const list = u.enabled_services.split(",").map((s: string) => s.trim());
           setTenantPermissions(list);
+        } else if (Array.isArray(u.permissions)) {
+          setTenantPermissions(u.permissions);
         }
       }
 
@@ -1110,46 +1126,52 @@ export default function DistributorDashboardPage() {
       {/* ========================================================================= */}
       {activeTab === "overview" && (
         <div className="space-y-6">
-          {/* Dynamic KPI Cards */}
+          {/* Dynamic KPI Cards (Filtered by RBAC Permitted Services) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">GST Registrations</span>
-                <Building className="w-4 h-4 text-blue-600" />
+            {isPermitted("gst_registration") && (
+              <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+                <div className="flex items-center justify-between text-slate-500 mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider">GST Registrations</span>
+                  <Building className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="text-2xl font-black text-slate-900">
+                  {serviceApplications.filter(a => a.service_category === 'gst_registration' || (a.service_category === 'gst' && !a.entity_type?.includes('GSTR'))).length}
+                </div>
+                <div className="text-[11px] text-slate-500 font-semibold mt-1">
+                  {serviceApplications.filter(a => (a.service_category === 'gst_registration' || (a.service_category === 'gst' && !a.entity_type?.includes('GSTR'))) && a.status === 'PENDING_APPROVAL').length} awaiting approval
+                </div>
               </div>
-              <div className="text-2xl font-black text-slate-900">
-                {serviceApplications.filter(a => a.service_category === 'gst_registration' || (a.service_category === 'gst' && !a.entity_type?.includes('GSTR'))).length}
-              </div>
-              <div className="text-[11px] text-slate-500 font-semibold mt-1">
-                {serviceApplications.filter(a => (a.service_category === 'gst_registration' || (a.service_category === 'gst' && !a.entity_type?.includes('GSTR'))) && a.status === 'PENDING_APPROVAL').length} awaiting approval
-              </div>
-            </div>
+            )}
 
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">GST Return Filings</span>
-                <FileSpreadsheet className="w-4 h-4 text-indigo-600" />
+            {isPermitted("gstr_filing") && (
+              <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+                <div className="flex items-center justify-between text-slate-500 mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider">GST Return Filings</span>
+                  <FileSpreadsheet className="w-4 h-4 text-indigo-600" />
+                </div>
+                <div className="text-2xl font-black text-slate-900">
+                  {serviceApplications.filter(a => a.service_category === 'gstr_filing' || a.entity_type?.includes('GSTR')).length}
+                </div>
+                <div className="text-[11px] text-slate-500 font-semibold mt-1">
+                  {serviceApplications.filter(a => (a.service_category === 'gstr_filing' || a.entity_type?.includes('GSTR')) && a.status === 'PENDING_APPROVAL').length} awaiting approval
+                </div>
               </div>
-              <div className="text-2xl font-black text-slate-900">
-                {serviceApplications.filter(a => a.service_category === 'gstr_filing' || a.entity_type?.includes('GSTR')).length}
-              </div>
-              <div className="text-[11px] text-slate-500 font-semibold mt-1">
-                {serviceApplications.filter(a => (a.service_category === 'gstr_filing' || a.entity_type?.includes('GSTR')) && a.status === 'PENDING_APPROVAL').length} awaiting approval
-              </div>
-            </div>
+            )}
 
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">Income Tax (IT) Filings</span>
-                <FileText className="w-4 h-4 text-purple-600" />
+            {isPermitted("itr_filing") && (
+              <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+                <div className="flex items-center justify-between text-slate-500 mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider">Income Tax (IT) Filings</span>
+                  <FileText className="w-4 h-4 text-purple-600" />
+                </div>
+                <div className="text-2xl font-black text-slate-900">
+                  {serviceApplications.filter(a => a.service_category === 'itr').length}
+                </div>
+                <div className="text-[11px] text-slate-500 font-semibold mt-1">
+                  {serviceApplications.filter(a => a.service_category === 'itr' && a.status === 'PENDING_APPROVAL').length} awaiting approval
+                </div>
               </div>
-              <div className="text-2xl font-black text-slate-900">
-                {serviceApplications.filter(a => a.service_category === 'itr').length}
-              </div>
-              <div className="text-[11px] text-slate-500 font-semibold mt-1">
-                {serviceApplications.filter(a => a.service_category === 'itr' && a.status === 'PENDING_APPROVAL').length} awaiting approval
-              </div>
-            </div>
+            )}
 
             <div className="bg-slate-900 text-white p-5 rounded-2xl border border-slate-800 shadow-md shadow-slate-900/10">
               <div className="flex items-center justify-between text-slate-400 mb-2">
@@ -1165,51 +1187,92 @@ export default function DistributorDashboardPage() {
             </div>
           </div>
 
-          {/* Verification Queues Quick Actions Grid */}
+          {/* Verification Queues Quick Actions Grid (Filtered by Permitted Modules) */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
             <h3 className="text-sm font-bold text-slate-900 mb-4">Verification Queues & Compliance Desks</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              <button 
-                onClick={() => switchTab("gst-reg")}
-                className="p-4 rounded-2xl bg-blue-50 hover:bg-blue-100/80 border border-blue-200/60 text-left transition-all cursor-pointer group"
-              >
-                <Building className="w-5 h-5 text-blue-700 mb-2 group-hover:scale-110 transition-transform" />
-                <div className="text-xs font-bold text-blue-950">GST Registration Queue</div>
-                <div className="text-[11px] text-blue-800/70 mt-0.5">
-                  {serviceApplications.filter(a => (a.service_category === 'gst_registration' || (a.service_category === 'gst' && !a.entity_type?.includes('GSTR'))) && a.status === 'PENDING_APPROVAL').length} Pending Review
-                </div>
-              </button>
+              {isPermitted("gst_registration") && (
+                <button 
+                  onClick={() => switchTab("gst-reg")}
+                  className="p-4 rounded-2xl bg-blue-50 hover:bg-blue-100/80 border border-blue-200/60 text-left transition-all cursor-pointer group"
+                >
+                  <Building className="w-5 h-5 text-blue-700 mb-2 group-hover:scale-110 transition-transform" />
+                  <div className="text-xs font-bold text-blue-950">GST Registration Queue</div>
+                  <div className="text-[11px] text-blue-800/70 mt-0.5">
+                    {serviceApplications.filter(a => (a.service_category === 'gst_registration' || (a.service_category === 'gst' && !a.entity_type?.includes('GSTR'))) && a.status === 'PENDING_APPROVAL').length} Pending Review
+                  </div>
+                </button>
+              )}
 
-              <button 
-                onClick={() => switchTab("gst-filing")}
-                className="p-4 rounded-2xl bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/60 text-left transition-all cursor-pointer group"
-              >
-                <FileSpreadsheet className="w-5 h-5 text-indigo-700 mb-2 group-hover:scale-110 transition-transform" />
-                <div className="text-xs font-bold text-indigo-950">GST Return Filings</div>
-                <div className="text-[11px] text-indigo-800/70 mt-0.5">
-                  {serviceApplications.filter(a => (a.service_category === 'gstr_filing' || a.entity_type?.includes('GSTR')) && a.status === 'PENDING_APPROVAL').length} Pending Review
-                </div>
-              </button>
+              {isPermitted("gstr_filing") && (
+                <button 
+                  onClick={() => switchTab("gst-filing")}
+                  className="p-4 rounded-2xl bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/60 text-left transition-all cursor-pointer group"
+                >
+                  <FileSpreadsheet className="w-5 h-5 text-indigo-700 mb-2 group-hover:scale-110 transition-transform" />
+                  <div className="text-xs font-bold text-indigo-950">GST Return Filings</div>
+                  <div className="text-[11px] text-indigo-800/70 mt-0.5">
+                    {serviceApplications.filter(a => (a.service_category === 'gstr_filing' || a.entity_type?.includes('GSTR')) && a.status === 'PENDING_APPROVAL').length} Pending Review
+                  </div>
+                </button>
+              )}
 
-              <button 
-                onClick={() => switchTab("it-filing")}
-                className="p-4 rounded-2xl bg-purple-50 hover:bg-purple-100/80 border border-purple-200/60 text-left transition-all cursor-pointer group"
-              >
-                <FileText className="w-5 h-5 text-purple-700 mb-2 group-hover:scale-110 transition-transform" />
-                <div className="text-xs font-bold text-purple-950">Income Tax (IT) Returns</div>
-                <div className="text-[11px] text-purple-800/70 mt-0.5">
-                  {serviceApplications.filter(a => a.service_category === 'itr' && a.status === 'PENDING_APPROVAL').length} Pending Review
-                </div>
-              </button>
+              {isPermitted("itr_filing") && (
+                <button 
+                  onClick={() => switchTab("it-filing")}
+                  className="p-4 rounded-2xl bg-purple-50 hover:bg-purple-100/80 border border-purple-200/60 text-left transition-all cursor-pointer group"
+                >
+                  <FileText className="w-5 h-5 text-purple-700 mb-2 group-hover:scale-110 transition-transform" />
+                  <div className="text-xs font-bold text-purple-950">Income Tax (IT) Returns</div>
+                  <div className="text-[11px] text-purple-800/70 mt-0.5">
+                    {serviceApplications.filter(a => a.service_category === 'itr' && a.status === 'PENDING_APPROVAL').length} Pending Review
+                  </div>
+                </button>
+              )}
 
-              <button 
-                onClick={() => switchTab("reports")}
-                className="p-4 rounded-2xl bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200/60 text-left transition-all cursor-pointer group"
-              >
-                <History className="w-5 h-5 text-emerald-700 mb-2 group-hover:scale-110 transition-transform" />
-                <div className="text-xs font-bold text-emerald-950">Reports & Audit Ledger</div>
-                <div className="text-[11px] text-emerald-800/70 mt-0.5">Double-entry audit trail</div>
-              </button>
+              {isPermitted("reports") && (
+                <button 
+                  onClick={() => switchTab("reports")}
+                  className="p-4 rounded-2xl bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200/60 text-left transition-all cursor-pointer group"
+                >
+                  <History className="w-5 h-5 text-emerald-700 mb-2 group-hover:scale-110 transition-transform" />
+                  <div className="text-xs font-bold text-emerald-950">Reports & Audit Ledger</div>
+                  <div className="text-[11px] text-emerald-800/70 mt-0.5">Double-entry audit trail</div>
+                </button>
+              )}
+
+              {isPermitted("pricing") && (
+                <button 
+                  onClick={() => switchTab("pricing")}
+                  className="p-4 rounded-2xl bg-cyan-50 hover:bg-cyan-100/80 border border-cyan-200/60 text-left transition-all cursor-pointer group"
+                >
+                  <Sliders className="w-5 h-5 text-cyan-700 mb-2 group-hover:scale-110 transition-transform" />
+                  <div className="text-xs font-bold text-cyan-950">Tier 3 Pricing Setup</div>
+                  <div className="text-[11px] text-cyan-800/70 mt-0.5">Custom margin configurations</div>
+                </button>
+              )}
+
+              {isPermitted("outlets") && (
+                <button 
+                  onClick={() => switchTab("outlets")}
+                  className="p-4 rounded-2xl bg-amber-50 hover:bg-amber-100/80 border border-amber-200/60 text-left transition-all cursor-pointer group"
+                >
+                  <Users className="w-5 h-5 text-amber-700 mb-2 group-hover:scale-110 transition-transform" />
+                  <div className="text-xs font-bold text-amber-950">Network Outlets</div>
+                  <div className="text-[11px] text-amber-800/70 mt-0.5">Retailers & Operators</div>
+                </button>
+              )}
+
+              {isPermitted("announcements") && (
+                <button 
+                  onClick={() => switchTab("announcements")}
+                  className="p-4 rounded-2xl bg-rose-50 hover:bg-rose-100/80 border border-rose-200/60 text-left transition-all cursor-pointer group"
+                >
+                  <Megaphone className="w-5 h-5 text-rose-700 mb-2 group-hover:scale-110 transition-transform" />
+                  <div className="text-xs font-bold text-rose-950">Company Announcements</div>
+                  <div className="text-[11px] text-rose-800/70 mt-0.5">Broadcast statutory alerts</div>
+                </button>
+              )}
             </div>
           </div>
 

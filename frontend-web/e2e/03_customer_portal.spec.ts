@@ -33,27 +33,18 @@ test.describe('03 - Customer Client Portal (Tier 4)', () => {
     await expect(topUpBtn).toHaveCount(0);
   });
 
-  test('should render all customer sub-navigation tabs', async ({ page }) => {
-    // Check tabs exist
-    const overviewTab = page.locator('button, a').filter({ hasText: /Dashboard Overview/i });
-    await expect(overviewTab.first()).toBeVisible();
-
-    const filingsTab = page.locator('button, a').filter({ hasText: /My Filings/i });
-    await expect(filingsTab.first()).toBeVisible();
-
-    const credsTab = page.locator('button, a').filter({ hasText: /My Credentials Vault/i });
-    await expect(credsTab.first()).toBeVisible();
-
-    const docVaultTab = page.locator('button, a').filter({ hasText: /Document Vault/i });
-    await expect(docVaultTab.first()).toBeVisible();
-
-    const receiptsTab = page.locator('button, a').filter({ hasText: /Receipts & Slips/i });
-    await expect(receiptsTab.first()).toBeVisible();
+  test('should render all customer sub-navigation tabs in left sidebar', async ({ page }) => {
+    const sidebar = page.locator('aside');
+    await expect(sidebar.getByText('Dashboard')).toBeVisible();
+    await expect(sidebar.getByText('My Filings')).toBeVisible();
+    await expect(sidebar.getByText('My Credentials')).toBeVisible();
+    await expect(sidebar.getByText('Document Vault')).toBeVisible();
+    await expect(sidebar.getByText('Receipts')).toBeVisible();
   });
 
   test('should navigate to My Credentials Vault and view/edit credential fields', async ({ page }) => {
-    // Click My Credentials Vault tab
-    const credsTab = page.locator('button, a').filter({ hasText: /My Credentials Vault/i }).first();
+    // Click My Credentials tab in sidebar
+    const credsTab = page.locator('aside').getByText('My Credentials').first();
     await credsTab.click();
     await page.waitForTimeout(500);
 
@@ -74,8 +65,8 @@ test.describe('03 - Customer Client Portal (Tier 4)', () => {
   });
 
   test('should navigate to Document Vault and Receipts tabs', async ({ page }) => {
-    // Click Document Vault tab
-    const docVaultTab = page.locator('button, a').filter({ hasText: /Document Vault/i }).first();
+    // Click Document Vault tab in sidebar
+    const docVaultTab = page.locator('aside').getByText('Document Vault').first();
     await docVaultTab.click();
     await page.waitForTimeout(500);
 
@@ -83,8 +74,8 @@ test.describe('03 - Customer Client Portal (Tier 4)', () => {
     const docVaultContent = page.locator('text=/Upload|Document|Vault/i');
     await expect(docVaultContent.first()).toBeVisible({ timeout: 5000 });
 
-    // Click Receipts & Slips tab
-    const receiptsTab = page.locator('button, a').filter({ hasText: /Receipts & Slips/i }).first();
+    // Click Receipts tab in sidebar
+    const receiptsTab = page.locator('aside').getByText('Receipts').first();
     await receiptsTab.click();
     await page.waitForTimeout(500);
 

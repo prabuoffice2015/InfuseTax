@@ -14,7 +14,7 @@ export const TEST_USERS = {
     password: 'Admin@123',
     name: 'Sengu (Master Distributer)',
     role: 'distributor',
-    expectedPath: '/dashboard/distributor',
+    expectedPath: '/dashboard/(admin|distributor)',
   },
   retailer: {
     email: 'retailer@infusetax.com',

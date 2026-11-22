@@ -58,6 +58,8 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
           if (res.data.user.enabled_services) {
             const list = res.data.user.enabled_services.split(",").map((s: string) => s.trim());
             setEnabledServices(list);
+          } else if (Array.isArray(res.data.user.permissions)) {
+            setEnabledServices(res.data.user.permissions);
           }
         }
       }).catch(() => {});
@@ -97,25 +99,23 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
         { label: "GST Filing", href: "/dashboard/company?tab=gst-filing", tabKey: "gst-filing", icon: FileSpreadsheet },
         { label: "IT Filing", href: "/dashboard/company?tab=it-filing", tabKey: "it-filing", icon: FileText },
         { label: "Reports", href: "/dashboard/company?tab=ledger", tabKey: "ledger", icon: History },
+        { label: "Companies", href: "/dashboard/company?tab=companies", tabKey: "companies", icon: Building },
+        { label: "Tier 2 Pricing", href: "/dashboard/company?tab=pricing", tabKey: "pricing", icon: Sliders },
+        { label: "Announcements", href: "/dashboard/company?tab=announcements", tabKey: "announcements", icon: Megaphone },
+        { label: "White Labeling", href: "/dashboard/company?tab=branding", tabKey: "branding", icon: Palette },
+        { label: "WhatsApp Gateway", href: "/dashboard/company?tab=whatsapp", tabKey: "whatsapp", icon: MessageSquare },
       ];
     } else if (role === "admin" || role.includes("distributor")) {
-      const items = [
+      return [
         { label: "Dashboard", href: "/dashboard/admin?tab=overview", tabKey: "overview", icon: LayoutDashboard, permKey: "overview" },
         { label: "GST Registration", href: "/dashboard/admin?tab=gst-reg", tabKey: "gst-reg", icon: Building, permKey: "gst_registration" },
         { label: "GST Filing", href: "/dashboard/admin?tab=gst-filing", tabKey: "gst-filing", icon: FileSpreadsheet, permKey: "gstr_filing" },
         { label: "IT Filing", href: "/dashboard/admin?tab=it-filing", tabKey: "it-filing", icon: FileText, permKey: "itr_filing" },
         { label: "Reports", href: "/dashboard/admin?tab=reports", tabKey: "reports", icon: History, permKey: "reports" },
+        { label: "Pricing Setup", href: "/dashboard/admin?tab=pricing", tabKey: "pricing", icon: Sliders, permKey: "pricing" },
+        { label: "Network Outlets", href: "/dashboard/admin?tab=outlets", tabKey: "outlets", icon: Users, permKey: "outlets" },
+        { label: "Announcements", href: "/dashboard/admin?tab=announcements", tabKey: "announcements", icon: Megaphone, permKey: "announcements" },
       ];
-      if (enabledServices.includes("pricing")) {
-        items.push({ label: "Pricing Setup", href: "/dashboard/admin?tab=pricing", tabKey: "pricing", icon: Sliders, permKey: "pricing" });
-      }
-      if (enabledServices.includes("outlets")) {
-        items.push({ label: "Network Outlets", href: "/dashboard/admin?tab=outlets", tabKey: "outlets", icon: Users, permKey: "outlets" });
-      }
-      if (enabledServices.includes("announcements")) {
-        items.push({ label: "Announcements", href: "/dashboard/admin?tab=announcements", tabKey: "announcements", icon: Megaphone, permKey: "announcements" });
-      }
-      return items;
     } else if (role.includes("customer") || role.includes("operator") || role.includes("employee")) {
       return [
         { label: "Dashboard", href: "/dashboard/customer?tab=overview", tabKey: "overview", icon: LayoutDashboard },
@@ -127,25 +127,25 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
     } else {
       // Retailer Store POS (Tier 3)
       return [
-        { label: "Dashboard", href: "/dashboard/retailer?desk=overview", deskKey: "overview", icon: LayoutDashboard },
-        { label: "Wallet", href: "/dashboard/retailer?desk=wallet", deskKey: "wallet", icon: Wallet },
-        { label: "Customer", href: "/dashboard/retailer?desk=customers", deskKey: "customers", icon: Users },
-        { label: "GST Filing", href: "/dashboard/retailer?desk=gstr_filing", deskKey: "gstr_filing", icon: FileSpreadsheet },
-        { label: "GST Registration", href: "/dashboard/retailer?desk=gst_reg", deskKey: "gst_reg", icon: Building },
-        { label: "IT Filing", href: "/dashboard/retailer?desk=itr", deskKey: "itr", icon: FileText },
-        { label: "Eseva Services", href: "/dashboard/retailer?desk=esevai", deskKey: "esevai", icon: Award },
-        { label: "Pan Card", href: "/dashboard/retailer?desk=pan", deskKey: "pan", icon: CreditCard },
-        { label: "Passport", href: "/dashboard/retailer?desk=passport", deskKey: "passport", icon: Plane },
-        { label: "Report", href: "/dashboard/retailer?desk=reports", deskKey: "reports", icon: History },
+        { label: "Dashboard", href: "/dashboard/retailer?desk=overview", deskKey: "overview", icon: LayoutDashboard, permKey: "overview" },
+        { label: "Wallet", href: "/dashboard/retailer?desk=wallet", deskKey: "wallet", icon: Wallet, permKey: "wallet" },
+        { label: "Customer", href: "/dashboard/retailer?desk=customers", deskKey: "customers", icon: Users, permKey: "customer_desk", altKey: "customers" },
+        { label: "GST Filing", href: "/dashboard/retailer?desk=gstr_filing", deskKey: "gstr_filing", icon: FileSpreadsheet, permKey: "gstr_filing" },
+        { label: "GST Registration", href: "/dashboard/retailer?desk=gst_reg", deskKey: "gst_reg", icon: Building, permKey: "gst_registration", altKey: "gst_reg" },
+        { label: "IT Filing", href: "/dashboard/retailer?desk=itr", deskKey: "itr", icon: FileText, permKey: "itr_filing", altKey: "itr" },
+        { label: "Eseva Services", href: "/dashboard/retailer?desk=esevai", deskKey: "esevai", icon: Award, permKey: "esevai" },
+        { label: "Pan Card", href: "/dashboard/retailer?desk=pan", deskKey: "pan", icon: CreditCard, permKey: "pan_card", altKey: "pan" },
+        { label: "Passport", href: "/dashboard/retailer?desk=passport", deskKey: "passport", icon: Plane, permKey: "passport" },
+        { label: "Report", href: "/dashboard/retailer?desk=reports", deskKey: "reports", icon: History, permKey: "reports" },
       ];
     }
   };
 
   const allNavItems = getRoleNavItems();
   const navItems = allNavItems.filter((item: any) => {
-    if (!item.permKey) return true;
+    if (!item.permKey || item.permKey === "overview") return true;
     if (enabledServices.length === 0 || enabledServices.includes("all")) return true;
-    return enabledServices.includes(item.permKey);
+    return enabledServices.includes(item.permKey) || (item.altKey && enabledServices.includes(item.altKey));
   });
 
   const getRoleBadge = () => {

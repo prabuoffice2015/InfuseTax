@@ -202,6 +202,30 @@ class User extends Model {
     }
 
     /**
+     * Extracts an array of string module keys from raw JSON, array, or comma-separated string.
+     */
+    public static function extractModules($value): ?array {
+        if ($value === null || $value === '') return null;
+        if (is_array($value)) {
+            $filtered = array_values(array_filter(array_map('trim', $value)));
+            return empty($filtered) ? [] : $filtered;
+        }
+        if (is_string($value)) {
+            $value = trim($value);
+            if ($value === '' || $value === 'all') return ['all'];
+            if ($value === '[]') return [];
+            if (str_starts_with($value, '[') && str_ends_with($value, ']')) {
+                $decoded = json_decode($value, true);
+                if (is_array($decoded)) {
+                    return array_values(array_filter(array_map('trim', $decoded)));
+                }
+            }
+            return array_values(array_filter(array_map('trim', explode(',', $value))));
+        }
+        return null;
+    }
+
+    /**
      * Computes the effective cascading role-based permissions for a user.
      */
     public static function getEffectivePermissions(string $userId): array {
@@ -214,35 +238,74 @@ class User extends Model {
             return ['all'];
         }
 
-        $tenantServices = !empty($user->tenant?->enabled_services) 
-            ? array_map('trim', explode(',', $user->tenant->enabled_services)) 
-            : ['all'];
-
+        // 1. For Admin (Tier 2 Admin / Distributor)
         if ($user->role === 'distributor' || $user->role === 'admin') {
-            return $tenantServices;
+            $mods = self::extractModules($user->enabled_modules);
+            $perms = self::extractModules($user->permissions);
+
+            // If explicitly configured with specific modules
+            if (!empty($mods) && !in_array('all', $mods)) {
+                $chosen = $mods;
+            } elseif (!empty($perms) && !in_array('all', $perms)) {
+                $chosen = $perms;
+            } elseif ($user->permissions === 'all' || in_array('all', $mods ?? []) || in_array('all', $perms ?? [])) {
+                // Default full access for Admin
+                return ['overview', 'gst_registration', 'gstr_filing', 'itr_filing', 'reports', 'pricing', 'outlets', 'announcements'];
+            } else {
+                $chosen = [];
+            }
+
+            // Always ensure overview is present for dashboard landing
+            if (!in_array('overview', $chosen)) {
+                array_unshift($chosen, 'overview');
+            }
+            return array_values(array_unique($chosen));
         }
 
-        $userPerms = ($user->permissions && $user->permissions !== 'all') 
-            ? array_map('trim', explode(',', $user->permissions)) 
-            : ['all'];
-
+        // 2. For Retailer (Tier 3 Retailer POS)
         if ($user->role === 'retailer') {
-            if (in_array('all', $tenantServices) && in_array('all', $userPerms)) return ['all'];
-            if (in_array('all', $tenantServices)) return $userPerms;
-            if (in_array('all', $userPerms)) return $tenantServices;
-            return array_values(array_intersect($tenantServices, $userPerms));
+            $mods = self::extractModules($user->enabled_modules);
+            $perms = self::extractModules($user->permissions);
+
+            // If explicitly configured with specific modules
+            if (!empty($mods) && !in_array('all', $mods)) {
+                $chosen = $mods;
+            } elseif (!empty($perms) && !in_array('all', $perms)) {
+                $chosen = $perms;
+            } elseif ($user->permissions === 'all' || in_array('all', $mods ?? []) || in_array('all', $perms ?? [])) {
+                // Default full access for Retailer & all aliases
+                return [
+                    'overview', 'wallet', 'customer_desk', 'customers',
+                    'gstr_filing', 'gst_registration', 'gst_reg',
+                    'itr_filing', 'itr', 'esevai', 'pan_card', 'pan',
+                    'passport', 'reports'
+                ];
+            } else {
+                $chosen = [];
+            }
+
+            // Include aliases so deskKey and permKey checks both match
+            $expanded = ['overview'];
+            foreach ($chosen as $m) {
+                $expanded[] = $m;
+                if ($m === 'customer_desk') $expanded[] = 'customers';
+                if ($m === 'gst_registration') $expanded[] = 'gst_reg';
+                if ($m === 'itr_filing') $expanded[] = 'itr';
+                if ($m === 'pan_card') $expanded[] = 'pan';
+                if ($m === 'customers') $expanded[] = 'customer_desk';
+                if ($m === 'gst_reg') $expanded[] = 'gst_registration';
+                if ($m === 'itr') $expanded[] = 'itr_filing';
+                if ($m === 'pan') $expanded[] = 'pan_card';
+            }
+            return array_values(array_unique($expanded));
         }
 
+        // 3. For Customer / Operator (Tier 4 Client Portal)
         if ($user->role === 'operator' || $user->role === 'customer') {
-            $retailer = $user->parent;
-            $retailerPerms = $retailer ? self::getEffectivePermissions($retailer->id) : $tenantServices;
-            if (in_array('all', $retailerPerms) && in_array('all', $userPerms)) return ['all'];
-            if (in_array('all', $retailerPerms)) return $userPerms;
-            if (in_array('all', $userPerms)) return $retailerPerms;
-            return array_values(array_intersect($retailerPerms, $userPerms));
+            return ['overview', 'my_filings', 'credentials', 'documents', 'receipts'];
         }
 
-        return $userPerms;
+        return ['all'];
     }
 
     public static function recordLoginSuccess(string $userId, string $ipAddress): void {
