@@ -199,7 +199,7 @@ export default function DistributorDashboardPage() {
   const [tenantPermissions, setTenantPermissions] = useState<string[]>([]);
 
   const isPermitted = (permKey: string) => {
-    if (permKey === "overview") return true;
+    if (permKey === "overview" || permKey === "approvals") return true;
     if (tenantPermissions.length === 0 || tenantPermissions.includes("all")) return true;
     return tenantPermissions.includes(permKey);
   };
@@ -424,6 +424,8 @@ export default function DistributorDashboardPage() {
     if (tenantPermissions.length > 0 && !tenantPermissions.includes("all")) {
       const isAllowed = 
         activeTab === "overview" ||
+        activeTab === "approvals" ||
+        activeTab === "service-approvals" ||
         (activeTab === "gst-reg" && tenantPermissions.includes("gst_registration")) ||
         (activeTab === "gst-filing" && tenantPermissions.includes("gstr_filing")) ||
         (activeTab === "it-filing" && tenantPermissions.includes("itr_filing")) ||

@@ -147,7 +147,7 @@ class WalletController {
                 UtrRequest::where('utr_number', $utrNumber)->update([
                     'status'      => 'approved',
                     'approved_by' => $adm->id,
-                    'approved_at' => now(),
+                    'approved_at' => date('Y-m-d H:i:s'),
                 ]);
             }
         } catch (\Throwable $e) {}

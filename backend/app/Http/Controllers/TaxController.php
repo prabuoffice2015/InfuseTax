@@ -1269,7 +1269,7 @@ class TaxController {
             $pdo->beginTransaction();
 
             // 1. Fetch customer details
-            $stmtC = $pdo->prepare("SELECT id, full_name, email, mobile, income_tax_login_id, gst_login_id, pan_card_number, tenant_id FROM users WHERE id = :cid");
+            $stmtC = $pdo->prepare("SELECT id, full_name, email, mobile, income_tax_login_id, user_code, tenant_id FROM users WHERE id = :cid");
             $stmtC->execute(['cid' => $customerId]);
             $customer = $stmtC->fetch(PDO::FETCH_ASSOC);
 
@@ -1306,27 +1306,29 @@ class TaxController {
             $stmtUpW->execute(['bal' => $newBalance, 'rid' => $retailerId]);
 
             // 6. Record audit ledger
+            $arn = 'GST' . date('Ym') . rand(100000, 999999);
+            $pan = !empty($customer['income_tax_login_id']) ? strtoupper(substr($customer['income_tax_login_id'], 0, 10)) : 
+                   (!empty($gstin) ? strtoupper(substr($gstin, 2, 10)) : 'GSTPENDING');
+
             $stmtLedger = $pdo->prepare("
-                INSERT INTO audit_ledger (tenant_id, user_id, entry_type, amount, balance_after, description, created_at)
-                VALUES (:tid, :uid, 'DEBIT', :amt, :after, :desc, NOW())
+                INSERT INTO audit_ledger (tenant_id, reference_id, actor_id, action_type, debit_user_id, credit_user_id, amount, balance_after, narration, created_at)
+                VALUES (:tid, :ref, :actor, 'MONTHLY_GST_RETURN', :debit, NULL, :amt, :after, :narr, NOW())
             ");
             $stmtLedger->execute([
                 'tid'   => $tenantId,
-                'uid'   => $retailerId,
+                'ref'   => $arn,
+                'actor' => $retailerId,
+                'debit' => $retailerId,
                 'amt'   => $portalFee,
                 'after' => $newBalance,
-                'desc'  => "Monthly GST Return ({$returnType}) - " . $customer['full_name'] . " (" . $month . ")"
+                'narr'  => "Monthly GST Return ({$returnType}) - " . $customer['full_name'] . " (" . $month . ")"
             ]);
 
             // 7. Insert GST filing record
-            $arn = 'GST' . date('Ym') . rand(100000, 999999);
-            $pan = !empty($customer['income_tax_login_id']) ? strtoupper(substr($customer['income_tax_login_id'], 0, 10)) : 
-                   (!empty($gstin) ? strtoupper(substr($gstin, 2, 10)) : 'GSTNPENDING');
-
             $docsPayload = json_encode([
                 'month'          => $month,
                 'return_type'    => $returnType,
-                'gstin'          => $gstin ?: ($customer['gst_login_id'] ?? ''),
+                'gstin'          => $gstin ?: ($customer['user_code'] ?? $customer['income_tax_login_id'] ?? ''),
                 'taxable_amount' => $taxableAmt,
                 'tax_liability'  => $taxLiab,
                 'itc_claim'      => $itcClaim,
@@ -1448,22 +1450,24 @@ class TaxController {
             $stmtUpW->execute(['bal' => $newBalance, 'rid' => $retailerId]);
 
             // 6. Record audit ledger
+            $ack = 'ITR' . date('Ym') . rand(100000, 999999);
+            $pan = !empty($customer['income_tax_login_id']) ? strtoupper(substr($customer['income_tax_login_id'], 0, 10)) : 'PANPENDING';
+
             $stmtLedger = $pdo->prepare("
-                INSERT INTO audit_ledger (tenant_id, user_id, entry_type, amount, balance_after, description, created_at)
-                VALUES (:tid, :uid, 'DEBIT', :amt, :after, :desc, NOW())
+                INSERT INTO audit_ledger (tenant_id, reference_id, actor_id, action_type, debit_user_id, credit_user_id, amount, balance_after, narration, created_at)
+                VALUES (:tid, :ref, :actor, 'MONTHLY_IT_FILING', :debit, NULL, :amt, :after, :narr, NOW())
             ");
             $stmtLedger->execute([
                 'tid'   => $tenantId,
-                'uid'   => $retailerId,
+                'ref'   => $ack,
+                'actor' => $retailerId,
+                'debit' => $retailerId,
                 'amt'   => $portalFee,
                 'after' => $newBalance,
-                'desc'  => "Monthly IT Filing - " . $customer['full_name'] . " (" . $month . ")"
+                'narr'  => "Monthly IT Filing - " . $customer['full_name'] . " (" . $month . ")"
             ]);
 
             // 7. Insert ITR filing record
-            $ack = 'ITR' . date('Ym') . rand(100000, 999999);
-            $pan = !empty($customer['income_tax_login_id']) ? strtoupper($customer['income_tax_login_id']) : 'PANPENDING';
-
             $docsPayload = json_encode([
                 'month'          => $month,
                 'invoices_count' => count($invoices),

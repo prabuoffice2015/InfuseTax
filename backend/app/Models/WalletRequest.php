@@ -52,6 +52,53 @@ class WalletRequest extends Model {
     }
 
     /**
+     * Retrieves unified wallet deposit & top-up requests with joined user and tenant metadata.
+     */
+    public static function getRequests(?string $tenantId = null, ?string $status = null): array {
+        $query = DB::table('wallet_requests as wr')
+            ->leftJoin('users as u', 'wr.requester_id', '=', 'u.id')
+            ->leftJoin('users as a', 'wr.approver_id', '=', 'a.id')
+            ->leftJoin('tenants as t', 'wr.tenant_id', '=', 't.id')
+            ->select([
+                'wr.id',
+                'wr.tenant_id',
+                'wr.requester_id',
+                DB::raw("COALESCE(wr.requester_role, u.role, 'retailer') as requester_role"),
+                'wr.target_approver_role',
+                'wr.approver_id',
+                'wr.amount',
+                'wr.payment_mode',
+                'wr.reference_no',
+                'wr.proof_doc_url',
+                'wr.status',
+                'wr.remarks',
+                'wr.created_at',
+                'wr.approved_at',
+                'u.full_name as requester_name',
+                'u.email as requester_email',
+                'u.mobile as requester_mobile',
+                'a.full_name as approver_name',
+                't.code as tenant_code',
+                't.company_name as tenant_name',
+            ])
+            ->orderBy('wr.created_at', 'desc');
+
+        if (!empty($tenantId) && $tenantId !== 'all') {
+            $query->where('wr.tenant_id', $tenantId);
+        }
+
+        if (!empty($status) && $status !== 'all') {
+            $query->where('wr.status', strtolower($status));
+        }
+
+        return $query->get()->map(function ($item) {
+            $arr = (array) $item;
+            $arr['amount'] = floatval($arr['amount'] ?? 0);
+            return $arr;
+        })->toArray();
+    }
+
+    /**
      * Approves a wallet request transactionally, credits wallet, and triggers WhatsApp alert.
      */
     public static function approve(string $requestId, ?string $approverId, ?string $remarks = null): bool {
@@ -62,7 +109,7 @@ class WalletRequest extends Model {
             $req->update([
                 'status'      => 'approved',
                 'approver_id' => $approverId,
-                'approved_at' => now(),
+                'approved_at' => date('Y-m-d H:i:s'),
                 'remarks'     => $remarks ?: $req->remarks,
             ]);
 
@@ -120,7 +167,7 @@ class WalletRequest extends Model {
         return $req->update([
             'status'      => 'rejected',
             'approver_id' => $approverId,
-            'approved_at' => now(),
+            'approved_at' => date('Y-m-d H:i:s'),
             'remarks'     => $reason ?: 'Rejected by administrator',
         ]);
     }

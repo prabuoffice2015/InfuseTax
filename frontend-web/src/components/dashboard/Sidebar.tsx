@@ -108,6 +108,7 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
     } else if (role === "admin" || role.includes("distributor")) {
       return [
         { label: "Dashboard", href: "/dashboard/admin?tab=overview", tabKey: "overview", icon: LayoutDashboard, permKey: "overview" },
+        { label: "Wallet Approval", href: "/dashboard/admin?tab=approvals", tabKey: "approvals", icon: CheckSquare, permKey: "overview" },
         { label: "GST Registration", href: "/dashboard/admin?tab=gst-reg", tabKey: "gst-reg", icon: Building, permKey: "gst_registration" },
         { label: "GST Filing", href: "/dashboard/admin?tab=gst-filing", tabKey: "gst-filing", icon: FileSpreadsheet, permKey: "gstr_filing" },
         { label: "IT Filing", href: "/dashboard/admin?tab=it-filing", tabKey: "it-filing", icon: FileText, permKey: "itr_filing" },

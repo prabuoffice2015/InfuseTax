@@ -778,7 +778,7 @@ class DashboardController {
      */
     public function approveWalletRequest(array $body): void {
         $actor = AuthMiddleware::authenticate();
-        RoleMiddleware::authorize(['super_admin', 'distributor', 'retailer']);
+        RoleMiddleware::authorize(['super_admin', 'distributor', 'admin', 'retailer']);
 
         $reqId = Security::sanitizeString($body['request_id'] ?? '');
         $remarks = !empty($body['remarks']) ? Security::sanitizeString($body['remarks']) : null;
@@ -803,7 +803,7 @@ class DashboardController {
      */
     public function rejectWalletRequest(array $body): void {
         $actor = AuthMiddleware::authenticate();
-        RoleMiddleware::authorize(['super_admin', 'distributor', 'retailer']);
+        RoleMiddleware::authorize(['super_admin', 'distributor', 'admin', 'retailer']);
 
         $reqId  = Security::sanitizeString($body['request_id'] ?? '');
         $reason = Security::sanitizeString($body['reason'] ?? 'Invalid deposit UTR reference');
