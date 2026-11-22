@@ -1102,11 +1102,11 @@ class DashboardController {
     }
 
     /**
-     * Updates Tier 3 price by Master Distributor with automated audit log.
+     * Updates Tier 3 price by Super Admin with automated audit log.
      */
     public function updateDistributorPricing(array $body): void {
         $actor = AuthMiddleware::authenticate();
-        RoleMiddleware::authorize(['super_admin', 'distributor']);
+        RoleMiddleware::authorize(['super_admin']);
 
         $pdo = Database::getConnection();
         if (!$pdo) {
@@ -1406,11 +1406,11 @@ class DashboardController {
     }
 
     /**
-     * Creates a new broadcast announcement (Super Admin or Master Distributor).
+     * Creates a new broadcast announcement (Super Admin only).
      */
     public function createAnnouncement(array $body): void {
         $actor = AuthMiddleware::authenticate();
-        RoleMiddleware::authorize(['super_admin', 'distributor']);
+        RoleMiddleware::authorize(['super_admin']);
 
         $title    = Security::sanitizeString($body['title'] ?? '');
         $category = Security::sanitizeString($body['category'] ?? 'ANNOUNCEMENT');
@@ -1476,11 +1476,11 @@ class DashboardController {
     }
 
     /**
-     * Deletes an announcement.
+     * Deletes an announcement (Super Admin only).
      */
     public function deleteAnnouncement(array $body): void {
         $actor = AuthMiddleware::authenticate();
-        RoleMiddleware::authorize(['super_admin', 'distributor']);
+        RoleMiddleware::authorize(['super_admin']);
 
         $id = Security::sanitizeString($body['id'] ?? '');
         if (empty($id)) Response::error('Announcement ID is required.', 422);
@@ -1488,13 +1488,8 @@ class DashboardController {
         $pdo = Database::getConnection();
         if ($pdo) {
             try {
-                if ($actor['role'] === 'super_admin') {
-                    $stmt = $pdo->prepare("DELETE FROM announcements WHERE id = :id");
-                    $stmt->execute(['id' => $id]);
-                } else {
-                    $stmt = $pdo->prepare("DELETE FROM announcements WHERE id = :id AND tenant_id = :tid");
-                    $stmt->execute(['id' => $id, 'tid' => $actor['tenant_id']]);
-                }
+                $stmt = $pdo->prepare("DELETE FROM announcements WHERE id = :id");
+                $stmt->execute(['id' => $id]);
                 Response::json(['status' => 'success', 'message' => 'Announcement deleted.']);
             } catch (\Throwable $e) {
                 Response::error('Failed to delete announcement.', 500);
@@ -1503,11 +1498,11 @@ class DashboardController {
     }
 
     /**
-     * Toggles announcement active status.
+     * Toggles announcement active status (Super Admin only).
      */
     public function toggleAnnouncementStatus(array $body): void {
         $actor = AuthMiddleware::authenticate();
-        RoleMiddleware::authorize(['super_admin', 'distributor']);
+        RoleMiddleware::authorize(['super_admin']);
 
         $id = Security::sanitizeString($body['id'] ?? '');
         if (empty($id)) Response::error('Announcement ID is required.', 422);
@@ -1524,11 +1519,11 @@ class DashboardController {
         }
     }
     /**
-     * Updates an existing announcement (Super Admin or Master Distributor).
+     * Updates an existing announcement (Super Admin only).
      */
     public function updateAnnouncement(array $body): void {
         $actor = AuthMiddleware::authenticate();
-        RoleMiddleware::authorize(['super_admin', 'distributor']);
+        RoleMiddleware::authorize(['super_admin']);
 
         $id       = Security::sanitizeString($body['id'] ?? '');
         $title    = Security::sanitizeString($body['title'] ?? '');

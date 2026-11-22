@@ -62,4 +62,27 @@ test.describe('04 - Retailer POS Desk & Wallet Controls', () => {
     const modalHeading = page.locator('text=/Add New Customer/i');
     await expect(modalHeading.first()).toBeVisible({ timeout: 5000 });
   });
+
+  test('should display Month Dropdown and Customer Invoices Compilation in IT Filing desk', async ({ page }) => {
+    const sidebar = page.locator('aside');
+    await sidebar.getByText('IT Filing').click();
+    await page.waitForTimeout(500);
+
+    await expect(page).toHaveURL(/desk=itr/);
+
+    // Switch to Monthly Mode
+    const monthlyBtn = page.locator('button').filter({ hasText: /Monthly Invoices/i });
+    if (await monthlyBtn.count() > 0) {
+      await monthlyBtn.first().click();
+      await page.waitForTimeout(300);
+    }
+
+    // Verify Month selector
+    const monthSelect = page.locator('select');
+    await expect(monthSelect.first()).toBeVisible({ timeout: 5000 });
+
+    // Verify Attach Customer Invoice button
+    const attachBtn = page.locator('button').filter({ hasText: /Attach Customer Invoice/i });
+    await expect(attachBtn.first()).toBeVisible();
+  });
 });

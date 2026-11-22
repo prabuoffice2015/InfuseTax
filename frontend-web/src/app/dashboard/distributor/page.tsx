@@ -427,10 +427,7 @@ export default function DistributorDashboardPage() {
         (activeTab === "gst-reg" && tenantPermissions.includes("gst_registration")) ||
         (activeTab === "gst-filing" && tenantPermissions.includes("gstr_filing")) ||
         (activeTab === "it-filing" && tenantPermissions.includes("itr_filing")) ||
-        (activeTab === "reports" && tenantPermissions.includes("reports")) ||
-        (activeTab === "pricing" && tenantPermissions.includes("pricing")) ||
-        (activeTab === "outlets" && tenantPermissions.includes("outlets")) ||
-        (activeTab === "announcements" && tenantPermissions.includes("announcements"));
+        (activeTab === "reports" && tenantPermissions.includes("reports"));
 
       if (!isAllowed) {
         switchTab("overview");
@@ -1093,9 +1090,6 @@ export default function DistributorDashboardPage() {
              activeTab === "gst-filing" ? "GST Return Filings" :
              activeTab === "it-filing" ? "Income Tax Returns" :
              activeTab === "reports" ? "Reports & Financial Ledger" :
-             activeTab === "pricing" ? "Tier 3 Pricing Setup" :
-             activeTab === "outlets" ? "Network Outlets" :
-             activeTab === "announcements" ? "Company Announcements" :
              "Admin Operations"}
           </h1>
           <p className="text-xs text-slate-500">
@@ -1322,9 +1316,9 @@ export default function DistributorDashboardPage() {
       {/* TAB 2: NETWORK OUTLETS (T3 Retailers & T4 Operators)                      */}
       {/* ========================================================================= */}
       {/* ========================================================================= */}
-      {/* TAB: COMPANY ANNOUNCEMENTS & DOWNLINE BROADCASTS                          */}
+      {/* (SUPER ADMIN MANAGED ONLY) ANNOUNCEMENTS, OUTLETS & PRICING REMOVED FROM ADMIN */}
       {/* ========================================================================= */}
-      {activeTab === "announcements" && (
+      {false && activeTab === "announcements" && (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
             <div>
@@ -1477,7 +1471,7 @@ export default function DistributorDashboardPage() {
         </div>
       )}
 
-      {activeTab === "outlets" && (
+      {false && activeTab === "outlets" && (
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -1686,7 +1680,7 @@ export default function DistributorDashboardPage() {
       {/* ========================================================================= */}
       {/* TAB 3: DIRECT TIER 3 PRICING SETUP                                        */}
       {/* ========================================================================= */}
-      {activeTab === "pricing" && (
+      {false && activeTab === "pricing" && (
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">

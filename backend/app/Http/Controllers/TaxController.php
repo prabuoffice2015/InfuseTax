@@ -808,27 +808,31 @@ class TaxController {
                                      WHEN g.entity_type LIKE '%GSTR%' THEN g.entity_type
                                      ELSE 'GST Registration'
                                    END as service, 
-                                   g.portal_fee as amount, g.retailer_margin as margin, 
+                                   NULL as amount, NULL as margin, 
                                    to_char(g.created_at, 'DD Mon YYYY, HH24:MI') as date, g.status,
                                    g.documents_payload, g.verified_doc_url, g.rejection_remarks,
                                    g.created_at
                             FROM gst_filings g
-                            WHERE g.operator_id = ? OR g.retailer_id = ?
+                            WHERE g.operator_id = :uid OR g.retailer_id = :uid 
+                               OR g.pan = (SELECT income_tax_login_id FROM users WHERE id = :uid)
+                               OR g.trade_name = (SELECT full_name FROM users WHERE id = :uid)
                             UNION ALL
                             SELECT i.id as uuid, i.ack_number as id, i.ack_number as arn, i.client_name as client, i.client_name, 'itr' as service_category,
                                    i.itr_form as entity_type, i.pan, COALESCE(i.mobile, '') as mobile, COALESCE(i.email, '') as email,
                                    'Income Tax Return' as service,
-                                   i.portal_fee as amount, i.retailer_margin as margin,
+                                   NULL as amount, NULL as margin,
                                    to_char(i.created_at, 'DD Mon YYYY, HH24:MI') as date, i.status,
                                    i.documents_payload, i.verified_doc_url, i.rejection_remarks,
                                    i.created_at
                             FROM itr_filings i
-                            WHERE i.operator_id = ? OR i.retailer_id = ?
+                            WHERE i.operator_id = :uid OR i.retailer_id = :uid
+                               OR i.pan = (SELECT income_tax_login_id FROM users WHERE id = :uid)
+                               OR i.client_name = (SELECT full_name FROM users WHERE id = :uid)
                         ) sub
                         ORDER BY created_at DESC
                         LIMIT 50
                     ");
-                    $stmt->execute([$userId, $userId, $userId, $userId]);
+                    $stmt->execute(['uid' => $userId]);
                     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 } else {
                     $stmt = $pdo->prepare("
@@ -973,6 +977,357 @@ class TaxController {
             ]);
         } catch (\Throwable $e) {
             Response::error('Failed to fetch E-Sevai list: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Get Customer Daily Invoices organized by Month.
+     */
+    public function getCustomerInvoices(): void {
+        $actor = AuthMiddleware::authenticate();
+        $pdo = Database::getConnection();
+        if (!$pdo) Response::error('Database connection unavailable.', 500);
+
+        $userId = $actor['sub'] ?? $actor['id'] ?? '';
+        $role   = $actor['role'] ?? 'customer';
+        $month  = Security::sanitizeString($_GET['month'] ?? date('Y-m'));
+
+        try {
+            $isCustomer = in_array($role, ['customer', 'operator', 'employee']);
+            $targetCustomerId = $isCustomer ? $userId : Security::sanitizeString($_GET['customer_id'] ?? '');
+
+            if ($isCustomer) {
+                $stmt = $pdo->prepare("
+                    SELECT id, tenant_id, customer_id, retailer_id, month, 
+                           invoice_date, invoice_number, invoice_title, 
+                           file_url, file_name, status, notes, created_at
+                    FROM customer_invoices
+                    WHERE customer_id = :cid AND month = :m
+                    ORDER BY invoice_date DESC, created_at DESC
+                ");
+                $stmt->execute(['cid' => $targetCustomerId, 'm' => $month]);
+                $invoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // Check if filing exists for this customer & month
+                $stmtFiling = $pdo->prepare("
+                    SELECT id, ack_number, status, bank_period, verified_doc_url, rejection_remarks, created_at, approved_at
+                    FROM itr_filings
+                    WHERE (operator_id = :cid OR client_name = (SELECT full_name FROM users WHERE id = :cid))
+                      AND (bank_period = :m OR documents_payload->>'month' = :m)
+                    ORDER BY created_at DESC LIMIT 1
+                ");
+                $stmtFiling->execute(['cid' => $targetCustomerId, 'm' => $month]);
+                $filing = $stmtFiling->fetch(PDO::FETCH_ASSOC) ?: null;
+
+                Response::json([
+                    'status'   => 'success',
+                    'month'    => $month,
+                    'invoices' => $invoices,
+                    'count'    => count($invoices),
+                    'filing'   => $filing
+                ]);
+            } else {
+                // Retailer, Admin, or Super Admin view
+                if (!empty($targetCustomerId)) {
+                    $stmt = $pdo->prepare("
+                        SELECT ci.*, u.full_name as customer_name, u.email as customer_email, u.mobile as customer_mobile
+                        FROM customer_invoices ci
+                        LEFT JOIN users u ON ci.customer_id = u.id
+                        WHERE ci.customer_id = :cid AND ci.month = :m
+                        ORDER BY ci.invoice_date DESC, ci.created_at DESC
+                    ");
+                    $stmt->execute(['cid' => $targetCustomerId, 'm' => $month]);
+                } else if ($role === 'super_admin' || $role === 'admin' || $role === 'distributor') {
+                    $stmt = $pdo->prepare("
+                        SELECT ci.*, u.full_name as customer_name, r.full_name as retailer_name
+                        FROM customer_invoices ci
+                        LEFT JOIN users u ON ci.customer_id = u.id
+                        LEFT JOIN users r ON ci.retailer_id = r.id
+                        WHERE ci.month = :m
+                        ORDER BY ci.invoice_date DESC, ci.created_at DESC
+                        LIMIT 100
+                    ");
+                    $stmt->execute(['m' => $month]);
+                } else {
+                    // Retailer looking at all their customers' invoices for that month
+                    $stmt = $pdo->prepare("
+                        SELECT ci.*, u.full_name as customer_name
+                        FROM customer_invoices ci
+                        LEFT JOIN users u ON ci.customer_id = u.id
+                        WHERE (ci.retailer_id = :rid OR u.parent_id = :rid) AND ci.month = :m
+                        ORDER BY ci.invoice_date DESC, ci.created_at DESC
+                    ");
+                    $stmt->execute(['rid' => $userId, 'm' => $month]);
+                }
+                $invoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                $filing = null;
+                if (!empty($targetCustomerId)) {
+                    $stmtFiling = $pdo->prepare("
+                        SELECT id, ack_number, status, bank_period, portal_fee, verified_doc_url, rejection_remarks, created_at, approved_at
+                        FROM itr_filings
+                        WHERE (operator_id = :cid OR client_name = (SELECT full_name FROM users WHERE id = :cid))
+                          AND (bank_period = :m OR documents_payload->>'month' = :m)
+                        ORDER BY created_at DESC LIMIT 1
+                    ");
+                    $stmtFiling->execute(['cid' => $targetCustomerId, 'm' => $month]);
+                    $filing = $stmtFiling->fetch(PDO::FETCH_ASSOC) ?: null;
+                }
+
+                Response::json([
+                    'status'   => 'success',
+                    'month'    => $month,
+                    'invoices' => $invoices,
+                    'count'    => count($invoices),
+                    'filing'   => $filing
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Response::error('Failed to fetch customer invoices: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Customer or Retailer uploads a daily invoice for a given month.
+     */
+    public function uploadCustomerInvoice(array $body): void {
+        $actor = AuthMiddleware::authenticate();
+        $pdo = Database::getConnection();
+        if (!$pdo) Response::error('Database connection unavailable.', 500);
+
+        $userId   = $actor['sub'] ?? $actor['id'] ?? '';
+        $role     = $actor['role'] ?? 'customer';
+        $tenantId = $actor['tenant_id'] ?? 'a0000000-0000-0000-0000-000000000001';
+
+        $isCustomer = in_array($role, ['customer', 'operator', 'employee']);
+
+        if ($isCustomer) {
+            $customerId = $userId;
+            $stmtP = $pdo->prepare("SELECT parent_id, tenant_id FROM users WHERE id = :id");
+            $stmtP->execute(['id' => $userId]);
+            $uRow = $stmtP->fetch(PDO::FETCH_ASSOC);
+            $retailerId = $uRow['parent_id'] ?? null;
+            if (!empty($uRow['tenant_id'])) $tenantId = $uRow['tenant_id'];
+        } else {
+            $customerId = Security::sanitizeString($body['customer_id'] ?? '');
+            $retailerId = $userId;
+            if (empty($customerId)) {
+                Response::error('Please select a customer to attach invoice.', 422);
+            }
+        }
+
+        $month         = Security::sanitizeString($body['month'] ?? date('Y-m'));
+        $invoiceDate   = Security::sanitizeString($body['invoice_date'] ?? date('Y-m-d'));
+        $invoiceTitle  = Security::sanitizeString($body['invoice_title'] ?? $body['title'] ?? 'Daily Business Invoice');
+        $invoiceNumber = Security::sanitizeString($body['invoice_number'] ?? ('INV-' . date('d') . rand(100, 999)));
+        $fileUrl       = trim($body['file_url'] ?? $body['data_url'] ?? '');
+        $fileName      = Security::sanitizeString($body['file_name'] ?? 'invoice_slip.pdf');
+        $amount        = floatval($body['amount'] ?? 0.00);
+        $notes         = Security::sanitizeString($body['notes'] ?? '');
+
+        if (empty($fileUrl)) {
+            Response::error('Invoice document file or scan is required.', 422);
+        }
+
+        try {
+            $stmt = $pdo->prepare("
+                INSERT INTO customer_invoices 
+                (tenant_id, customer_id, retailer_id, month, invoice_date, invoice_number, invoice_title, amount, file_url, file_name, status, notes, created_at, updated_at)
+                VALUES 
+                (:tid, :cid, :rid, :m, :idate, :inumber, :ititle, :amt, :furl, :fname, 'UPLOADED', :notes, NOW(), NOW())
+                RETURNING *
+            ");
+            $stmt->execute([
+                'tid'     => $tenantId,
+                'cid'     => $customerId,
+                'rid'     => $retailerId,
+                'm'       => $month,
+                'idate'   => $invoiceDate,
+                'inumber' => $invoiceNumber,
+                'ititle'  => $invoiceTitle,
+                'amt'     => $amount,
+                'furl'    => $fileUrl,
+                'fname'   => $fileName,
+                'notes'   => $notes
+            ]);
+            $created = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            Response::json([
+                'status'  => 'success',
+                'message' => 'Invoice uploaded successfully for month ' . $month,
+                'invoice' => $created
+            ], 201);
+        } catch (\Throwable $e) {
+            Response::error('Failed to upload customer invoice: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Delete an unfiled customer invoice.
+     */
+    public function deleteCustomerInvoice(array $body): void {
+        $actor = AuthMiddleware::authenticate();
+        $pdo = Database::getConnection();
+        if (!$pdo) Response::error('Database connection unavailable.', 500);
+
+        $userId = $actor['sub'] ?? $actor['id'] ?? '';
+        $role   = $actor['role'] ?? 'customer';
+        $id     = Security::sanitizeString($body['id'] ?? $body['invoice_id'] ?? '');
+
+        if (empty($id)) {
+            Response::error('Invoice ID is required.', 422);
+        }
+
+        try {
+            if ($role === 'super_admin') {
+                $stmt = $pdo->prepare("DELETE FROM customer_invoices WHERE id = :id");
+                $stmt->execute(['id' => $id]);
+            } else {
+                $stmt = $pdo->prepare("DELETE FROM customer_invoices WHERE id = :id AND (customer_id = :uid OR retailer_id = :uid) AND status = 'UPLOADED'");
+                $stmt->execute(['id' => $id, 'uid' => $userId]);
+            }
+
+            Response::json([
+                'status'  => 'success',
+                'message' => 'Invoice removed successfully.'
+            ]);
+        } catch (\Throwable $e) {
+            Response::error('Failed to delete invoice: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Retailer submits compiled Monthly IT Filing for a customer.
+     * Deducts service fee from retailer wallet, creates ITR filing for Admin verification.
+     */
+    public function submitMonthlyItFiling(array $body): void {
+        $actor = AuthMiddleware::authenticate();
+        $pdo = Database::getConnection();
+        if (!$pdo) Response::error('Database connection unavailable.', 500);
+
+        $retailerId = $actor['sub'] ?? $actor['id'] ?? '';
+        $tenantId   = $actor['tenant_id'] ?? 'a0000000-0000-0000-0000-000000000001';
+        $customerId = Security::sanitizeString($body['customer_id'] ?? '');
+        $month      = Security::sanitizeString($body['month'] ?? date('Y-m'));
+        $notes      = Security::sanitizeString($body['notes'] ?? 'Monthly IT return submitted with compiled invoices.');
+
+        if (empty($customerId)) {
+            Response::error('Target customer is required for monthly IT filing.', 422);
+        }
+
+        try {
+            $pdo->beginTransaction();
+
+            // 1. Fetch customer details
+            $stmtC = $pdo->prepare("SELECT id, full_name, email, mobile, income_tax_login_id, user_code, tenant_id FROM users WHERE id = :cid");
+            $stmtC->execute(['cid' => $customerId]);
+            $customer = $stmtC->fetch(PDO::FETCH_ASSOC);
+
+            if (!$customer) {
+                $pdo->rollBack();
+                Response::error('Customer not found.', 404);
+            }
+
+            if (!empty($customer['tenant_id'])) {
+                $tenantId = $customer['tenant_id'];
+            }
+
+            // 2. Fetch invoices for this customer & month
+            $stmtInv = $pdo->prepare("SELECT id, invoice_date, invoice_number, invoice_title, amount, file_url, file_name FROM customer_invoices WHERE customer_id = :cid AND month = :m");
+            $stmtInv->execute(['cid' => $customerId, 'm' => $month]);
+            $invoices = $stmtInv->fetchAll(PDO::FETCH_ASSOC);
+
+            // 3. Get Super Admin configured service fee for ITR filing
+            $portalFee = self::getServiceRate($pdo, $tenantId, 'itr_filing', 550.00);
+
+            // 4. Check retailer wallet balance
+            $stmtW = $pdo->prepare("SELECT balance FROM wallets WHERE user_id = :rid FOR UPDATE");
+            $stmtW->execute(['rid' => $retailerId]);
+            $currBal = floatval($stmtW->fetchColumn() ?: 0.00);
+
+            if ($currBal < $portalFee) {
+                $pdo->rollBack();
+                Response::error("Insufficient wallet balance (₹" . number_format($currBal, 2) . "). Required service fee for Monthly IT Filing is ₹" . number_format($portalFee, 2) . ". Please top up wallet.", 422);
+            }
+
+            // 5. Debit retailer wallet
+            $newBalance = $currBal - $portalFee;
+            $stmtUpW = $pdo->prepare("UPDATE wallets SET balance = :bal, updated_at = NOW() WHERE user_id = :rid");
+            $stmtUpW->execute(['bal' => $newBalance, 'rid' => $retailerId]);
+
+            // 6. Record audit ledger
+            $stmtLedger = $pdo->prepare("
+                INSERT INTO audit_ledger (tenant_id, user_id, entry_type, amount, balance_after, description, created_at)
+                VALUES (:tid, :uid, 'DEBIT', :amt, :after, :desc, NOW())
+            ");
+            $stmtLedger->execute([
+                'tid'   => $tenantId,
+                'uid'   => $retailerId,
+                'amt'   => $portalFee,
+                'after' => $newBalance,
+                'desc'  => "Monthly IT Filing - " . $customer['full_name'] . " (" . $month . ")"
+            ]);
+
+            // 7. Insert ITR filing record
+            $ack = 'ITR' . date('Ym') . rand(100000, 999999);
+            $pan = !empty($customer['income_tax_login_id']) ? strtoupper($customer['income_tax_login_id']) : 'PANPENDING';
+
+            $docsPayload = json_encode([
+                'month'          => $month,
+                'invoices_count' => count($invoices),
+                'invoices'       => $invoices,
+                'notes'          => $notes,
+                'submitted_by'   => $actor['name'] ?? 'Retailer'
+            ]);
+
+            $stmtFiling = $pdo->prepare("
+                INSERT INTO itr_filings 
+                (tenant_id, retailer_id, operator_id, ack_number, client_name, pan, assessment_year, itr_form, gross_salary, optimal_regime, tax_savings, net_refund, status, documents_payload, mobile, email, bank_period, portal_fee, retailer_margin, created_at)
+                VALUES 
+                (:tid, :rid, :oid, :ack, :client, :pan, '2025-26', 'Monthly IT Return', 0, 'MONTHLY_RETURN', 0, 0, 'PENDING_APPROVAL', :docs, :mobile, :email, :bperiod, :fee, 0.00, NOW())
+                RETURNING *
+            ");
+            $stmtFiling->execute([
+                'tid'     => $tenantId,
+                'rid'     => $retailerId,
+                'oid'     => $customerId,
+                'ack'     => $ack,
+                'client'  => $customer['full_name'],
+                'pan'     => $pan,
+                'docs'    => $docsPayload,
+                'mobile'  => $customer['mobile'] ?? '',
+                'email'   => $customer['email'] ?? '',
+                'bperiod' => $month,
+                'fee'     => $portalFee
+            ]);
+            $filing = $stmtFiling->fetch(PDO::FETCH_ASSOC);
+
+            // 8. Mark customer invoices as FILED
+            $stmtMark = $pdo->prepare("UPDATE customer_invoices SET status = 'FILED', updated_at = NOW() WHERE customer_id = :cid AND month = :m");
+            $stmtMark->execute(['cid' => $customerId, 'm' => $month]);
+
+            // 9. Notify Admin & Super Admin
+            \App\Models\Notification::create([
+                'tenant_id' => $tenantId,
+                'title'     => "New Monthly IT Filing: " . $customer['full_name'] . " (" . $month . ")",
+                'message'   => "Retailer submitted monthly return with " . count($invoices) . " attached invoices. Wallet deducted ₹" . number_format($portalFee, 2) . ". Ready for verification.",
+                'type'      => "filing",
+                'is_read'   => false,
+            ]);
+
+            $pdo->commit();
+
+            Response::json([
+                'status'     => 'success',
+                'message'    => "✓ Monthly IT Filing for {$customer['full_name']} ({$month}) submitted successfully! ₹" . number_format($portalFee, 2) . " deducted from wallet.",
+                'filing_id'  => $filing['id'] ?? $ack,
+                'ack_number' => $ack,
+                'status'     => 'PENDING_APPROVAL',
+                'balance'    => $newBalance
+            ], 201);
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            Response::error('Failed to submit monthly IT filing: ' . $e->getMessage(), 500);
         }
     }
 }

@@ -49,7 +49,9 @@ import {
   Plane,
   CreditCard,
   Award,
-  Wallet
+  Wallet,
+  Calendar,
+  Plus
 } from "lucide-react";
 import ReceiptModal, { ReceiptData } from "@/components/dashboard/ReceiptModal";
 import AnnouncementsDesk from "@/components/dashboard/AnnouncementsDesk";
@@ -238,6 +240,145 @@ export default function RetailerDashboardPage() {
   // Ledger Filter
   const [ledgerActionFilter, setLedgerActionFilter] = useState("all");
   const [ledgerSearch, setLedgerSearch] = useState("");
+
+  // Month-Wise IT Filing & Invoices State for Retailer
+  const retMonthOptions = useMemo(() => {
+    const options = [];
+    const now = new Date();
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = d.toISOString().slice(0, 7); // YYYY-MM
+      const label = d.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+      options.push({ key, label });
+    }
+    return options;
+  }, []);
+
+  const [retSelectedMonth, setRetSelectedMonth] = useState<string>(
+    new Date().toISOString().slice(0, 7)
+  );
+  const [retSelectedCustomerForInvoices, setRetSelectedCustomerForInvoices] = useState<any | null>(null);
+  const [retCustomerInvoices, setRetCustomerInvoices] = useState<any[]>([]);
+  const [retMonthlyFiling, setRetMonthlyFiling] = useState<any | null>(null);
+  const [retInvoicesLoading, setRetInvoicesLoading] = useState(false);
+  const [showRetInvoiceModal, setShowRetInvoiceModal] = useState(false);
+  const [retInvoiceForm, setRetInvoiceForm] = useState({
+    invoice_date: new Date().toISOString().slice(0, 10),
+    invoice_title: "",
+    invoice_number: "",
+    amount: "0",
+    file_name: "",
+    file_url: "",
+    notes: ""
+  });
+  const [isUploadingRetInvoice, setIsUploadingRetInvoice] = useState(false);
+  const [isSubmittingMonthlyReturn, setIsSubmittingMonthlyReturn] = useState(false);
+  const [itrSubMode, setItrSubMode] = useState<"standard" | "monthly">("standard");
+
+  const loadRetailerCustomerInvoices = async (customerId: string, month: string) => {
+    if (!customerId) return;
+    setRetInvoicesLoading(true);
+    try {
+      const res = await secureApiCall(`/api/v1/customer/invoices?customer_id=${customerId}&month=${month}`);
+      if (res.ok && res.data?.status === "success") {
+        setRetCustomerInvoices(res.data.invoices || []);
+        setRetMonthlyFiling(res.data.filing || null);
+      } else {
+        setRetCustomerInvoices([]);
+        setRetMonthlyFiling(null);
+      }
+    } catch {
+      setRetCustomerInvoices([]);
+      setRetMonthlyFiling(null);
+    } finally {
+      setRetInvoicesLoading(false);
+    }
+  };
+
+  const handleRetUploadInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!retSelectedCustomerForInvoices) {
+      showToast("Please select a customer first", "error");
+      return;
+    }
+    if (!retInvoiceForm.file_url) {
+      showToast("Please attach an invoice file / scan (PDF/Image)", "error");
+      return;
+    }
+    setIsUploadingRetInvoice(true);
+    try {
+      const res = await secureApiCall("/api/v1/customer/invoices/upload", {
+        method: "POST",
+        body: {
+          customer_id: retSelectedCustomerForInvoices.id,
+          month: retSelectedMonth,
+          invoice_date: retInvoiceForm.invoice_date,
+          invoice_title: retInvoiceForm.invoice_title || "Daily Customer Invoice",
+          invoice_number: retInvoiceForm.invoice_number,
+          amount: parseFloat(retInvoiceForm.amount || "0"),
+          file_url: retInvoiceForm.file_url,
+          file_name: retInvoiceForm.file_name,
+          notes: retInvoiceForm.notes
+        }
+      });
+      if (res.ok && res.data?.status === "success") {
+        showToast("✓ Invoice attached for " + retSelectedCustomerForInvoices.name);
+        setShowRetInvoiceModal(false);
+        setRetInvoiceForm({
+          invoice_date: new Date().toISOString().slice(0, 10),
+          invoice_title: "",
+          invoice_number: "",
+          amount: "0",
+          file_name: "",
+          file_url: "",
+          notes: ""
+        });
+        loadRetailerCustomerInvoices(retSelectedCustomerForInvoices.id, retSelectedMonth);
+      } else {
+        showToast(res.data?.message || "Failed to upload invoice", "error");
+      }
+    } catch {
+      showToast("Network error uploading invoice", "error");
+    } finally {
+      setIsUploadingRetInvoice(false);
+    }
+  };
+
+  const handleSubmitMonthlyItFiling = async () => {
+    if (!retSelectedCustomerForInvoices) {
+      showToast("Please select a customer", "error");
+      return;
+    }
+    const monthLabel = retMonthOptions.find(m => m.key === retSelectedMonth)?.label || retSelectedMonth;
+    if (!confirm(`Are you sure you want to submit Monthly IT Filing for ${retSelectedCustomerForInvoices.name} (${monthLabel})?\n\nThis will deduct the required service fee from your wallet balance (₹${counterWalletBalance.toFixed(2)}) and route the return to Admin for verification and official receipt upload.`)) {
+      return;
+    }
+    setIsSubmittingMonthlyReturn(true);
+    try {
+      const res = await secureApiCall("/api/v1/retailer/itr/monthly-submit", {
+        method: "POST",
+        body: {
+          customer_id: retSelectedCustomerForInvoices.id,
+          month: retSelectedMonth,
+          notes: `Monthly return compiled with ${retCustomerInvoices.length} invoices.`
+        }
+      });
+      if (res.ok && res.data?.status === "success") {
+        showToast(res.data.message || "✓ Monthly IT Filing submitted successfully!");
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("infusetax_wallet_updated"));
+        }
+        loadAllData();
+        loadRetailerCustomerInvoices(retSelectedCustomerForInvoices.id, retSelectedMonth);
+      } else {
+        showToast(res.data?.message || "Failed to submit monthly IT filing", "error");
+      }
+    } catch {
+      showToast("Network error submitting filing", "error");
+    } finally {
+      setIsSubmittingMonthlyReturn(false);
+    }
+  };
 
   // Auto-redirect to first permitted desk if current desk is disabled
   useEffect(() => {
@@ -1616,6 +1757,18 @@ export default function RetailerDashboardPage() {
                               <button
                                 onClick={() => {
                                   setSelectedCustomerForFiling(c);
+                                  setRetSelectedCustomerForInvoices(c);
+                                  loadRetailerCustomerInvoices(c.id, retSelectedMonth);
+                                  setItrSubMode("monthly");
+                                  switchDesk("itr");
+                                }}
+                                className="px-2.5 py-1 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-bold text-[11px] rounded-lg transition-all cursor-pointer"
+                              >
+                                Monthly ITR
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedCustomerForFiling(c);
                                   setEsevaiApplicantName(c.name || "");
                                   setEsevaiMobile(c.mobile || "");
                                   switchDesk("esevai");
@@ -2394,25 +2547,260 @@ export default function RetailerDashboardPage() {
               </button>
             </div>
           </div>
-          {/* Filer Type Switcher */}
-          <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-2 max-w-md">
+          {/* Top Mode Selector: Standard Annual Return vs Monthly Compiled Invoices */}
+          <div className="flex bg-slate-200/80 p-1.5 rounded-2xl gap-2 max-w-lg">
             <button
-              onClick={() => setItFilerType("individual")}
-              className={`flex-1 py-2.5 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer text-center ${
-                itFilerType === "individual" ? "bg-white text-emerald-800 shadow-md font-extrabold" : "text-slate-600 hover:text-slate-900"
+              type="button"
+              onClick={() => setItrSubMode("standard")}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer text-center ${
+                itrSubMode === "standard" ? "bg-white text-purple-900 shadow-sm font-black" : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              Individual Filer (ITR-1 / 2)
+              Annual Return Form (ITR 1-4)
             </button>
             <button
-              onClick={() => setItFilerType("business")}
-              className={`flex-1 py-2.5 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer text-center ${
-                itFilerType === "business" ? "bg-white text-emerald-800 shadow-md font-extrabold" : "text-slate-600 hover:text-slate-900"
+              type="button"
+              onClick={() => {
+                setItrSubMode("monthly");
+                const targetCust = selectedCustomerForFiling || retSelectedCustomerForInvoices || customersList[0];
+                if (targetCust) {
+                  setRetSelectedCustomerForInvoices(targetCust);
+                  setSelectedCustomerForFiling(targetCust);
+                  loadRetailerCustomerInvoices(targetCust.id, retSelectedMonth);
+                }
+              }}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer text-center ${
+                itrSubMode === "monthly" ? "bg-purple-700 text-white shadow-sm font-black" : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              Business Person (ITR-3 / 4)
+              Monthly Invoices &amp; Return Submission
             </button>
           </div>
+
+          {itrSubMode === "monthly" && (
+            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                <div>
+                  <span className="px-2.5 py-0.5 bg-purple-100 text-purple-800 border border-purple-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
+                    Tier 3 Client Compilation
+                  </span>
+                  <h2 className="text-xl font-extrabold text-slate-900 mt-1">
+                    Customer Monthly IT Filing &amp; Invoices Desk
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Review daily client invoices, attach invoices on behalf of customer, and submit monthly returns to Admin with wallet deduction.
+                  </p>
+                </div>
+
+                {/* Month Dropdown & Attach Invoice Button */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center space-x-2 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5">
+                    <Calendar className="w-4 h-4 text-purple-700" />
+                    <span className="text-xs font-bold text-slate-700">Month:</span>
+                    <select
+                      value={retSelectedMonth}
+                      onChange={(e) => {
+                        const m = e.target.value;
+                        setRetSelectedMonth(m);
+                        if (retSelectedCustomerForInvoices) {
+                          loadRetailerCustomerInvoices(retSelectedCustomerForInvoices.id, m);
+                        }
+                      }}
+                      className="bg-transparent text-xs font-black text-purple-900 focus:outline-none cursor-pointer"
+                    >
+                      {retMonthOptions.map((opt) => (
+                        <option key={opt.key} value={opt.key}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!retSelectedCustomerForInvoices && customersList[0]) {
+                        setRetSelectedCustomerForInvoices(customersList[0]);
+                      }
+                      setShowRetInvoiceModal(true);
+                    }}
+                    className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-1.5 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>+ Attach Customer Invoice</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Monthly Filing Status Banner */}
+              {retMonthlyFiling ? (
+                <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs ${
+                  retMonthlyFiling.status === "APPROVED"
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                    : "bg-blue-50 border-blue-200 text-blue-900"
+                }`}>
+                  <div className="flex items-center space-x-3">
+                    {retMonthlyFiling.status === "APPROVED" ? (
+                      <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
+                    ) : (
+                      <Clock className="w-6 h-6 text-blue-600 shrink-0" />
+                    )}
+                    <div>
+                      <span className="font-extrabold block text-sm">
+                        {retMonthlyFiling.status === "APPROVED"
+                          ? `✓ Monthly Return for ${retMonthOptions.find(m => m.key === retSelectedMonth)?.label || retSelectedMonth} Approved!`
+                          : `⏳ Monthly Return for ${retMonthOptions.find(m => m.key === retSelectedMonth)?.label || retSelectedMonth} Under Admin Review`}
+                      </span>
+                      <span className="text-[11px] opacity-80">
+                        Ack: {retMonthlyFiling.ack_number} • Status: {retMonthlyFiling.status} • Fee: ₹{parseFloat(retMonthlyFiling.portal_fee || 550).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {retMonthlyFiling.verified_doc_url && (
+                    <a
+                      href={retMonthlyFiling.verified_doc_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center space-x-1.5 shadow-sm shrink-0"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Download Admin-Approved Receipt</span>
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl border border-purple-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs">
+                  <div>
+                    <span className="font-bold text-slate-800 block text-sm">
+                      Month Invoices Compilation: {retCustomerInvoices.length} Attached
+                    </span>
+                    <span className="text-slate-500 text-[11px]">
+                      Once all daily invoices for this month are compiled, click Submit to debit your wallet and send to Admin for department processing.
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSubmitMonthlyItFiling}
+                    disabled={isSubmittingMonthlyReturn}
+                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-extrabold shadow-md flex items-center space-x-2 cursor-pointer disabled:opacity-60 shrink-0"
+                  >
+                    <FileCheck className="w-4 h-4" />
+                    <span>{isSubmittingMonthlyReturn ? "Submitting..." : "Submit Monthly IT Return"}</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Invoices List Table */}
+              <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
+                    <tr>
+                      <th className="p-3.5">Invoice Date</th>
+                      <th className="p-3.5">Customer Name</th>
+                      <th className="p-3.5">Bill Title / Description</th>
+                      <th className="p-3.5">Invoice / Ref No.</th>
+                      <th className="p-3.5">Amount (₹)</th>
+                      <th className="p-3.5">Status</th>
+                      <th className="p-3.5 text-center">Document</th>
+                      <th className="p-3.5 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                    {retInvoicesLoading ? (
+                      <tr>
+                        <td colSpan={8} className="p-6 text-center text-slate-400 font-bold">
+                          Loading invoices...
+                        </td>
+                      </tr>
+                    ) : retCustomerInvoices.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="p-8 text-center text-slate-400 font-bold">
+                          No invoices found for {retMonthOptions.find(m => m.key === retSelectedMonth)?.label || retSelectedMonth}. Click &quot;+ Attach Customer Invoice&quot; to upload daily bills.
+                        </td>
+                      </tr>
+                    ) : (
+                      retCustomerInvoices.map((inv) => (
+                        <tr key={inv.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-3.5 font-mono text-slate-700">{inv.invoice_date}</td>
+                          <td className="p-3.5 font-bold text-slate-900">{inv.customer_name || retSelectedCustomerForInvoices?.name || "Customer"}</td>
+                          <td className="p-3.5 text-slate-800">{inv.invoice_title}</td>
+                          <td className="p-3.5 font-mono text-purple-700 font-bold">{inv.invoice_number || "—"}</td>
+                          <td className="p-3.5 font-mono font-bold text-slate-900">₹{parseFloat(inv.amount || 0).toFixed(2)}</td>
+                          <td className="p-3.5">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                              inv.status === "FILED" ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"
+                            }`}>
+                              {inv.status === "FILED" ? "Filed in Return" : "Uploaded"}
+                            </span>
+                          </td>
+                          <td className="p-3.5 text-center">
+                            {inv.file_url ? (
+                              <a
+                                href={inv.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors inline-flex items-center space-x-1"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>View File</span>
+                              </a>
+                            ) : (
+                              <span className="text-slate-400 italic">No file</span>
+                            )}
+                          </td>
+                          <td className="p-3.5 text-right">
+                            {inv.status !== "FILED" && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (!confirm("Delete this invoice?")) return;
+                                  await secureApiCall("/api/v1/customer/invoices/delete", {
+                                    method: "POST",
+                                    body: { invoice_id: inv.id }
+                                  });
+                                  if (retSelectedCustomerForInvoices) {
+                                    loadRetailerCustomerInvoices(retSelectedCustomerForInvoices.id, retSelectedMonth);
+                                  }
+                                }}
+                                className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                title="Delete invoice"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Filer Type Switcher for Standard Mode */}
+          {itrSubMode === "standard" && (
+            <>
+              <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-2 max-w-md">
+                <button
+                  onClick={() => setItFilerType("individual")}
+                  className={`flex-1 py-2.5 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer text-center ${
+                    itFilerType === "individual" ? "bg-white text-emerald-800 shadow-md font-extrabold" : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Individual Filer (ITR-1 / 2)
+                </button>
+                <button
+                  onClick={() => setItFilerType("business")}
+                  className={`flex-1 py-2.5 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer text-center ${
+                    itFilerType === "business" ? "bg-white text-emerald-800 shadow-md font-extrabold" : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Business Person (ITR-3 / 4)
+                </button>
+              </div>
 
           <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
@@ -2591,6 +2979,8 @@ export default function RetailerDashboardPage() {
               </div>
             </form>
           </div>
+          </>
+          )}
         </div>
       )}
 
@@ -3664,6 +4054,133 @@ export default function RetailerDashboardPage() {
                   className="px-6 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-60"
                 >
                   {isSavingCustomer ? "Saving Customer..." : "Onboard Customer"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: RETAILER ATTACHES CUSTOMER INVOICE */}
+      {showRetInvoiceModal && retSelectedCustomerForInvoices && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Attach Customer Invoice</h3>
+                <p className="text-xs text-slate-500">
+                  Customer: <strong>{retSelectedCustomerForInvoices.name}</strong> • Month: <strong>{retMonthOptions.find(m => m.key === retSelectedMonth)?.label || retSelectedMonth}</strong>
+                </p>
+              </div>
+              <button onClick={() => setShowRetInvoiceModal(false)} className="text-slate-400 hover:text-slate-700 font-bold cursor-pointer">✕</button>
+            </div>
+
+            <form onSubmit={handleRetUploadInvoice} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Invoice / Bill Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={retInvoiceForm.invoice_date}
+                  onChange={(e) => setRetInvoiceForm({ ...retInvoiceForm, invoice_date: e.target.value })}
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-purple-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Bill Title / Description *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Sales Cash Bill / Purchase Voucher"
+                  value={retInvoiceForm.invoice_title}
+                  onChange={(e) => setRetInvoiceForm({ ...retInvoiceForm, invoice_title: e.target.value })}
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-slate-900 focus:outline-none focus:border-purple-600"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Invoice / Ref No.</label>
+                  <input
+                    type="text"
+                    placeholder="INV-001"
+                    value={retInvoiceForm.invoice_number}
+                    onChange={(e) => setRetInvoiceForm({ ...retInvoiceForm, invoice_number: e.target.value })}
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Bill Amount (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={retInvoiceForm.amount}
+                    onChange={(e) => setRetInvoiceForm({ ...retInvoiceForm, amount: e.target.value })}
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+              </div>
+
+              {/* File Attachment */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Upload Bill / Invoice (PDF / Image) *</label>
+                <div className="p-3 bg-purple-50/50 border border-dashed border-purple-300 rounded-xl flex items-center justify-between">
+                  <div className="flex items-center space-x-2 truncate">
+                    <FileUp className="w-5 h-5 text-purple-600 shrink-0" />
+                    <span className="text-xs text-slate-700 truncate font-semibold">
+                      {retInvoiceForm.file_name || "Select scan or PDF"}
+                    </span>
+                  </div>
+                  <label className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold cursor-pointer shrink-0 transition-colors">
+                    <span>Browse</span>
+                    <input
+                      type="file"
+                      accept=".pdf,image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          setRetInvoiceForm({
+                            ...retInvoiceForm,
+                            file_name: file.name,
+                            file_url: reader.result as string
+                          });
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Notes / Remarks</label>
+                <textarea
+                  rows={2}
+                  placeholder="Optional notes..."
+                  value={retInvoiceForm.notes}
+                  onChange={(e) => setRetInvoiceForm({ ...retInvoiceForm, notes: e.target.value })}
+                  className="w-full text-xs p-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowRetInvoiceModal(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploadingRetInvoice}
+                  className="px-5 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-60"
+                >
+                  {isUploadingRetInvoice ? "Attaching..." : "Attach Invoice"}
                 </button>
               </div>
             </form>

@@ -3550,7 +3550,26 @@ export default function CompanySuperAdminPage() {
 
               {newUser.role === "customer" && (
                 <div className="space-y-3 p-3.5 bg-amber-50/60 rounded-2xl border border-amber-200">
-                  <div className="text-[11px] font-black uppercase text-amber-900">Customer Income Tax Portal Logins</div>
+                  <div>
+                    <label className="block text-[11px] font-black uppercase text-amber-900 mb-1">
+                      Assign Under Retailer POS *
+                    </label>
+                    <select
+                      value={newUser.parent_id}
+                      onChange={(e) => setNewUser({ ...newUser, parent_id: e.target.value })}
+                      className="w-full text-xs p-2.5 bg-white border border-amber-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-amber-600 cursor-pointer"
+                    >
+                      <option value="">-- Select Assignee Retailer --</option>
+                      {users.filter(u => u.role === "retailer").map(r => (
+                        <option key={r.id} value={r.id}>
+                          {r.name || r.full_name} ({r.shop_name || r.email || r.contact})
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-[10px] text-slate-500 mt-1 block">Maps this client directly to the selected Retailer POS outlet.</span>
+                  </div>
+
+                  <div className="text-[11px] font-black uppercase text-amber-900 mt-2">Customer Income Tax Portal Logins</div>
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="text"

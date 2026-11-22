@@ -112,16 +112,11 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
         { label: "GST Filing", href: "/dashboard/admin?tab=gst-filing", tabKey: "gst-filing", icon: FileSpreadsheet, permKey: "gstr_filing" },
         { label: "IT Filing", href: "/dashboard/admin?tab=it-filing", tabKey: "it-filing", icon: FileText, permKey: "itr_filing" },
         { label: "Reports", href: "/dashboard/admin?tab=reports", tabKey: "reports", icon: History, permKey: "reports" },
-        { label: "Pricing Setup", href: "/dashboard/admin?tab=pricing", tabKey: "pricing", icon: Sliders, permKey: "pricing" },
-        { label: "Network Outlets", href: "/dashboard/admin?tab=outlets", tabKey: "outlets", icon: Users, permKey: "outlets" },
-        { label: "Announcements", href: "/dashboard/admin?tab=announcements", tabKey: "announcements", icon: Megaphone, permKey: "announcements" },
       ];
     } else if (role.includes("customer") || role.includes("operator") || role.includes("employee")) {
       return [
         { label: "Dashboard", href: "/dashboard/customer?tab=overview", tabKey: "overview", icon: LayoutDashboard },
         { label: "My Filings", href: "/dashboard/customer?tab=my_filings", tabKey: "my_filings", icon: FileCheck },
-        { label: "My Credentials", href: "/dashboard/customer?tab=credentials", tabKey: "credentials", icon: ShieldAlert },
-        { label: "Document Vault", href: "/dashboard/customer?tab=documents", tabKey: "documents", icon: ShieldCheck },
         { label: "Receipts", href: "/dashboard/customer?tab=receipts", tabKey: "receipts", icon: Receipt },
       ];
     } else {

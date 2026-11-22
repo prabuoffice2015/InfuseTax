@@ -33,54 +33,70 @@ test.describe('03 - Customer Client Portal (Tier 4)', () => {
     await expect(topUpBtn).toHaveCount(0);
   });
 
-  test('should render all customer sub-navigation tabs in left sidebar', async ({ page }) => {
+  test('should render exactly 3 customer navigation items in left sidebar', async ({ page }) => {
     const sidebar = page.locator('aside');
     await expect(sidebar.getByText('Dashboard')).toBeVisible();
     await expect(sidebar.getByText('My Filings')).toBeVisible();
-    await expect(sidebar.getByText('My Credentials')).toBeVisible();
-    await expect(sidebar.getByText('Document Vault')).toBeVisible();
     await expect(sidebar.getByText('Receipts')).toBeVisible();
+
+    // Verify removed old tabs are NOT in customer sidebar
+    await expect(sidebar.getByText('My Credentials')).toHaveCount(0);
+    await expect(sidebar.getByText('Document Vault')).toHaveCount(0);
   });
 
-  test('should navigate to My Credentials Vault and view/edit credential fields', async ({ page }) => {
-    // Click My Credentials tab in sidebar
-    const credsTab = page.locator('aside').getByText('My Credentials').first();
-    await credsTab.click();
+  test('should enforce strict zero-amount visibility (no commercial fees or pricing displayed)', async ({ page }) => {
+    // Check main page content has zero commercial pricing / fee indicators
+    const feeCol = page.locator('text=/Fee \\(₹\\)|Portal Fee|Wholesale Price|Margin/i');
+    await expect(feeCol).toHaveCount(0);
+
+    // Switch to My Filings tab
+    const myFilingsTab = page.locator('aside').getByText('My Filings').first();
+    await myFilingsTab.click();
     await page.waitForTimeout(500);
 
-    // Verify Income Tax portal credentials form
-    const itUserHeading = page.locator('text=/Income Tax Department Login ID|Income Tax.*Login ID/i');
-    await expect(itUserHeading.first()).toBeVisible({ timeout: 5000 });
-
-    const itPassHeading = page.locator('text=/Income Tax Portal Password/i');
-    await expect(itPassHeading.first()).toBeVisible();
-
-    // Verify Password input and toggle visibility button
-    const passInput = page.locator('input[type="password"]');
-    await expect(passInput.first()).toBeVisible();
-
-    // Verify Save Credentials button
-    const saveBtn = page.locator('button').filter({ hasText: /Save Credentials|Update/i });
-    await expect(saveBtn.first()).toBeVisible();
+    // Verify no fee column in filings
+    const filingsFeeCol = page.locator('text=/Fee \\(₹\\)|Portal Fee/i');
+    await expect(filingsFeeCol).toHaveCount(0);
   });
 
-  test('should navigate to Document Vault and Receipts tabs', async ({ page }) => {
-    // Click Document Vault tab in sidebar
-    const docVaultTab = page.locator('aside').getByText('Document Vault').first();
-    await docVaultTab.click();
+  test('should provide Month Selector dropdown and Daily Invoice Upload capability', async ({ page }) => {
+    const myFilingsTab = page.locator('aside').getByText('My Filings').first();
+    await myFilingsTab.click();
     await page.waitForTimeout(500);
 
-    // Verify Document Vault container is visible
-    const docVaultContent = page.locator('text=/Upload|Document|Vault/i');
-    await expect(docVaultContent.first()).toBeVisible({ timeout: 5000 });
+    // Month selector dropdown should be visible
+    const monthSelect = page.locator('select');
+    await expect(monthSelect.first()).toBeVisible({ timeout: 5000 });
 
+    // Upload daily invoice button should be present
+    const uploadBtn = page.locator('button').filter({ hasText: /Upload Daily Invoice/i });
+    await expect(uploadBtn.first()).toBeVisible();
+
+    // Click upload daily invoice to open modal
+    await uploadBtn.first().click();
+    await page.waitForTimeout(300);
+
+    // Modal should appear
+    const modalHeading = page.locator('text=/Upload Daily Invoice/i');
+    await expect(modalHeading.first()).toBeVisible();
+
+    // Close modal
+    const cancelBtn = page.locator('button').filter({ hasText: /Cancel|✕/i });
+    await cancelBtn.first().click();
+  });
+
+  test('should navigate to Receipts tab and display Admin-Approved receipts', async ({ page }) => {
     // Click Receipts tab in sidebar
     const receiptsTab = page.locator('aside').getByText('Receipts').first();
     await receiptsTab.click();
     await page.waitForTimeout(500);
 
-    // Verify Receipts section
-    const receiptsContent = page.locator('text=/Receipt|Slips|Transaction/i');
-    await expect(receiptsContent.first()).toBeVisible({ timeout: 5000 });
+    // Verify Receipts section header
+    const receiptsHeading = page.locator('text=/Department Receipts & Verified Slips/i');
+    await expect(receiptsHeading.first()).toBeVisible({ timeout: 5000 });
+
+    // Verify verified receipt button / link
+    const downloadReceipt = page.locator('text=/Download Department Receipt|View Slip/i');
+    await expect(downloadReceipt.first()).toBeVisible({ timeout: 5000 });
   });
 });
