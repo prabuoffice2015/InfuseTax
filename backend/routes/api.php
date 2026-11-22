@@ -90,10 +90,11 @@ Router::post('/api/v1/retailer/customers/update', 'DashboardController@updateUse
 Router::post('/api/v1/services/esevai/apply', 'TaxController@submitEsevaiApplication');
 Router::get('/api/v1/services/esevai/list', 'TaxController@getEsevaiList');
 
-// Customer Daily Invoices & Monthly IT Filing
+// Customer Daily Invoices & Monthly GST Return Filing
 Router::get('/api/v1/customer/invoices', 'TaxController@getCustomerInvoices');
 Router::post('/api/v1/customer/invoices/upload', 'TaxController@uploadCustomerInvoice');
 Router::post('/api/v1/customer/invoices/delete', 'TaxController@deleteCustomerInvoice');
+Router::post('/api/v1/retailer/gstr/monthly-submit', 'TaxController@submitMonthlyGstFiling');
 Router::post('/api/v1/retailer/itr/monthly-submit', 'TaxController@submitMonthlyItFiling');
 Router::get('/api/v1/admin/audit-ledger', 'DashboardController@getAuditLedger');
 Router::post('/api/v1/admin/tenant/update', 'DashboardController@updateTenantBranding');

@@ -297,7 +297,8 @@ export default function RetailerDashboardPage() {
 
   const handleRetUploadInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!retSelectedCustomerForInvoices) {
+    const targetCust = selectedCustomerForFiling || retSelectedCustomerForInvoices;
+    if (!targetCust) {
       showToast("Please select a customer first", "error");
       return;
     }
@@ -310,7 +311,7 @@ export default function RetailerDashboardPage() {
       const res = await secureApiCall("/api/v1/customer/invoices/upload", {
         method: "POST",
         body: {
-          customer_id: retSelectedCustomerForInvoices.id,
+          customer_id: targetCust.id,
           month: retSelectedMonth,
           invoice_date: retInvoiceForm.invoice_date,
           invoice_title: retInvoiceForm.invoice_title || "Daily Customer Invoice",
@@ -322,7 +323,7 @@ export default function RetailerDashboardPage() {
         }
       });
       if (res.ok && res.data?.status === "success") {
-        showToast("✓ Invoice attached for " + retSelectedCustomerForInvoices.name);
+        showToast("✓ Invoice attached for " + targetCust.name);
         setShowRetInvoiceModal(false);
         setRetInvoiceForm({
           invoice_date: new Date().toISOString().slice(0, 10),
@@ -333,7 +334,7 @@ export default function RetailerDashboardPage() {
           file_url: "",
           notes: ""
         });
-        loadRetailerCustomerInvoices(retSelectedCustomerForInvoices.id, retSelectedMonth);
+        loadRetailerCustomerInvoices(targetCust.id, retSelectedMonth);
       } else {
         showToast(res.data?.message || "Failed to upload invoice", "error");
       }
@@ -344,13 +345,79 @@ export default function RetailerDashboardPage() {
     }
   };
 
+  const handleRetDeleteInvoice = async (invoiceId: string) => {
+    if (!confirm("Are you sure you want to remove this invoice?")) return;
+    try {
+      const res = await secureApiCall("/api/v1/customer/invoices/delete", {
+        method: "POST",
+        body: { invoice_id: invoiceId }
+      });
+      if (res.ok && res.data?.status === "success") {
+        showToast("Invoice removed.");
+        const targetCust = selectedCustomerForFiling || retSelectedCustomerForInvoices;
+        if (targetCust) {
+          loadRetailerCustomerInvoices(targetCust.id, retSelectedMonth);
+        }
+      } else {
+        showToast(res.data?.message || "Failed to delete invoice", "error");
+      }
+    } catch {
+      showToast("Network error deleting invoice", "error");
+    }
+  };
+
+  const handleSubmitMonthlyGstrReturn = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const targetCust = selectedCustomerForFiling || retSelectedCustomerForInvoices;
+    if (!targetCust) {
+      showToast("Please select a customer first", "error");
+      return;
+    }
+    const monthLabel = retMonthOptions.find(m => m.key === retSelectedMonth)?.label || retSelectedMonth;
+    const serviceFee = getServicePrice("gstr_filing").tier3_price;
+    if (!confirm(`Are you sure you want to submit Monthly GST Return (${gstrReturnType}) for ${targetCust.name} (${monthLabel})?\n\nThis will deduct the wholesale fee (₹${serviceFee.toFixed(2)}) from your counter wallet balance (₹${counterWalletBalance.toFixed(2)}) and route the return with all ${retCustomerInvoices.length} attached invoices to Admin for verification and receipt upload.`)) {
+      return;
+    }
+    setIsGstrSubmitting(true);
+    try {
+      const res = await secureApiCall("/api/v1/retailer/gstr/monthly-submit", {
+        method: "POST",
+        body: {
+          customer_id: targetCust.id,
+          month: retSelectedMonth,
+          return_type: gstrReturnType,
+          gstin: gstrGstin,
+          taxable_amount: parseFloat(gstrTurnover || "0"),
+          tax_liability: parseFloat(gstrOutputTax || "0"),
+          itc_claim: parseFloat(gstrItcClaim || "0"),
+          notes: `Monthly ${gstrReturnType} return compiled with ${retCustomerInvoices.length} customer invoices.`
+        }
+      });
+      if (res.ok && res.data?.status === "success") {
+        showToast(res.data.message || `✓ Monthly ${gstrReturnType} return submitted successfully!`);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("infusetax_wallet_updated"));
+        }
+        loadAllData();
+        loadRetailerCustomerInvoices(targetCust.id, retSelectedMonth);
+      } else {
+        showToast(res.data?.message || "Failed to submit monthly GST return", "error");
+      }
+    } catch {
+      showToast("Network error submitting monthly GST return", "error");
+    } finally {
+      setIsGstrSubmitting(false);
+    }
+  };
+
   const handleSubmitMonthlyItFiling = async () => {
-    if (!retSelectedCustomerForInvoices) {
+    const targetCust = selectedCustomerForFiling || retSelectedCustomerForInvoices;
+    if (!targetCust) {
       showToast("Please select a customer", "error");
       return;
     }
     const monthLabel = retMonthOptions.find(m => m.key === retSelectedMonth)?.label || retSelectedMonth;
-    if (!confirm(`Are you sure you want to submit Monthly IT Filing for ${retSelectedCustomerForInvoices.name} (${monthLabel})?\n\nThis will deduct the required service fee from your wallet balance (₹${counterWalletBalance.toFixed(2)}) and route the return to Admin for verification and official receipt upload.`)) {
+    if (!confirm(`Are you sure you want to submit Monthly Return for ${targetCust.name} (${monthLabel})?`)) {
       return;
     }
     setIsSubmittingMonthlyReturn(true);
@@ -358,20 +425,20 @@ export default function RetailerDashboardPage() {
       const res = await secureApiCall("/api/v1/retailer/itr/monthly-submit", {
         method: "POST",
         body: {
-          customer_id: retSelectedCustomerForInvoices.id,
+          customer_id: targetCust.id,
           month: retSelectedMonth,
           notes: `Monthly return compiled with ${retCustomerInvoices.length} invoices.`
         }
       });
       if (res.ok && res.data?.status === "success") {
-        showToast(res.data.message || "✓ Monthly IT Filing submitted successfully!");
+        showToast(res.data.message || "✓ Return submitted successfully!");
         if (typeof window !== "undefined") {
           window.dispatchEvent(new Event("infusetax_wallet_updated"));
         }
         loadAllData();
-        loadRetailerCustomerInvoices(retSelectedCustomerForInvoices.id, retSelectedMonth);
+        loadRetailerCustomerInvoices(targetCust.id, retSelectedMonth);
       } else {
-        showToast(res.data?.message || "Failed to submit monthly IT filing", "error");
+        showToast(res.data?.message || "Failed to submit return", "error");
       }
     } catch {
       showToast("Network error submitting filing", "error");
@@ -379,6 +446,13 @@ export default function RetailerDashboardPage() {
       setIsSubmittingMonthlyReturn(false);
     }
   };
+
+  useEffect(() => {
+    const cust = selectedCustomerForFiling || retSelectedCustomerForInvoices;
+    if (cust?.id && retSelectedMonth) {
+      loadRetailerCustomerInvoices(cust.id, retSelectedMonth);
+    }
+  }, [selectedCustomerForFiling, retSelectedCustomerForInvoices, retSelectedMonth]);
 
   // Auto-redirect to first permitted desk if current desk is disabled
   useEffect(() => {
@@ -523,7 +597,12 @@ export default function RetailerDashboardPage() {
 
       if (sRes.status === "fulfilled" && sRes.value.ok && sRes.value.data?.operators) {
         setStaffMembers(sRes.value.data.operators);
-        setCustomersList(sRes.value.data.customers || sRes.value.data.operators || []);
+        const custs = sRes.value.data.customers || sRes.value.data.operators || [];
+        setCustomersList(custs);
+        if (custs.length > 0) {
+          setSelectedCustomerForFiling((prev: any) => prev || custs[0]);
+          setRetSelectedCustomerForInvoices((prev: any) => prev || custs[0]);
+        }
       }
 
       if (prRes.status === "fulfilled" && prRes.value.ok && prRes.value.data?.pricing) {
@@ -2547,243 +2626,8 @@ export default function RetailerDashboardPage() {
               </button>
             </div>
           </div>
-          {/* Top Mode Selector: Standard Annual Return vs Monthly Compiled Invoices */}
-          <div className="flex bg-slate-200/80 p-1.5 rounded-2xl gap-2 max-w-lg">
-            <button
-              type="button"
-              onClick={() => setItrSubMode("standard")}
-              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer text-center ${
-                itrSubMode === "standard" ? "bg-white text-purple-900 shadow-sm font-black" : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              Annual Return Form (ITR 1-4)
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setItrSubMode("monthly");
-                const targetCust = selectedCustomerForFiling || retSelectedCustomerForInvoices || customersList[0];
-                if (targetCust) {
-                  setRetSelectedCustomerForInvoices(targetCust);
-                  setSelectedCustomerForFiling(targetCust);
-                  loadRetailerCustomerInvoices(targetCust.id, retSelectedMonth);
-                }
-              }}
-              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer text-center ${
-                itrSubMode === "monthly" ? "bg-purple-700 text-white shadow-sm font-black" : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              Monthly Invoices &amp; Return Submission
-            </button>
-          </div>
-
-          {itrSubMode === "monthly" && (
-            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-                <div>
-                  <span className="px-2.5 py-0.5 bg-purple-100 text-purple-800 border border-purple-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
-                    Tier 3 Client Compilation
-                  </span>
-                  <h2 className="text-xl font-extrabold text-slate-900 mt-1">
-                    Customer Monthly IT Filing &amp; Invoices Desk
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Review daily client invoices, attach invoices on behalf of customer, and submit monthly returns to Admin with wallet deduction.
-                  </p>
-                </div>
-
-                {/* Month Dropdown & Attach Invoice Button */}
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center space-x-2 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5">
-                    <Calendar className="w-4 h-4 text-purple-700" />
-                    <span className="text-xs font-bold text-slate-700">Month:</span>
-                    <select
-                      value={retSelectedMonth}
-                      onChange={(e) => {
-                        const m = e.target.value;
-                        setRetSelectedMonth(m);
-                        if (retSelectedCustomerForInvoices) {
-                          loadRetailerCustomerInvoices(retSelectedCustomerForInvoices.id, m);
-                        }
-                      }}
-                      className="bg-transparent text-xs font-black text-purple-900 focus:outline-none cursor-pointer"
-                    >
-                      {retMonthOptions.map((opt) => (
-                        <option key={opt.key} value={opt.key}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!retSelectedCustomerForInvoices && customersList[0]) {
-                        setRetSelectedCustomerForInvoices(customersList[0]);
-                      }
-                      setShowRetInvoiceModal(true);
-                    }}
-                    className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-1.5 cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>+ Attach Customer Invoice</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Monthly Filing Status Banner */}
-              {retMonthlyFiling ? (
-                <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs ${
-                  retMonthlyFiling.status === "APPROVED"
-                    ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-                    : "bg-blue-50 border-blue-200 text-blue-900"
-                }`}>
-                  <div className="flex items-center space-x-3">
-                    {retMonthlyFiling.status === "APPROVED" ? (
-                      <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
-                    ) : (
-                      <Clock className="w-6 h-6 text-blue-600 shrink-0" />
-                    )}
-                    <div>
-                      <span className="font-extrabold block text-sm">
-                        {retMonthlyFiling.status === "APPROVED"
-                          ? `✓ Monthly Return for ${retMonthOptions.find(m => m.key === retSelectedMonth)?.label || retSelectedMonth} Approved!`
-                          : `⏳ Monthly Return for ${retMonthOptions.find(m => m.key === retSelectedMonth)?.label || retSelectedMonth} Under Admin Review`}
-                      </span>
-                      <span className="text-[11px] opacity-80">
-                        Ack: {retMonthlyFiling.ack_number} • Status: {retMonthlyFiling.status} • Fee: ₹{parseFloat(retMonthlyFiling.portal_fee || 550).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {retMonthlyFiling.verified_doc_url && (
-                    <a
-                      href={retMonthlyFiling.verified_doc_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center space-x-1.5 shadow-sm shrink-0"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>Download Admin-Approved Receipt</span>
-                    </a>
-                  )}
-                </div>
-              ) : (
-                <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl border border-purple-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs">
-                  <div>
-                    <span className="font-bold text-slate-800 block text-sm">
-                      Month Invoices Compilation: {retCustomerInvoices.length} Attached
-                    </span>
-                    <span className="text-slate-500 text-[11px]">
-                      Once all daily invoices for this month are compiled, click Submit to debit your wallet and send to Admin for department processing.
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleSubmitMonthlyItFiling}
-                    disabled={isSubmittingMonthlyReturn}
-                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-extrabold shadow-md flex items-center space-x-2 cursor-pointer disabled:opacity-60 shrink-0"
-                  >
-                    <FileCheck className="w-4 h-4" />
-                    <span>{isSubmittingMonthlyReturn ? "Submitting..." : "Submit Monthly IT Return"}</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Invoices List Table */}
-              <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
-                    <tr>
-                      <th className="p-3.5">Invoice Date</th>
-                      <th className="p-3.5">Customer Name</th>
-                      <th className="p-3.5">Bill Title / Description</th>
-                      <th className="p-3.5">Invoice / Ref No.</th>
-                      <th className="p-3.5">Amount (₹)</th>
-                      <th className="p-3.5">Status</th>
-                      <th className="p-3.5 text-center">Document</th>
-                      <th className="p-3.5 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                    {retInvoicesLoading ? (
-                      <tr>
-                        <td colSpan={8} className="p-6 text-center text-slate-400 font-bold">
-                          Loading invoices...
-                        </td>
-                      </tr>
-                    ) : retCustomerInvoices.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="p-8 text-center text-slate-400 font-bold">
-                          No invoices found for {retMonthOptions.find(m => m.key === retSelectedMonth)?.label || retSelectedMonth}. Click &quot;+ Attach Customer Invoice&quot; to upload daily bills.
-                        </td>
-                      </tr>
-                    ) : (
-                      retCustomerInvoices.map((inv) => (
-                        <tr key={inv.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="p-3.5 font-mono text-slate-700">{inv.invoice_date}</td>
-                          <td className="p-3.5 font-bold text-slate-900">{inv.customer_name || retSelectedCustomerForInvoices?.name || "Customer"}</td>
-                          <td className="p-3.5 text-slate-800">{inv.invoice_title}</td>
-                          <td className="p-3.5 font-mono text-purple-700 font-bold">{inv.invoice_number || "—"}</td>
-                          <td className="p-3.5 font-mono font-bold text-slate-900">₹{parseFloat(inv.amount || 0).toFixed(2)}</td>
-                          <td className="p-3.5">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                              inv.status === "FILED" ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"
-                            }`}>
-                              {inv.status === "FILED" ? "Filed in Return" : "Uploaded"}
-                            </span>
-                          </td>
-                          <td className="p-3.5 text-center">
-                            {inv.file_url ? (
-                              <a
-                                href={inv.file_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors inline-flex items-center space-x-1"
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                                <span>View File</span>
-                              </a>
-                            ) : (
-                              <span className="text-slate-400 italic">No file</span>
-                            )}
-                          </td>
-                          <td className="p-3.5 text-right">
-                            {inv.status !== "FILED" && (
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  if (!confirm("Delete this invoice?")) return;
-                                  await secureApiCall("/api/v1/customer/invoices/delete", {
-                                    method: "POST",
-                                    body: { invoice_id: inv.id }
-                                  });
-                                  if (retSelectedCustomerForInvoices) {
-                                    loadRetailerCustomerInvoices(retSelectedCustomerForInvoices.id, retSelectedMonth);
-                                  }
-                                }}
-                                className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                                title="Delete invoice"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Filer Type Switcher for Standard Mode */}
-          {itrSubMode === "standard" && (
-            <>
-              <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-2 max-w-md">
+          {/* Filer Type Switcher */}
+          <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-2 max-w-md">
                 <button
                   onClick={() => setItFilerType("individual")}
                   className={`flex-1 py-2.5 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer text-center ${
@@ -2979,8 +2823,6 @@ export default function RetailerDashboardPage() {
               </div>
             </form>
           </div>
-          </>
-          )}
         </div>
       )}
 
@@ -3025,110 +2867,283 @@ export default function RetailerDashboardPage() {
               </button>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-            <div>
-              <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
-                Monthly & Quarterly Compliance
-              </span>
-              <h2 className="text-xl font-extrabold text-slate-900 mt-1">GSTR-1 & GSTR-3B Return Filing Desk</h2>
-              <p className="text-xs text-slate-500">Auto-calculate output tax, set-off Input Tax Credit (ITC), and generate ARN receipt.</p>
+          {/* Month Selector Bar & Attach Invoice */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-indigo-50/50 border border-indigo-200/80 rounded-2xl">
+            <div className="flex items-center space-x-2">
+              <Calendar className="w-4 h-4 text-indigo-700" />
+              <span className="text-xs font-bold text-slate-700">Return Month:</span>
+              <select
+                value={retSelectedMonth}
+                onChange={(e) => {
+                  const m = e.target.value;
+                  setRetSelectedMonth(m);
+                  setGstrPeriod(retMonthOptions.find(opt => opt.key === m)?.label || m);
+                  const cust = selectedCustomerForFiling || retSelectedCustomerForInvoices;
+                  if (cust) {
+                    loadRetailerCustomerInvoices(cust.id, m);
+                  }
+                }}
+                className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-black text-indigo-950 focus:outline-none cursor-pointer shadow-xs"
+              >
+                {retMonthOptions.map((opt) => (
+                  <option key={opt.key} value={opt.key}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div className="px-4 py-2 bg-indigo-50 border border-indigo-200 rounded-2xl text-right">
-              <span className="text-[10px] font-bold text-indigo-700 uppercase">Customer MRP Fee</span>
-              <div className="text-base font-black text-indigo-950 font-mono">
-                ₹{getServicePrice("gstr_filing").mrp_customer_fee.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+
+            <button
+              type="button"
+              onClick={() => {
+                const cust = selectedCustomerForFiling || retSelectedCustomerForInvoices || customersList[0];
+                if (cust) {
+                  setSelectedCustomerForFiling(cust);
+                  setRetSelectedCustomerForInvoices(cust);
+                }
+                setShowRetInvoiceModal(true);
+              }}
+              className="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-1.5 cursor-pointer self-start sm:self-auto"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ Attach Customer Invoice / Bill</span>
+            </button>
+          </div>
+
+          {/* Customer Daily Invoices Table for Selected Month */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-900 flex items-center space-x-2">
+                  <span>Customer Daily Invoices &amp; Receipts ({retMonthOptions.find(m => m.key === retSelectedMonth)?.label || retSelectedMonth})</span>
+                  <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 rounded-full text-[10px] font-black">
+                    {retCustomerInvoices.length} Attached
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Daily bills uploaded by customer or attached by retailer for monthly GST compliance compilation.
+                </p>
               </div>
-              <div className="text-[10px] text-indigo-800 font-semibold mt-0.5">
-                Wholesale Rate: ₹{getServicePrice("gstr_filing").tier3_price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-              </div>
+            </div>
+
+            <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
+                  <tr>
+                    <th className="p-3.5">Invoice Date</th>
+                    <th className="p-3.5">Bill Title / Description</th>
+                    <th className="p-3.5">Invoice / Ref No.</th>
+                    <th className="p-3.5">Amount (₹)</th>
+                    <th className="p-3.5">Status</th>
+                    <th className="p-3.5 text-center">Document</th>
+                    <th className="p-3.5 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                  {retInvoicesLoading ? (
+                    <tr>
+                      <td colSpan={7} className="p-6 text-center text-slate-400 font-bold">
+                        Loading invoices...
+                      </td>
+                    </tr>
+                  ) : retCustomerInvoices.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-6 text-center text-slate-400 font-bold">
+                        No customer invoices uploaded for {retMonthOptions.find(m => m.key === retSelectedMonth)?.label || retSelectedMonth}. Customer can upload daily sales/purchase bills from their Customer Client Portal, or you can attach customer bills using &quot;+ Attach Customer Invoice / Bill&quot;.
+                      </td>
+                    </tr>
+                  ) : (
+                    retCustomerInvoices.map((inv) => (
+                      <tr key={inv.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="p-3.5 font-mono text-slate-700">{inv.invoice_date}</td>
+                        <td className="p-3.5 font-bold text-slate-900">{inv.invoice_title}</td>
+                        <td className="p-3.5 font-mono text-indigo-700 font-bold">{inv.invoice_number || "—"}</td>
+                        <td className="p-3.5 font-mono font-bold text-slate-900">₹{parseFloat(inv.amount || 0).toFixed(2)}</td>
+                        <td className="p-3.5">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                            inv.status === "FILED" ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"
+                          }`}>
+                            {inv.status === "FILED" ? "Filed in Return" : "Uploaded"}
+                          </span>
+                        </td>
+                        <td className="p-3.5 text-center">
+                          {inv.file_url ? (
+                            <a
+                              href={inv.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors inline-flex items-center space-x-1"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>View File</span>
+                            </a>
+                          ) : (
+                            <span className="text-slate-400 italic">No file</span>
+                          )}
+                        </td>
+                        <td className="p-3.5 text-right">
+                          {inv.status !== "FILED" && (
+                            <button
+                              type="button"
+                              onClick={() => handleRetDeleteInvoice(inv.id)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                              title="Delete invoice"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
-          <form onSubmit={handleGstrSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Return Type</label>
-                <select
-                  value={gstrReturnType}
-                  onChange={(e) => setGstrReturnType(e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 font-bold"
+          {/* Monthly Return Status Banner OR Form */}
+          {retMonthlyFiling ? (
+            <div className={`p-5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs ${
+              retMonthlyFiling.status === "APPROVED"
+                ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                : "bg-blue-50 border-blue-200 text-blue-900"
+            }`}>
+              <div className="flex items-center space-x-3">
+                {retMonthlyFiling.status === "APPROVED" ? (
+                  <CheckCircle2 className="w-7 h-7 text-emerald-600 shrink-0" />
+                ) : (
+                  <Clock className="w-7 h-7 text-blue-600 shrink-0" />
+                )}
+                <div>
+                  <span className="font-extrabold block text-sm">
+                    {retMonthlyFiling.status === "APPROVED"
+                      ? `✓ Monthly GST Return for ${retMonthOptions.find(m => m.key === retSelectedMonth)?.label || retSelectedMonth} Approved!`
+                      : `⏳ Monthly GST Return for ${retMonthOptions.find(m => m.key === retSelectedMonth)?.label || retSelectedMonth} Under Admin Review`}
+                  </span>
+                  <span className="text-[11px] opacity-80">
+                    ARN Ref: {retMonthlyFiling.ack_number || retMonthlyFiling.arn} • Status: {retMonthlyFiling.status} • Wholesale Fee: ₹{parseFloat(retMonthlyFiling.portal_fee || 350).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {retMonthlyFiling.verified_doc_url && (
+                <a
+                  href={retMonthlyFiling.verified_doc_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center space-x-1.5 shadow-sm shrink-0"
                 >
-                  <option value="GSTR-3B">GSTR-3B (Monthly Summary & Tax Payment)</option>
-                  <option value="GSTR-1">GSTR-1 (Outward Supplies Sales Invoices)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">GSTIN Number (15-Digit) *</label>
-                <input
-                  type="text"
-                  maxLength={15}
-                  required
-                  value={gstrGstin}
-                  onChange={(e) => setGstrGstin(e.target.value.toUpperCase())}
-                  className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl font-mono uppercase focus:bg-white focus:outline-none focus:border-indigo-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Tax Period</label>
-                <select
-                  value={gstrPeriod}
-                  onChange={(e) => setGstrPeriod(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 font-bold"
-                >
-                  <option value="August 2026">August 2026 (Active Return Period)</option>
-                  <option value="July 2026">July 2026</option>
-                  <option value="Q1 FY26-27">Q1 FY26-27 (QRMP Scheme)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Taxable Outward Supplies (INR)</label>
-                <input
-                  type="number"
-                  value={gstrTurnover}
-                  onChange={(e) => {
-                    const val = Number(e.target.value);
-                    setGstrTurnover(e.target.value);
-                    setGstrOutputTax((val * 0.18).toFixed(2));
-                  }}
-                  className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl font-mono focus:bg-white focus:outline-none focus:border-indigo-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Output Tax Liability (18% IGST)</label>
-                <input
-                  type="number"
-                  value={gstrOutputTax}
-                  onChange={(e) => setGstrOutputTax(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl font-mono focus:bg-white focus:outline-none focus:border-indigo-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Eligible ITC Claim (2B Auto)</label>
-                <input
-                  type="number"
-                  value={gstrItcClaim}
-                  onChange={(e) => setGstrItcClaim(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl font-mono focus:bg-white focus:outline-none focus:border-indigo-600"
-                />
-              </div>
+                  <Download className="w-4 h-4" />
+                  <span>Download Admin-Approved Receipt</span>
+                </a>
+              )}
             </div>
+          ) : (
+            <div className="space-y-4 pt-2 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
+                    Month-End Submission
+                  </span>
+                  <h3 className="text-base font-extrabold text-slate-900 mt-1">
+                    Compile &amp; Submit Monthly Return ({retMonthOptions.find(m => m.key === retSelectedMonth)?.label || retSelectedMonth})
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Submit the customer's compiled monthly return. Your counter wallet will be debited ₹{getServicePrice("gstr_filing").tier3_price.toFixed(2)} and sent to Admin for verification.
+                  </p>
+                </div>
+                <div className="px-3.5 py-1.5 bg-indigo-50 border border-indigo-200 rounded-xl text-right">
+                  <span className="text-[10px] font-bold text-indigo-700 uppercase">Wholesale Debit Fee</span>
+                  <div className="text-sm font-black text-indigo-950 font-mono">
+                    ₹{getServicePrice("gstr_filing").tier3_price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+              </div>
 
-            <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100">
-              <button
-                type="submit"
-                disabled={isGstrSubmitting}
-                className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-bold rounded-2xl shadow-lg transition-all flex items-center space-x-2 cursor-pointer disabled:opacity-50"
-              >
-                <FileSpreadsheet className="w-4 h-4" />
-                <span>{isGstrSubmitting ? "Filing Return..." : `File ${gstrReturnType} & Generate ARN (₹${getServicePrice("gstr_filing").tier3_price.toLocaleString('en-IN', { minimumFractionDigits: 2 })})`}</span>
-              </button>
+              <form onSubmit={handleSubmitMonthlyGstrReturn} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Return Type</label>
+                    <select
+                      value={gstrReturnType}
+                      onChange={(e) => setGstrReturnType(e.target.value as any)}
+                      className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 font-bold"
+                    >
+                      <option value="GSTR-3B">GSTR-3B (Monthly Summary &amp; Tax Payment)</option>
+                      <option value="GSTR-1">GSTR-1 (Outward Supplies Sales Invoices)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">GSTIN Number (15-Digit) *</label>
+                    <input
+                      type="text"
+                      maxLength={15}
+                      required
+                      value={gstrGstin}
+                      onChange={(e) => setGstrGstin(e.target.value.toUpperCase())}
+                      className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl font-mono uppercase focus:bg-white focus:outline-none focus:border-indigo-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Tax Period</label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={retMonthOptions.find(m => m.key === retSelectedMonth)?.label || retSelectedMonth}
+                      className="w-full px-3.5 py-2.5 text-xs bg-slate-100 border border-slate-300 rounded-xl font-bold text-slate-700 cursor-not-allowed"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Taxable Outward Supplies (INR)</label>
+                    <input
+                      type="number"
+                      value={gstrTurnover}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setGstrTurnover(e.target.value);
+                        setGstrOutputTax((val * 0.18).toFixed(2));
+                      }}
+                      className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl font-mono focus:bg-white focus:outline-none focus:border-indigo-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Output Tax Liability (18% IGST)</label>
+                    <input
+                      type="number"
+                      value={gstrOutputTax}
+                      onChange={(e) => setGstrOutputTax(e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl font-mono focus:bg-white focus:outline-none focus:border-indigo-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Eligible ITC Claim (2B Auto)</label>
+                    <input
+                      type="number"
+                      value={gstrItcClaim}
+                      onChange={(e) => setGstrItcClaim(e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl font-mono focus:bg-white focus:outline-none focus:border-indigo-600"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100">
+                  <button
+                    type="submit"
+                    disabled={isGstrSubmitting}
+                    className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-indigo-700 hover:from-emerald-700 hover:to-indigo-800 text-white text-xs font-black rounded-2xl shadow-lg transition-all flex items-center space-x-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    <span>{isGstrSubmitting ? "Submitting Return..." : `Submit Monthly GST Return (₹${getServicePrice("gstr_filing").tier3_price.toLocaleString('en-IN', { minimumFractionDigits: 2 })})`}</span>
+                  </button>
+                </div>
+              </form>
             </div>
-          </form>
+          )}
         </div>
       )}
 

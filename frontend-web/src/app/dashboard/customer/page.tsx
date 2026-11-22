@@ -329,18 +329,18 @@ export default function CustomerDashboardPage() {
           <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
                   <FileSpreadsheet className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-extrabold text-slate-900">IT Filing: Daily Invoices by Month</h3>
-                  <p className="text-xs text-slate-500">Upload your bills and sales receipts daily. Your Retailer compiles them for monthly return submission.</p>
+                  <h3 className="text-sm font-extrabold text-slate-900">GST Filing: Daily Invoices by Month</h3>
+                  <p className="text-xs text-slate-500">Upload your sales and purchase bills daily. Your Retailer compiles them for monthly GST return submission (GSTR-1 &amp; GSTR-3B).</p>
                 </div>
               </div>
 
               <button
                 onClick={() => switchTab("my_filings")}
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center space-x-1.5 cursor-pointer self-start sm:self-auto"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center space-x-1.5 cursor-pointer self-start sm:self-auto"
               >
                 <span>Manage Monthly Invoices</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -453,26 +453,26 @@ export default function CustomerDashboardPage() {
           <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
               <div>
-                <span className="px-2.5 py-0.5 bg-purple-100 text-purple-800 border border-purple-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
-                  IT Return Invoices
+                <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
+                  GST Return Invoices
                 </span>
                 <h2 className="text-xl font-black text-slate-900 mt-1">
-                  Daily Invoices Desk (Month-Wise)
+                  GST Daily Invoices Desk (Month-Wise)
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Select month to view or upload daily business invoices/bills. Your assigned Retailer compiles and files at month-end.
+                  Select month to view or upload daily business sales/purchase bills. Your assigned Retailer compiles and submits your monthly GST return at month-end.
                 </p>
               </div>
 
               {/* Month Selector Dropdown & Upload Button */}
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center space-x-2 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5">
-                  <Calendar className="w-4 h-4 text-purple-700" />
+                  <Calendar className="w-4 h-4 text-indigo-700" />
                   <span className="text-xs font-bold text-slate-700">Month:</span>
                   <select
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="bg-transparent text-xs font-black text-purple-900 focus:outline-none cursor-pointer"
+                    className="bg-transparent text-xs font-black text-indigo-900 focus:outline-none cursor-pointer"
                   >
                     {monthOptions.map((opt) => (
                       <option key={opt.key} value={opt.key}>
@@ -484,7 +484,7 @@ export default function CustomerDashboardPage() {
 
                 <button
                   onClick={() => setShowUploadModal(true)}
-                  className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-1.5 cursor-pointer"
+                  className="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-1.5 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                   <span>+ Upload Daily Invoice</span>
@@ -508,8 +508,8 @@ export default function CustomerDashboardPage() {
                   <div>
                     <span className="font-extrabold block text-sm">
                       {monthlyFiling.status === "APPROVED" 
-                        ? `✓ Monthly IT Filing for ${selectedMonthLabel} Approved!` 
-                        : `⏳ Monthly IT Return for ${selectedMonthLabel} Submitted`}
+                        ? `✓ Monthly GST Return for ${selectedMonthLabel} Approved!` 
+                        : `⏳ Monthly GST Return for ${selectedMonthLabel} Submitted (Under Review)`}
                     </span>
                     <span className="text-[11px] opacity-80">
                       Ack Ref: {monthlyFiling.ack_number} • Status: {monthlyFiling.status}

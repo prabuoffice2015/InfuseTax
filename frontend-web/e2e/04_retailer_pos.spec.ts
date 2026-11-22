@@ -63,19 +63,12 @@ test.describe('04 - Retailer POS Desk & Wallet Controls', () => {
     await expect(modalHeading.first()).toBeVisible({ timeout: 5000 });
   });
 
-  test('should display Month Dropdown and Customer Invoices Compilation in IT Filing desk', async ({ page }) => {
+  test('should display Month Dropdown and Customer Invoices Compilation in GST Filing desk', async ({ page }) => {
     const sidebar = page.locator('aside');
-    await sidebar.getByText('IT Filing').click();
+    await sidebar.getByText('GST Filing').click();
     await page.waitForTimeout(500);
 
-    await expect(page).toHaveURL(/desk=itr/);
-
-    // Switch to Monthly Mode
-    const monthlyBtn = page.locator('button').filter({ hasText: /Monthly Invoices/i });
-    if (await monthlyBtn.count() > 0) {
-      await monthlyBtn.first().click();
-      await page.waitForTimeout(300);
-    }
+    await expect(page).toHaveURL(/desk=gstr_filing/);
 
     // Verify Month selector
     const monthSelect = page.locator('select');
@@ -84,5 +77,9 @@ test.describe('04 - Retailer POS Desk & Wallet Controls', () => {
     // Verify Attach Customer Invoice button
     const attachBtn = page.locator('button').filter({ hasText: /Attach Customer Invoice/i });
     await expect(attachBtn.first()).toBeVisible();
+
+    // Verify Customer Daily Invoices table header
+    const invoicesTableHeading = page.locator('text=/Customer Daily Invoices & Receipts/i');
+    await expect(invoicesTableHeading.first()).toBeVisible({ timeout: 5000 });
   });
 });

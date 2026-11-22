@@ -1008,16 +1008,28 @@ class TaxController {
                 $stmt->execute(['cid' => $targetCustomerId, 'm' => $month]);
                 $invoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-                // Check if filing exists for this customer & month
+                // Check if filing exists for this customer & month (Check GST filing first, then ITR)
                 $stmtFiling = $pdo->prepare("
-                    SELECT id, ack_number, status, bank_period, verified_doc_url, rejection_remarks, created_at, approved_at
-                    FROM itr_filings
-                    WHERE (operator_id = :cid OR client_name = (SELECT full_name FROM users WHERE id = :cid))
-                      AND (bank_period = :m OR documents_payload->>'month' = :m)
+                    SELECT id, arn as ack_number, arn, status, COALESCE(tax_period, documents_payload->>'month') as bank_period, verified_doc_url, rejection_remarks, created_at, approved_at
+                    FROM gst_filings
+                    WHERE (operator_id = :cid OR retailer_id = :cid OR trade_name = (SELECT full_name FROM users WHERE id = :cid))
+                      AND (tax_period = :m OR documents_payload->>'month' = :m)
                     ORDER BY created_at DESC LIMIT 1
                 ");
                 $stmtFiling->execute(['cid' => $targetCustomerId, 'm' => $month]);
                 $filing = $stmtFiling->fetch(PDO::FETCH_ASSOC) ?: null;
+
+                if (!$filing) {
+                    $stmtFilingItr = $pdo->prepare("
+                        SELECT id, ack_number, status, bank_period, verified_doc_url, rejection_remarks, created_at, approved_at
+                        FROM itr_filings
+                        WHERE (operator_id = :cid OR client_name = (SELECT full_name FROM users WHERE id = :cid))
+                          AND (bank_period = :m OR documents_payload->>'month' = :m)
+                        ORDER BY created_at DESC LIMIT 1
+                    ");
+                    $stmtFilingItr->execute(['cid' => $targetCustomerId, 'm' => $month]);
+                    $filing = $stmtFilingItr->fetch(PDO::FETCH_ASSOC) ?: null;
+                }
 
                 Response::json([
                     'status'   => 'success',
@@ -1064,14 +1076,26 @@ class TaxController {
                 $filing = null;
                 if (!empty($targetCustomerId)) {
                     $stmtFiling = $pdo->prepare("
-                        SELECT id, ack_number, status, bank_period, portal_fee, verified_doc_url, rejection_remarks, created_at, approved_at
-                        FROM itr_filings
-                        WHERE (operator_id = :cid OR client_name = (SELECT full_name FROM users WHERE id = :cid))
-                          AND (bank_period = :m OR documents_payload->>'month' = :m)
+                        SELECT id, arn as ack_number, arn, status, COALESCE(tax_period, documents_payload->>'month') as bank_period, portal_fee, verified_doc_url, rejection_remarks, created_at, approved_at
+                        FROM gst_filings
+                        WHERE (operator_id = :cid OR retailer_id = :rid OR trade_name = (SELECT full_name FROM users WHERE id = :cid))
+                          AND (tax_period = :m OR documents_payload->>'month' = :m)
                         ORDER BY created_at DESC LIMIT 1
                     ");
-                    $stmtFiling->execute(['cid' => $targetCustomerId, 'm' => $month]);
+                    $stmtFiling->execute(['cid' => $targetCustomerId, 'rid' => $userId, 'm' => $month]);
                     $filing = $stmtFiling->fetch(PDO::FETCH_ASSOC) ?: null;
+
+                    if (!$filing) {
+                        $stmtFilingItr = $pdo->prepare("
+                            SELECT id, ack_number, status, bank_period, portal_fee, verified_doc_url, rejection_remarks, created_at, approved_at
+                            FROM itr_filings
+                            WHERE (operator_id = :cid OR client_name = (SELECT full_name FROM users WHERE id = :cid))
+                              AND (bank_period = :m OR documents_payload->>'month' = :m)
+                            ORDER BY created_at DESC LIMIT 1
+                        ");
+                        $stmtFilingItr->execute(['cid' => $targetCustomerId, 'm' => $month]);
+                        $filing = $stmtFilingItr->fetch(PDO::FETCH_ASSOC) ?: null;
+                    }
                 }
 
                 Response::json([
@@ -1108,6 +1132,17 @@ class TaxController {
             $uRow = $stmtP->fetch(PDO::FETCH_ASSOC);
             $retailerId = $uRow['parent_id'] ?? null;
             if (!empty($uRow['tenant_id'])) $tenantId = $uRow['tenant_id'];
+
+            if (empty($retailerId)) {
+                $stmtDef = $pdo->prepare("SELECT id FROM users WHERE role = 'retailer' AND tenant_id = :tid LIMIT 1");
+                $stmtDef->execute(['tid' => $tenantId]);
+                $retailerId = $stmtDef->fetchColumn() ?: null;
+                if (!$retailerId) {
+                    $stmtDef2 = $pdo->prepare("SELECT id FROM users WHERE role = 'retailer' LIMIT 1");
+                    $stmtDef2->execute();
+                    $retailerId = $stmtDef2->fetchColumn() ?: null;
+                }
+            }
         } else {
             $customerId = Security::sanitizeString($body['customer_id'] ?? '');
             $retailerId = $userId;
@@ -1193,6 +1228,153 @@ class TaxController {
             ]);
         } catch (\Throwable $e) {
             Response::error('Failed to delete invoice: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Retailer submits compiled Monthly GST Return (GSTR-1 / GSTR-3B) for a customer.
+     * Deducts gstr_filing service fee from retailer wallet, creates GST filing for Admin verification.
+     */
+    public function submitMonthlyGstFiling(array $body): void {
+        $actor = AuthMiddleware::authenticate();
+        $pdo = Database::getConnection();
+        if (!$pdo) Response::error('Database connection unavailable.', 500);
+
+        $retailerId = $actor['sub'] ?? $actor['id'] ?? '';
+        $tenantId   = $actor['tenant_id'] ?? 'a0000000-0000-0000-0000-000000000001';
+        $customerId = Security::sanitizeString($body['customer_id'] ?? '');
+        $month      = Security::sanitizeString($body['month'] ?? date('Y-m'));
+        $returnType = Security::sanitizeString($body['return_type'] ?? 'GSTR-3B');
+        $gstin      = Security::sanitizeString($body['gstin'] ?? '');
+        $taxableAmt = floatval($body['taxable_amount'] ?? 0.00);
+        $taxLiab    = floatval($body['tax_liability'] ?? 0.00);
+        $itcClaim   = floatval($body['itc_claim'] ?? 0.00);
+        $notes      = Security::sanitizeString($body['notes'] ?? 'Monthly GST return submitted with compiled customer invoices.');
+
+        if (empty($customerId)) {
+            Response::error('Target customer is required for monthly GST return filing.', 422);
+        }
+
+        try {
+            $pdo->beginTransaction();
+
+            // 1. Fetch customer details
+            $stmtC = $pdo->prepare("SELECT id, full_name, email, mobile, income_tax_login_id, gst_login_id, pan_card_number, tenant_id FROM users WHERE id = :cid");
+            $stmtC->execute(['cid' => $customerId]);
+            $customer = $stmtC->fetch(PDO::FETCH_ASSOC);
+
+            if (!$customer) {
+                $pdo->rollBack();
+                Response::error('Customer not found.', 404);
+            }
+
+            if (!empty($customer['tenant_id'])) {
+                $tenantId = $customer['tenant_id'];
+            }
+
+            // 2. Fetch invoices for this customer & month
+            $stmtInv = $pdo->prepare("SELECT id, invoice_date, invoice_number, invoice_title, amount, file_url, file_name FROM customer_invoices WHERE customer_id = :cid AND month = :m");
+            $stmtInv->execute(['cid' => $customerId, 'm' => $month]);
+            $invoices = $stmtInv->fetchAll(PDO::FETCH_ASSOC);
+
+            // 3. Get Super Admin configured service fee for GSTR filing
+            $portalFee = self::getServiceRate($pdo, $tenantId, 'gstr_filing', 350.00);
+
+            // 4. Check retailer wallet balance
+            $stmtW = $pdo->prepare("SELECT balance FROM wallets WHERE user_id = :rid FOR UPDATE");
+            $stmtW->execute(['rid' => $retailerId]);
+            $currBal = floatval($stmtW->fetchColumn() ?: 0.00);
+
+            if ($currBal < $portalFee) {
+                $pdo->rollBack();
+                Response::error("Insufficient wallet balance (₹" . number_format($currBal, 2) . "). Required service fee for Monthly GST Return Filing is ₹" . number_format($portalFee, 2) . ". Please top up wallet.", 422);
+            }
+
+            // 5. Debit retailer wallet
+            $newBalance = $currBal - $portalFee;
+            $stmtUpW = $pdo->prepare("UPDATE wallets SET balance = :bal, updated_at = NOW() WHERE user_id = :rid");
+            $stmtUpW->execute(['bal' => $newBalance, 'rid' => $retailerId]);
+
+            // 6. Record audit ledger
+            $stmtLedger = $pdo->prepare("
+                INSERT INTO audit_ledger (tenant_id, user_id, entry_type, amount, balance_after, description, created_at)
+                VALUES (:tid, :uid, 'DEBIT', :amt, :after, :desc, NOW())
+            ");
+            $stmtLedger->execute([
+                'tid'   => $tenantId,
+                'uid'   => $retailerId,
+                'amt'   => $portalFee,
+                'after' => $newBalance,
+                'desc'  => "Monthly GST Return ({$returnType}) - " . $customer['full_name'] . " (" . $month . ")"
+            ]);
+
+            // 7. Insert GST filing record
+            $arn = 'GST' . date('Ym') . rand(100000, 999999);
+            $pan = !empty($customer['income_tax_login_id']) ? strtoupper(substr($customer['income_tax_login_id'], 0, 10)) : 
+                   (!empty($gstin) ? strtoupper(substr($gstin, 2, 10)) : 'GSTNPENDING');
+
+            $docsPayload = json_encode([
+                'month'          => $month,
+                'return_type'    => $returnType,
+                'gstin'          => $gstin ?: ($customer['gst_login_id'] ?? ''),
+                'taxable_amount' => $taxableAmt,
+                'tax_liability'  => $taxLiab,
+                'itc_claim'      => $itcClaim,
+                'invoices_count' => count($invoices),
+                'invoices'       => $invoices,
+                'notes'          => $notes,
+                'submitted_by'   => $actor['name'] ?? 'Retailer'
+            ]);
+
+            $stmtFiling = $pdo->prepare("
+                INSERT INTO gst_filings 
+                (tenant_id, retailer_id, operator_id, arn, trade_name, legal_name, entity_type, pan, state, filing_type, tax_period, status, documents_payload, portal_fee, retailer_margin, created_at)
+                VALUES 
+                (:tid, :rid, :oid, :arn, :trade, :legal, :entity, :pan, 'Tamil Nadu', 'MONTHLY_RETURN', :tperiod, 'PENDING_APPROVAL', :docs, :fee, 0.00, NOW())
+                RETURNING *
+            ");
+            $stmtFiling->execute([
+                'tid'     => $tenantId,
+                'rid'     => $retailerId,
+                'oid'     => $customerId,
+                'arn'     => $arn,
+                'trade'   => $customer['full_name'],
+                'legal'   => $customer['full_name'],
+                'entity'  => $returnType,
+                'pan'     => $pan,
+                'tperiod' => $month,
+                'docs'    => $docsPayload,
+                'fee'     => $portalFee
+            ]);
+            $filing = $stmtFiling->fetch(PDO::FETCH_ASSOC);
+
+            // 8. Mark customer invoices as FILED
+            $stmtMark = $pdo->prepare("UPDATE customer_invoices SET status = 'FILED', updated_at = NOW() WHERE customer_id = :cid AND month = :m");
+            $stmtMark->execute(['cid' => $customerId, 'm' => $month]);
+
+            // 9. Notify Admin & Super Admin
+            \App\Models\Notification::create([
+                'tenant_id' => $tenantId,
+                'title'     => "New Monthly GST Return: " . $customer['full_name'] . " (" . $month . ")",
+                'message'   => "Retailer submitted monthly {$returnType} return with " . count($invoices) . " attached invoices. Wallet deducted ₹" . number_format($portalFee, 2) . ". Ready for verification.",
+                'type'      => "filing",
+                'is_read'   => false,
+            ]);
+
+            $pdo->commit();
+
+            Response::json([
+                'status'     => 'success',
+                'message'    => "✓ Monthly GST Return ({$returnType}) for {$customer['full_name']} ({$month}) submitted successfully! ₹" . number_format($portalFee, 2) . " deducted from wallet.",
+                'filing_id'  => $filing['id'] ?? $arn,
+                'ack_number' => $arn,
+                'arn'        => $arn,
+                'status'     => 'PENDING_APPROVAL',
+                'balance'    => $newBalance
+            ], 201);
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            Response::error('Failed to submit monthly GST return: ' . $e->getMessage(), 500);
         }
     }
 
