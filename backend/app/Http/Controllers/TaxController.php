@@ -1091,8 +1091,6 @@ class TaxController {
                     ");
                     $stmtFiling->execute(['cid' => $targetCustomerId, 'rid' => $userId, 'm' => ($month === 'all' ? date('Y-m') : $month)]);
                     $filing = $stmtFiling->fetch(PDO::FETCH_ASSOC) ?: null;
-                }
-                    $filing = $stmtFiling->fetch(PDO::FETCH_ASSOC) ?: null;
 
                     if (!$filing) {
                         $stmtFilingItr = $pdo->prepare("
@@ -1102,7 +1100,7 @@ class TaxController {
                               AND (bank_period = :m OR documents_payload->>'month' = :m)
                             ORDER BY created_at DESC LIMIT 1
                         ");
-                        $stmtFilingItr->execute(['cid' => $targetCustomerId, 'm' => $month]);
+                        $stmtFilingItr->execute(['cid' => $targetCustomerId, 'm' => ($month === 'all' ? date('Y-m') : $month)]);
                         $filing = $stmtFilingItr->fetch(PDO::FETCH_ASSOC) ?: null;
                     }
                 }
