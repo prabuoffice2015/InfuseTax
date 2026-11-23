@@ -1088,6 +1088,7 @@ export default function DistributorDashboardPage() {
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
             {activeTab === "overview" ? "Admin Operations Dashboard" :
+             activeTab === "service-approvals" ? "All Service Approvals" :
              activeTab === "gst-reg" ? "GST Registration Applications" :
              activeTab === "gst-filing" ? "GST Return Filings" :
              activeTab === "it-filing" ? "Income Tax Returns" :
@@ -1096,6 +1097,7 @@ export default function DistributorDashboardPage() {
           </h1>
           <p className="text-xs text-slate-500">
             {activeTab === "overview" ? "Review service application queues, verify client returns, and audit downline filing activity." :
+             activeTab === "service-approvals" ? "Inspect all services submitted by downline Retailers, verify deducted wallet fees, and approve or reject submissions." :
              activeTab === "gst-reg" ? "Inspect scanned color document proofs, verify business trade details, and approve or reject GST registrations." :
              activeTab === "gst-filing" ? "Verify sales and purchase return figures, check ITC claims, and approve GST returns." :
              activeTab === "it-filing" ? "Inspect AIS, Form 16 computations, and approve ITR submissions." :
@@ -1822,14 +1824,15 @@ export default function DistributorDashboardPage() {
       {/* ========================================================================= */}
       {(activeTab === "service-approvals" || activeTab === "gst-reg" || activeTab === "gst-filing" || activeTab === "it-filing") && (() => {
         const categoryFilter = activeTab === "gst-reg" ? "gst_registration" : activeTab === "gst-filing" ? "gstr_filing" : activeTab === "it-filing" ? "itr" : "all";
-        const pageTitle = activeTab === "gst-reg" ? "GST Registration Applications (View & Approve)" : activeTab === "gst-filing" ? "GST Return Filings (View & Approve)" : activeTab === "it-filing" ? "Income Tax Returns (View & Approve)" : "Network Service Filing Approvals";
-        const pageDesc = activeTab === "gst-reg" ? "Inspect scanned color document proofs, verify business trade details, and approve or reject GST registrations." : activeTab === "gst-filing" ? "Verify sales and purchase return figures, check ITC claims, and approve GST returns." : activeTab === "it-filing" ? "Inspect AIS, Form 16 computations, and approve ITR submissions." : "Inspect scanned color documents from Tier 3 Retailers & Tier 4 Operators, approve with verified proof upload, or reject with mandatory remarks.";
+        const pageTitle = activeTab === "gst-reg" ? "GST Registration Applications (View & Approve)" : activeTab === "gst-filing" ? "GST Return Filings (View & Approve)" : activeTab === "it-filing" ? "Income Tax Returns (View & Approve)" : "All Service Approvals (Network Submissions)";
+        const pageDesc = activeTab === "gst-reg" ? "Inspect scanned color document proofs, verify business trade details, and approve or reject GST registrations." : activeTab === "gst-filing" ? "Verify sales and purchase return figures, check ITC claims, and approve GST returns." : activeTab === "it-filing" ? "Inspect AIS, Form 16 computations, and approve ITR submissions." : "Inspect scanned documents from Tier 3 Retailers, verify deducted wallet fees, and approve or reject submissions with official certificates.";
 
         const matchesCategory = (a: any) => {
           if (categoryFilter === "all") return true;
-          if (categoryFilter === "gst_registration") return a.service_category === "gst_registration" || a.service_name?.toLowerCase().includes("registration");
-          if (categoryFilter === "gstr_filing") return a.service_category === "gstr_filing" || a.service_name?.toLowerCase().includes("return") || a.service_name?.toLowerCase().includes("gstr");
+          if (categoryFilter === "gst_registration") return a.service_category === "gst_registration" || (a.service_category === "gst" && a.filing_type !== "MONTHLY_RETURN" && !a.entity_type?.includes("GSTR")) || a.service_name?.toLowerCase().includes("registration");
+          if (categoryFilter === "gstr_filing") return a.service_category === "gstr_filing" || (a.service_category === "gst" && (a.filing_type === "MONTHLY_RETURN" || a.entity_type?.includes("GSTR"))) || a.service_name?.toLowerCase().includes("return") || a.service_name?.toLowerCase().includes("gstr");
           if (categoryFilter === "itr") return a.service_category === "itr" || a.service_name?.toLowerCase().includes("itr") || a.service_name?.toLowerCase().includes("income");
+          if (categoryFilter === "esevai") return a.service_category === "esevai" || a.service_name?.toLowerCase().includes("esevai") || a.service_name?.toLowerCase().includes("certificate") || a.service_name?.toLowerCase().includes("pan") || a.service_name?.toLowerCase().includes("passport");
           return true;
         };
 
@@ -1874,7 +1877,7 @@ export default function DistributorDashboardPage() {
                   <tr>
                     <th className="p-3.5">ARN / Ref</th>
                     <th className="p-3.5">Customer / Client</th>
-                    <th className="p-3.5">Service & Constitution</th>
+                    <th className="p-3.5">Service &amp; Constitution</th>
                     <th className="p-3.5">Retailer / Submitter</th>
                     <th className="p-3.5 text-right">Fee (₹)</th>
                     <th className="p-3.5">Status</th>
@@ -1893,14 +1896,14 @@ export default function DistributorDashboardPage() {
                       <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="p-3.5 font-bold font-mono text-[11px] text-blue-700">{app.arn}</td>
                         <td className="p-3.5">
-                          <div className="font-bold text-slate-900">{app.client_name}</div>
+                          <div className="font-bold text-slate-900">{app.customer_name || app.client_name}</div>
                           <div className="text-[11px] text-slate-400">{app.submitted_at}</div>
                         </td>
                         <td className="p-3.5">
-                          <div className="font-bold text-slate-800">{app.service_category === 'itr' ? 'Income Tax Return' : app.service_category === 'gstr_filing' ? 'GST Return' : 'GST Registration'}</div>
+                          <div className="font-bold text-slate-800">{app.service_name || (app.service_category === 'itr' ? 'Income Tax Return' : app.service_category === 'gstr_filing' ? 'GST Return' : app.service_category === 'esevai' ? 'E-Sevai Service' : 'GST Registration')}</div>
                           <div className="text-[11px] text-slate-500">{app.entity_type}</div>
                         </td>
-                        <td className="p-3.5 font-medium text-slate-700">{app.operator_name || "Retailer Counter"}</td>
+                        <td className="p-3.5 font-medium text-slate-700">{app.retailer_name || app.operator_name || "Retailer Counter"}</td>
                         <td className="p-3.5 text-right font-black text-slate-900 font-mono">
                           ₹{(parseFloat(app.amount as any || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </td>
@@ -1918,7 +1921,7 @@ export default function DistributorDashboardPage() {
                             className="px-3.5 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-xl font-bold transition-all shadow-xs cursor-pointer inline-flex items-center space-x-1"
                           >
                             <Eye className="w-3.5 h-3.5" />
-                            <span>View & Approve</span>
+                            <span>View &amp; Approve</span>
                           </button>
                         </td>
                       </tr>

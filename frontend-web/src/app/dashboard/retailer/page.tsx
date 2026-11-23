@@ -297,6 +297,11 @@ export default function RetailerDashboardPage() {
 
   const handleRetUploadInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (retMonthlyFiling && retMonthlyFiling.status !== 'REJECTED') {
+      showToast("Cannot attach invoice: Monthly return has already been submitted for this customer and period.", "error");
+      setShowRetInvoiceModal(false);
+      return;
+    }
     const targetCust = selectedCustomerForFiling || retSelectedCustomerForInvoices;
     if (!targetCust) {
       showToast("Please select a customer first", "error");
@@ -2910,21 +2915,28 @@ export default function RetailerDashboardPage() {
               </select>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                const cust = selectedCustomerForFiling || retSelectedCustomerForInvoices || customersList[0];
-                if (cust) {
-                  setSelectedCustomerForFiling(cust);
-                  setRetSelectedCustomerForInvoices(cust);
-                }
-                setShowRetInvoiceModal(true);
-              }}
-              className="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-1.5 cursor-pointer self-start sm:self-auto"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ Attach Customer Invoice / Bill</span>
-            </button>
+            {retMonthlyFiling && retMonthlyFiling.status !== 'REJECTED' ? (
+              <div className="px-4 py-2 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-xs self-start sm:self-auto">
+                <Lock className="w-3.5 h-3.5 text-amber-600" />
+                <span>Month Locked (Return Submitted)</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  const cust = selectedCustomerForFiling || retSelectedCustomerForInvoices || customersList[0];
+                  if (cust) {
+                    setSelectedCustomerForFiling(cust);
+                    setRetSelectedCustomerForInvoices(cust);
+                  }
+                  setShowRetInvoiceModal(true);
+                }}
+                className="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-1.5 cursor-pointer self-start sm:self-auto"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Attach Customer Invoice / Bill</span>
+              </button>
+            )}
           </div>
 
           {/* Customer Daily Invoices Table for Selected Month */}
@@ -3019,7 +3031,7 @@ export default function RetailerDashboardPage() {
                           )}
                         </td>
                         <td className="p-3.5 text-right">
-                          {inv.status !== "FILED" && (
+                          {inv.status !== "FILED" && (!retMonthlyFiling || retMonthlyFiling.status === "REJECTED") && (
                             <button
                               type="button"
                               onClick={() => handleRetDeleteInvoice(inv.id)}
@@ -4114,7 +4126,7 @@ export default function RetailerDashboardPage() {
       )}
 
       {/* MODAL: RETAILER ATTACHES CUSTOMER INVOICE */}
-      {showRetInvoiceModal && retSelectedCustomerForInvoices && (
+      {showRetInvoiceModal && retSelectedCustomerForInvoices && (!retMonthlyFiling || retMonthlyFiling.status === "REJECTED") && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">

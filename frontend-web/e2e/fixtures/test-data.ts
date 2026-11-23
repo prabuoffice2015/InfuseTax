@@ -30,6 +30,13 @@ export const TEST_USERS = {
     role: 'customer',
     expectedPath: '/dashboard/customer',
   },
+  sailesh: {
+    email: 'sailesh@infusetax.com',
+    password: 'Admin@123',
+    name: 'Sailesh (Counter Staff)',
+    role: 'customer',
+    expectedPath: '/dashboard/customer',
+  },
   operator: {
     email: 'counter@infusetax.com',
     password: 'Admin@123',

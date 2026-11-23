@@ -74,9 +74,9 @@ test.describe('04 - Retailer POS Desk & Wallet Controls', () => {
     const monthSelect = page.locator('select');
     await expect(monthSelect.first()).toBeVisible({ timeout: 5000 });
 
-    // Verify Attach Customer Invoice button
-    const attachBtn = page.locator('button').filter({ hasText: /Attach Customer Invoice/i });
-    await expect(attachBtn.first()).toBeVisible();
+    // Verify Attach Customer Invoice button or Month Locked indicator (when return submitted)
+    const attachBtnOrLock = page.locator('button, div').filter({ hasText: /Attach Customer Invoice|Month Locked/i });
+    await expect(attachBtnOrLock.first()).toBeVisible({ timeout: 5000 });
 
     // Verify Customer Daily Invoices table header
     const invoicesTableHeading = page.locator('text=/Customer Daily Invoices & Receipts/i');

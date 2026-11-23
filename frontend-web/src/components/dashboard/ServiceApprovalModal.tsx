@@ -38,13 +38,16 @@ import { secureApiCall } from "@/lib/crypto";
 
 export interface ServiceApprovalItem {
   id: string;
-  service_category: "gst" | "itr" | "gst_registration" | "gstr_filing" | string;
+  service_category: "gst" | "itr" | "gst_registration" | "gstr_filing" | "esevai" | string;
+  service_name?: string;
   arn: string;
   client_name: string;
   entity_type: string;
   pan: string;
   amount: number;
   status: string;
+  retailer_name?: string;
+  customer_name?: string;
   documents?: { 
     [key: string]: boolean | string | { 
       name?: string; 
@@ -510,18 +513,22 @@ export default function ServiceApprovalModal({ item, onClose, onSuccess, readOnl
           )}
 
           {/* Applicant & Operator Metadata Overview */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/80 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/80 text-xs">
             <div>
-              <div className="text-[10px] text-slate-400 font-bold uppercase">Constitution / Type</div>
-              <div className="font-extrabold text-slate-900 mt-0.5 truncate">{item.entity_type || "Standard"}</div>
+              <div className="text-[10px] text-slate-400 font-bold uppercase">Constitution / Service</div>
+              <div className="font-extrabold text-slate-900 mt-0.5 truncate">{item.service_name || item.entity_type || "Standard"}</div>
             </div>
             <div>
-              <div className="text-[10px] text-slate-400 font-bold uppercase">PAN / Aadhaar</div>
+              <div className="text-[10px] text-slate-400 font-bold uppercase">PAN / Identification</div>
               <div className="font-mono font-bold text-slate-900 mt-0.5">{item.pan || "N/A"}</div>
             </div>
             <div>
-              <div className="text-[10px] text-slate-400 font-bold uppercase">Submitted By (Operator)</div>
-              <div className="font-bold text-slate-900 mt-0.5 truncate">{item.operator_name || "Counter Staff"}</div>
+              <div className="text-[10px] text-slate-400 font-bold uppercase">Retailer / Submitter</div>
+              <div className="font-bold text-slate-900 mt-0.5 truncate">{item.retailer_name || item.operator_name || "Retailer Counter"}</div>
+            </div>
+            <div>
+              <div className="text-[10px] text-slate-400 font-bold uppercase">Debited Wallet Fee</div>
+              <div className="font-mono font-black text-emerald-700 mt-0.5">₹{parseFloat(item.amount as any || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
             </div>
             <div>
               <div className="text-[10px] text-slate-400 font-bold uppercase">Submission Time</div>

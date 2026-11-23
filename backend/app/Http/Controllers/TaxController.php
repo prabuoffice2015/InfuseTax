@@ -462,19 +462,14 @@ class TaxController {
             // 1. Fetch GST Filings
             if ($role === 'super_admin') {
                 $stmtGst = $pdo->prepare("
-                    SELECT g.id, 'gst' as service_category, g.arn, g.trade_name as client_name, g.entity_type, g.pan, 
+                    SELECT g.id, 
+                           CASE WHEN g.filing_type = 'MONTHLY_RETURN' THEN 'gstr_filing' ELSE 'gst_registration' END as service_category,
+                           CASE WHEN g.filing_type = 'MONTHLY_RETURN' THEN 'Monthly GST Return (' || COALESCE(g.tax_period, 'Active') || ')' ELSE 'GST Registration (' || COALESCE(g.entity_type, 'Proprietorship') || ')' END as service_name,
+                           g.arn, g.trade_name as client_name, g.entity_type, g.pan, 
                            g.portal_fee as amount, g.status, g.documents_payload, g.verified_doc_url, g.rejection_remarks,
-                           u.full_name as operator_name, u.email as operator_email, u.mobile as operator_mobile,
-                           to_char(g.created_at, 'DD Mon YYYY, HH24:MI') as submitted_at
-                    FROM gst_filings g
-                    LEFT JOIN users u ON g.operator_id = u.id
-                    ORDER BY g.created_at DESC
-                ");
-                $stmtGst->execute();
-            } else if ($role === 'distributor' || $role === 'admin') {
-                $stmtGst = $pdo->prepare("
-                    SELECT g.id, 'gst' as service_category, g.arn, g.trade_name as client_name, g.entity_type, g.pan, 
-                           g.portal_fee as amount, g.status, g.documents_payload, g.verified_doc_url, g.rejection_remarks,
+                           COALESCE(r.full_name, 'Retailer Counter') as retailer_name,
+                           r.email as retailer_email, r.mobile as retailer_mobile,
+                           COALESCE(u.full_name, g.trade_name) as customer_name,
                            COALESCE(u.full_name, r.full_name, 'Retailer / Operator') as operator_name, 
                            COALESCE(u.email, r.email) as operator_email, 
                            COALESCE(u.mobile, r.mobile) as operator_mobile,
@@ -482,15 +477,41 @@ class TaxController {
                     FROM gst_filings g
                     LEFT JOIN users u ON g.operator_id = u.id
                     LEFT JOIN users r ON g.retailer_id = r.id
-                    WHERE g.tenant_id = :tid
+                    ORDER BY g.created_at DESC
+                ");
+                $stmtGst->execute();
+            } else if ($role === 'distributor' || $role === 'admin') {
+                $stmtGst = $pdo->prepare("
+                    SELECT g.id, 
+                           CASE WHEN g.filing_type = 'MONTHLY_RETURN' THEN 'gstr_filing' ELSE 'gst_registration' END as service_category,
+                           CASE WHEN g.filing_type = 'MONTHLY_RETURN' THEN 'Monthly GST Return (' || COALESCE(g.tax_period, 'Active') || ')' ELSE 'GST Registration (' || COALESCE(g.entity_type, 'Proprietorship') || ')' END as service_name,
+                           g.arn, g.trade_name as client_name, g.entity_type, g.pan, 
+                           g.portal_fee as amount, g.status, g.documents_payload, g.verified_doc_url, g.rejection_remarks,
+                           COALESCE(r.full_name, 'Retailer Counter') as retailer_name,
+                           r.email as retailer_email, r.mobile as retailer_mobile,
+                           COALESCE(u.full_name, g.trade_name) as customer_name,
+                           COALESCE(u.full_name, r.full_name, 'Retailer / Operator') as operator_name, 
+                           COALESCE(u.email, r.email) as operator_email, 
+                           COALESCE(u.mobile, r.mobile) as operator_mobile,
+                           to_char(g.created_at, 'DD Mon YYYY, HH24:MI') as submitted_at
+                    FROM gst_filings g
+                    LEFT JOIN users u ON g.operator_id = u.id
+                    LEFT JOIN users r ON g.retailer_id = r.id
+                    WHERE (g.tenant_id = :tid OR g.tenant_id IS NULL)
                     ORDER BY g.created_at DESC
                 ");
                 $stmtGst->execute(['tid' => $tenantId]);
             } else {
                 // Retailer (Tier 3)
                 $stmtGst = $pdo->prepare("
-                    SELECT g.id, 'gst' as service_category, g.arn, g.trade_name as client_name, g.entity_type, g.pan, 
+                    SELECT g.id, 
+                           CASE WHEN g.filing_type = 'MONTHLY_RETURN' THEN 'gstr_filing' ELSE 'gst_registration' END as service_category,
+                           CASE WHEN g.filing_type = 'MONTHLY_RETURN' THEN 'Monthly GST Return (' || COALESCE(g.tax_period, 'Active') || ')' ELSE 'GST Registration (' || COALESCE(g.entity_type, 'Proprietorship') || ')' END as service_name,
+                           g.arn, g.trade_name as client_name, g.entity_type, g.pan, 
                            g.portal_fee as amount, g.status, g.documents_payload, g.verified_doc_url, g.rejection_remarks,
+                           COALESCE(r.full_name, 'Retailer Counter') as retailer_name,
+                           r.email as retailer_email, r.mobile as retailer_mobile,
+                           COALESCE(u.full_name, g.trade_name) as customer_name,
                            COALESCE(u.full_name, r.full_name, 'Shop Operator') as operator_name, 
                            COALESCE(u.email, r.email) as operator_email, 
                            COALESCE(u.mobile, r.mobile) as operator_mobile,
@@ -508,38 +529,60 @@ class TaxController {
             // 2. Fetch ITR Filings
             if ($role === 'super_admin') {
                 $stmtItr = $pdo->prepare("
-                    SELECT i.id, 'itr' as service_category, i.ack_number as arn, i.client_name, i.itr_form as entity_type, i.pan, 
+                    SELECT i.id, 'itr' as service_category, 
+                           'Income Tax Return (' || COALESCE(i.itr_form, 'ITR-1') || ')' as service_name,
+                           i.ack_number as arn, i.client_name, i.itr_form as entity_type, i.pan, 
                            i.portal_fee as amount, i.status, i.documents_payload, i.verified_doc_url, i.rejection_remarks,
+                           COALESCE(r.full_name, 'Retailer Counter') as retailer_name,
+                           r.email as retailer_email, r.mobile as retailer_mobile,
+                           COALESCE(u.full_name, i.client_name) as customer_name,
                            i.mobile as client_mobile, i.email as client_email, i.bank_period,
                            u.full_name as operator_name, u.email as operator_email, u.mobile as operator_mobile,
                            to_char(i.created_at, 'DD Mon YYYY, HH24:MI') as submitted_at
                     FROM itr_filings i
                     LEFT JOIN users u ON i.operator_id = u.id
+                    LEFT JOIN users r ON i.retailer_id = r.id
                     ORDER BY i.created_at DESC
                 ");
                 $stmtItr->execute();
             } else if ($role === 'distributor' || $role === 'admin') {
                 $stmtItr = $pdo->prepare("
-                    SELECT i.id, 'itr' as service_category, i.ack_number as arn, i.client_name, i.itr_form as entity_type, i.pan, 
+                    SELECT i.id, 'itr' as service_category, 
+                           'Income Tax Return (' || COALESCE(i.itr_form, 'ITR-1') || ')' as service_name,
+                           i.ack_number as arn, i.client_name, i.itr_form as entity_type, i.pan, 
                            i.portal_fee as amount, i.status, i.documents_payload, i.verified_doc_url, i.rejection_remarks,
+                           COALESCE(r.full_name, 'Retailer Counter') as retailer_name,
+                           r.email as retailer_email, r.mobile as retailer_mobile,
+                           COALESCE(u.full_name, i.client_name) as customer_name,
                            i.mobile as client_mobile, i.email as client_email, i.bank_period,
-                           u.full_name as operator_name, u.email as operator_email, u.mobile as operator_mobile,
+                           COALESCE(u.full_name, r.full_name, 'Retailer / Operator') as operator_name, 
+                           COALESCE(u.email, r.email) as operator_email, 
+                           COALESCE(u.mobile, r.mobile) as operator_mobile,
                            to_char(i.created_at, 'DD Mon YYYY, HH24:MI') as submitted_at
                     FROM itr_filings i
                     LEFT JOIN users u ON i.operator_id = u.id
-                    WHERE i.tenant_id = :tid
+                    LEFT JOIN users r ON i.retailer_id = r.id
+                    WHERE (i.tenant_id = :tid OR i.tenant_id IS NULL)
                     ORDER BY i.created_at DESC
                 ");
                 $stmtItr->execute(['tid' => $tenantId]);
             } else {
                 $stmtItr = $pdo->prepare("
-                    SELECT i.id, 'itr' as service_category, i.ack_number as arn, i.client_name, i.itr_form as entity_type, i.pan, 
+                    SELECT i.id, 'itr' as service_category, 
+                           'Income Tax Return (' || COALESCE(i.itr_form, 'ITR-1') || ')' as service_name,
+                           i.ack_number as arn, i.client_name, i.itr_form as entity_type, i.pan, 
                            i.portal_fee as amount, i.status, i.documents_payload, i.verified_doc_url, i.rejection_remarks,
+                           COALESCE(r.full_name, 'Retailer Counter') as retailer_name,
+                           r.email as retailer_email, r.mobile as retailer_mobile,
+                           COALESCE(u.full_name, i.client_name) as customer_name,
                            i.mobile as client_mobile, i.email as client_email, i.bank_period,
-                           u.full_name as operator_name, u.email as operator_email, u.mobile as operator_mobile,
+                           COALESCE(u.full_name, r.full_name, 'Shop Operator') as operator_name, 
+                           COALESCE(u.email, r.email) as operator_email, 
+                           COALESCE(u.mobile, r.mobile) as operator_mobile,
                            to_char(i.created_at, 'DD Mon YYYY, HH24:MI') as submitted_at
                     FROM itr_filings i
                     LEFT JOIN users u ON i.operator_id = u.id
+                    LEFT JOIN users r ON i.retailer_id = r.id
                     WHERE i.retailer_id = :uid OR i.tenant_id = :tid
                     ORDER BY i.created_at DESC
                 ");
@@ -547,8 +590,83 @@ class TaxController {
             }
             $itrRows = $stmtItr->fetchAll(PDO::FETCH_ASSOC);
 
+            // 3. Fetch E-Sevai Applications
+            if ($role === 'super_admin') {
+                $stmtEsevai = $pdo->prepare("
+                    SELECT e.id, 'esevai' as service_category,
+                           CASE WHEN e.service_type ILIKE '%pan%' THEN 'PAN Card Application'
+                                WHEN e.service_type ILIKE '%passport%' THEN 'Passport Assistance'
+                                ELSE 'E-Sevai Certificate (' || e.service_type || ')'
+                           END as service_name,
+                           e.id::text as arn, e.applicant_name as client_name, e.service_type as entity_type, '' as pan,
+                           60.00 as amount, e.status, e.documents_payload, e.verified_doc_url, e.rejection_remarks,
+                           COALESCE(r.full_name, 'Retailer Counter') as retailer_name,
+                           r.email as retailer_email, r.mobile as retailer_mobile,
+                           COALESCE(u.full_name, e.applicant_name) as customer_name,
+                           e.mobile as client_mobile, '' as client_email, '' as bank_period,
+                           COALESCE(u.full_name, r.full_name, 'Retailer / Operator') as operator_name,
+                           COALESCE(u.email, r.email) as operator_email,
+                           COALESCE(u.mobile, r.mobile) as operator_mobile,
+                           to_char(e.created_at, 'DD Mon YYYY, HH24:MI') as submitted_at
+                    FROM esevai_applications e
+                    LEFT JOIN users u ON e.customer_id = u.id
+                    LEFT JOIN users r ON e.retailer_id = r.id
+                    ORDER BY e.created_at DESC
+                ");
+                $stmtEsevai->execute();
+            } else if ($role === 'distributor' || $role === 'admin') {
+                $stmtEsevai = $pdo->prepare("
+                    SELECT e.id, 'esevai' as service_category,
+                           CASE WHEN e.service_type ILIKE '%pan%' THEN 'PAN Card Application'
+                                WHEN e.service_type ILIKE '%passport%' THEN 'Passport Assistance'
+                                ELSE 'E-Sevai Certificate (' || e.service_type || ')'
+                           END as service_name,
+                           e.id::text as arn, e.applicant_name as client_name, e.service_type as entity_type, '' as pan,
+                           60.00 as amount, e.status, e.documents_payload, e.verified_doc_url, e.rejection_remarks,
+                           COALESCE(r.full_name, 'Retailer Counter') as retailer_name,
+                           r.email as retailer_email, r.mobile as retailer_mobile,
+                           COALESCE(u.full_name, e.applicant_name) as customer_name,
+                           e.mobile as client_mobile, '' as client_email, '' as bank_period,
+                           COALESCE(u.full_name, r.full_name, 'Retailer / Operator') as operator_name,
+                           COALESCE(u.email, r.email) as operator_email,
+                           COALESCE(u.mobile, r.mobile) as operator_mobile,
+                           to_char(e.created_at, 'DD Mon YYYY, HH24:MI') as submitted_at
+                    FROM esevai_applications e
+                    LEFT JOIN users u ON e.customer_id = u.id
+                    LEFT JOIN users r ON e.retailer_id = r.id
+                    WHERE (e.tenant_id = :tid OR e.tenant_id IS NULL)
+                    ORDER BY e.created_at DESC
+                ");
+                $stmtEsevai->execute(['tid' => $tenantId]);
+            } else {
+                $stmtEsevai = $pdo->prepare("
+                    SELECT e.id, 'esevai' as service_category,
+                           CASE WHEN e.service_type ILIKE '%pan%' THEN 'PAN Card Application'
+                                WHEN e.service_type ILIKE '%passport%' THEN 'Passport Assistance'
+                                ELSE 'E-Sevai Certificate (' || e.service_type || ')'
+                           END as service_name,
+                           e.id::text as arn, e.applicant_name as client_name, e.service_type as entity_type, '' as pan,
+                           60.00 as amount, e.status, e.documents_payload, e.verified_doc_url, e.rejection_remarks,
+                           COALESCE(r.full_name, 'Retailer Counter') as retailer_name,
+                           r.email as retailer_email, r.mobile as retailer_mobile,
+                           COALESCE(u.full_name, e.applicant_name) as customer_name,
+                           e.mobile as client_mobile, '' as client_email, '' as bank_period,
+                           COALESCE(u.full_name, r.full_name, 'Shop Operator') as operator_name,
+                           COALESCE(u.email, r.email) as operator_email,
+                           COALESCE(u.mobile, r.mobile) as operator_mobile,
+                           to_char(e.created_at, 'DD Mon YYYY, HH24:MI') as submitted_at
+                    FROM esevai_applications e
+                    LEFT JOIN users u ON e.customer_id = u.id
+                    LEFT JOIN users r ON e.retailer_id = r.id
+                    WHERE e.retailer_id = :uid OR e.tenant_id = :tid
+                    ORDER BY e.created_at DESC
+                ");
+                $stmtEsevai->execute(['uid' => $userId, 'tid' => $tenantId]);
+            }
+            $esevaiRows = $stmtEsevai->fetchAll(PDO::FETCH_ASSOC);
+
             // Merge and decode JSON payloads
-            $allRows = array_merge($gstRows, $itrRows);
+            $allRows = array_merge($gstRows, $itrRows, $esevaiRows);
             foreach ($allRows as &$row) {
                 if (!empty($row['documents_payload'])) {
                     $row['documents'] = is_string($row['documents_payload']) ? json_decode($row['documents_payload'], true) : $row['documents_payload'];
@@ -592,11 +710,25 @@ class TaxController {
         try {
             $pdo->beginTransaction();
 
-            if ($serviceCat === 'itr') {
+            $normCat = 'gst';
+            if (in_array($serviceCat, ['itr', 'itr_filing'])) {
+                $normCat = 'itr';
+            } else if (in_array($serviceCat, ['esevai', 'pan', 'passport'])) {
+                $normCat = 'esevai';
+            }
+
+            if ($normCat === 'itr') {
                 $stmt = $pdo->prepare("
                     UPDATE itr_filings 
                     SET status = 'APPROVED', approver_id = :aid, verified_doc_url = :vurl, approved_at = NOW()
                     WHERE ack_number = :id OR id::text = :id
+                ");
+                $stmt->execute(['aid' => $approverId, 'vurl' => $verifiedUrl, 'id' => $appId]);
+            } else if ($normCat === 'esevai') {
+                $stmt = $pdo->prepare("
+                    UPDATE esevai_applications 
+                    SET status = 'APPROVED', approver_id = :aid, verified_doc_url = :vurl, approved_at = NOW()
+                    WHERE id::text = :id
                 ");
                 $stmt->execute(['aid' => $approverId, 'vurl' => $verifiedUrl, 'id' => $appId]);
             } else {
@@ -677,7 +809,14 @@ class TaxController {
             $refNumber       = $appId;
             $tenantId        = 'a0000000-0000-0000-0000-000000000001';
 
-            if ($serviceCat === 'itr') {
+            $normCat = 'gst';
+            if (in_array($serviceCat, ['itr', 'itr_filing'])) {
+                $normCat = 'itr';
+            } else if (in_array($serviceCat, ['esevai', 'pan', 'passport'])) {
+                $normCat = 'esevai';
+            }
+
+            if ($normCat === 'itr') {
                 $stmtGet = $pdo->prepare("SELECT operator_id, retailer_id, portal_fee, ack_number, tenant_id FROM itr_filings WHERE ack_number = :id OR id::text = :id");
                 $stmtGet->execute(['id' => $appId]);
                 $row = $stmtGet->fetch(PDO::FETCH_ASSOC);
@@ -692,6 +831,23 @@ class TaxController {
                     UPDATE itr_filings 
                     SET status = 'REJECTED', approver_id = :aid, rejection_remarks = :rem, rejected_at = NOW()
                     WHERE ack_number = :id OR id::text = :id
+                ");
+                $stmt->execute(['aid' => $approverId, 'rem' => $rejectionRemarks, 'id' => $appId]);
+            } else if ($normCat === 'esevai') {
+                $stmtGet = $pdo->prepare("SELECT customer_id, retailer_id, tenant_id FROM esevai_applications WHERE id::text = :id");
+                $stmtGet->execute(['id' => $appId]);
+                $row = $stmtGet->fetch(PDO::FETCH_ASSOC);
+                if ($row) {
+                    $feeToRefund    = 60.00;
+                    $userIdToRefund = !empty($row['retailer_id']) ? $row['retailer_id'] : $row['customer_id'];
+                    $refNumber      = $appId;
+                    $tenantId       = $row['tenant_id'] ?? 'a0000000-0000-0000-0000-000000000001';
+                }
+
+                $stmt = $pdo->prepare("
+                    UPDATE esevai_applications 
+                    SET status = 'REJECTED', approver_id = :aid, rejection_remarks = :rem, rejected_at = NOW()
+                    WHERE id::text = :id
                 ");
                 $stmt->execute(['aid' => $approverId, 'rem' => $rejectionRemarks, 'id' => $appId]);
             } else {
@@ -1174,6 +1330,33 @@ class TaxController {
             Response::error('Invoice document file or scan is required.', 422);
         }
 
+        // Validation: Verify if month is already submitted/filed for this customer
+        $stmtCheck = $pdo->prepare("
+            SELECT id, status, arn as ack_number, 'gst' as source FROM gst_filings 
+            WHERE (operator_id = :cid OR trade_name = (SELECT full_name FROM users WHERE id = :cid))
+              AND (tax_period = :m OR documents_payload->>'month' = :m)
+              AND status != 'REJECTED'
+            ORDER BY created_at DESC LIMIT 1
+        ");
+        $stmtCheck->execute(['cid' => $customerId, 'm' => $month]);
+        $existingFiling = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+        if (!$existingFiling) {
+            $stmtCheckItr = $pdo->prepare("
+                SELECT id, status, ack_number, 'itr' as source FROM itr_filings 
+                WHERE (operator_id = :cid OR client_name = (SELECT full_name FROM users WHERE id = :cid))
+                  AND (bank_period = :m OR documents_payload->>'month' = :m)
+                  AND status != 'REJECTED'
+                ORDER BY created_at DESC LIMIT 1
+            ");
+            $stmtCheckItr->execute(['cid' => $customerId, 'm' => $month]);
+            $existingFiling = $stmtCheckItr->fetch(PDO::FETCH_ASSOC);
+        }
+
+        if ($existingFiling) {
+            Response::error("Monthly GST/Tax return for {$month} has already been submitted (Status: {$existingFiling['status']}, Ack: {$existingFiling['ack_number']}). Daily invoices cannot be added for a submitted month.", 422);
+        }
+
         try {
             $stmt = $pdo->prepare("
                 INSERT INTO customer_invoices 
@@ -1224,6 +1407,32 @@ class TaxController {
         }
 
         try {
+            // Check invoice status and month
+            $stmtInv = $pdo->prepare("SELECT id, customer_id, month, status FROM customer_invoices WHERE id = :id");
+            $stmtInv->execute(['id' => $id]);
+            $targetInv = $stmtInv->fetch(PDO::FETCH_ASSOC);
+            if (!$targetInv) {
+                Response::error('Invoice not found.', 404);
+            }
+            if ($targetInv['status'] === 'FILED') {
+                Response::error('This invoice has already been compiled into a submitted return and cannot be deleted.', 422);
+            }
+
+            // Also verify if the month has an active return filing
+            $invMonth = $targetInv['month'];
+            $invCid   = $targetInv['customer_id'];
+            $stmtCheck = $pdo->prepare("
+                SELECT id, status, arn as ack_number FROM gst_filings 
+                WHERE (operator_id = :cid OR trade_name = (SELECT full_name FROM users WHERE id = :cid))
+                  AND (tax_period = :m OR documents_payload->>'month' = :m)
+                  AND status != 'REJECTED'
+                LIMIT 1
+            ");
+            $stmtCheck->execute(['cid' => $invCid, 'm' => $invMonth]);
+            if ($stmtCheck->fetchColumn()) {
+                Response::error("Monthly return for {$invMonth} has already been submitted. Invoices cannot be removed.", 422);
+            }
+
             if ($role === 'super_admin') {
                 $stmt = $pdo->prepare("DELETE FROM customer_invoices WHERE id = :id");
                 $stmt->execute(['id' => $id]);

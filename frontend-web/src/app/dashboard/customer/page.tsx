@@ -25,7 +25,8 @@ import {
   ShieldCheck,
   Shield,
   FileUp,
-  X
+  X,
+  Lock
 } from "lucide-react";
 import ReceiptModal, { ReceiptData } from "@/components/dashboard/ReceiptModal";
 import TaxCalendarTicker from "@/components/dashboard/TaxCalendarTicker";
@@ -84,6 +85,9 @@ export default function CustomerDashboardPage() {
   const [monthlyInvoices, setMonthlyInvoices] = useState<any[]>([]);
   const [monthlyFiling, setMonthlyFiling] = useState<any | null>(null);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
+
+  // Locked check: Return already compiled/submitted for this period
+  const isMonthLocked = Boolean(monthlyFiling && monthlyFiling.status !== "REJECTED");
 
   // Invoice Upload Modal State
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -164,6 +168,11 @@ export default function CustomerDashboardPage() {
   // Handle uploading daily invoice
   const handleUploadInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isMonthLocked) {
+      showToast("Cannot upload invoice: Monthly return has already been submitted for this period.", "error");
+      setShowUploadModal(false);
+      return;
+    }
     if (!invoiceForm.file_url) {
       showToast("Please select or scan an invoice file (PDF/Image)", "error");
       return;
@@ -483,13 +492,20 @@ export default function CustomerDashboardPage() {
                   </select>
                 </div>
 
-                <button
-                  onClick={() => setShowUploadModal(true)}
-                  className="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-1.5 cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>+ Upload Daily Invoice</span>
-                </button>
+                {isMonthLocked ? (
+                  <div className="px-4 py-2 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-xs">
+                    <Lock className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Month Locked (Return Submitted)</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowUploadModal(true)}
+                    className="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-1.5 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>+ Upload Daily Invoice</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -596,7 +612,7 @@ export default function CustomerDashboardPage() {
                           )}
                         </td>
                         <td className="p-3.5 text-right">
-                          {inv.status !== "FILED" && (
+                          {inv.status !== "FILED" && !isMonthLocked && (
                             <button
                               onClick={() => handleDeleteInvoice(inv.id)}
                               className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
@@ -792,7 +808,7 @@ export default function CustomerDashboardPage() {
       )}
 
       {/* MODAL: UPLOAD DAILY INVOICE */}
-      {showUploadModal && (
+      {showUploadModal && !isMonthLocked && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">

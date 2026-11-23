@@ -27,7 +27,8 @@ import {
   Scale,
   Megaphone,
   MessageSquare,
-  FileCheck
+  FileCheck,
+  CheckCircle2
 } from "lucide-react";
 import { clearAuthSession, getAuthUser } from "@/lib/auth";
 import { secureApiCall } from "@/lib/crypto";
@@ -108,6 +109,7 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
     } else if (role === "admin" || role.includes("distributor")) {
       return [
         { label: "Dashboard", href: "/dashboard/admin?tab=overview", tabKey: "overview", icon: LayoutDashboard, permKey: "overview" },
+        { label: "All Service Approvals", href: "/dashboard/admin?tab=service-approvals", tabKey: "service-approvals", icon: CheckCircle2, permKey: "overview" },
         { label: "Wallet Approval", href: "/dashboard/admin?tab=approvals", tabKey: "approvals", icon: CheckSquare, permKey: "overview" },
         { label: "GST Registration", href: "/dashboard/admin?tab=gst-reg", tabKey: "gst-reg", icon: Building, permKey: "gst_registration" },
         { label: "GST Filing", href: "/dashboard/admin?tab=gst-filing", tabKey: "gst-filing", icon: FileSpreadsheet, permKey: "gstr_filing" },
