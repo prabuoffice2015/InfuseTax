@@ -44,7 +44,13 @@ import {
   Megaphone,
   MessageSquare,
   FileText,
-  X
+  X,
+  QrCode,
+  CreditCard,
+  Copy,
+  Check,
+  Smartphone,
+  Star
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { secureApiCall } from "@/lib/crypto";
@@ -387,13 +393,49 @@ export default function CompanySuperAdminPage() {
   const [ledgerPageSize, setLedgerPageSize] = useState(10);
 
   // ==========================================
+  // BANK ACCOUNTS & DYNAMIC UPI QR STATES
+  // ==========================================
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [primaryUpi, setPrimaryUpi] = useState<any>({
+    vpa: "taxpartner.retail@icici",
+    payee_name: "TaxPartner Technologies Pvt Ltd",
+    qr_code_url: null,
+    bank_name: "HDFC Bank",
+    account_number: "50200012345678",
+    ifsc_code: "HDFC0001234"
+  });
+  const [showAddBankModal, setShowAddBankModal] = useState(false);
+  const [editingBank, setEditingBank] = useState<any | null>(null);
+  const [bankFormData, setBankFormData] = useState({
+    bank_name: "",
+    account_holder: "TaxPartner Technologies Pvt Ltd",
+    account_number: "",
+    ifsc_code: "",
+    branch: "",
+    account_type: "CURRENT",
+    upi_id: "",
+    qr_code_url: "",
+    is_primary: false,
+    is_active: true
+  });
+  const [upiFormData, setUpiFormData] = useState({
+    vpa: "taxpartner.retail@icici",
+    payee_name: "TaxPartner Technologies Pvt Ltd",
+    qr_code_url: "",
+    bank_account_id: ""
+  });
+  const [isSavingBank, setIsSavingBank] = useState(false);
+  const [isSavingUpi, setIsSavingUpi] = useState(false);
+  const [copiedBankId, setCopiedBankId] = useState<string | null>(null);
+
+  // ==========================================
   // INITIAL DATA FETCHING
   // ==========================================
   const loadAllData = async () => {
     setLoading(true);
     try {
       const [
-        statsRes, compRes, usersRes, pricingRes, logsRes, utrRes, ledgerRes, annRes, filingsRes, servRes
+        statsRes, compRes, usersRes, pricingRes, logsRes, utrRes, ledgerRes, annRes, filingsRes, servRes, bankRes
       ] = await Promise.allSettled([
         secureApiCall("/api/v1/dashboard/stats"),
         secureApiCall("/api/v1/admin/companies"),
@@ -404,7 +446,8 @@ export default function CompanySuperAdminPage() {
         secureApiCall("/api/v1/admin/audit-ledger"),
         secureApiCall("/api/v1/announcements"),
         secureApiCall("/api/v1/filings/recent"),
-        secureApiCall("/api/v1/service-approvals/list")
+        secureApiCall("/api/v1/service-approvals/list"),
+        secureApiCall("/api/v1/company/bank-accounts")
       ]);
 
       if (filingsRes.status === "fulfilled" && filingsRes.value.ok && filingsRes.value.data?.filings) {
@@ -474,10 +517,136 @@ export default function CompanySuperAdminPage() {
       if (annRes.status === "fulfilled" && annRes.value.ok && annRes.value.data?.announcements) {
         setAnnouncements(annRes.value.data.announcements);
       }
+
+      if (bankRes.status === "fulfilled" && bankRes.value.ok && bankRes.value.data?.bank_accounts) {
+        setBankAccounts(bankRes.value.data.bank_accounts);
+        if (bankRes.value.data.primary_upi) {
+          setPrimaryUpi(bankRes.value.data.primary_upi);
+          setUpiFormData({
+            vpa: bankRes.value.data.primary_upi.vpa || "taxpartner.retail@icici",
+            payee_name: bankRes.value.data.primary_upi.payee_name || "TaxPartner Technologies Pvt Ltd",
+            qr_code_url: bankRes.value.data.primary_upi.qr_code_url || "",
+            bank_account_id: bankRes.value.data.primary_account?.id || ""
+          });
+        }
+      }
     } catch (err) {
       console.error("Failed to load dashboard data:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveBank = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingBank(true);
+    try {
+      if (editingBank) {
+        const res = await secureApiCall("/api/v1/super-admin/bank-accounts/update", {
+          method: "POST",
+          body: JSON.stringify({
+            id: editingBank.id,
+            ...bankFormData
+          })
+        });
+        if (res.ok) {
+          showToast(`✓ Bank account ${bankFormData.bank_name} updated successfully!`);
+          setShowAddBankModal(false);
+          setEditingBank(null);
+          loadAllData();
+        } else {
+          showToast((res.data?.message || (res as any).message || "Failed to update bank account"), "error");
+        }
+      } else {
+        const res = await secureApiCall("/api/v1/super-admin/bank-accounts/create", {
+          method: "POST",
+          body: JSON.stringify(bankFormData)
+        });
+        if (res.ok) {
+          showToast(`✓ Bank account ${bankFormData.bank_name} added successfully!`);
+          setShowAddBankModal(false);
+          loadAllData();
+        } else {
+          showToast((res.data?.message || (res as any).message || "Failed to create bank account"), "error");
+        }
+      }
+    } catch (err: any) {
+      showToast(err.message || "Network error saving bank account", "error");
+    } finally {
+      setIsSavingBank(false);
+    }
+  };
+
+  const handleToggleBankStatus = async (id: string, bankName: string) => {
+    try {
+      const res = await secureApiCall("/api/v1/super-admin/bank-accounts/toggle-status", {
+        method: "POST",
+        body: JSON.stringify({ id })
+      });
+      if (res.ok) {
+        showToast(res.data?.message || `Updated status for ${bankName}`);
+        loadAllData();
+      } else {
+        showToast((res.data?.message || (res as any).message || "Failed to toggle status"), "error");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Network error", "error");
+    }
+  };
+
+  const handleSetPrimaryBank = async (id: string, bankName: string) => {
+    try {
+      const res = await secureApiCall("/api/v1/super-admin/bank-accounts/set-primary", {
+        method: "POST",
+        body: JSON.stringify({ id })
+      });
+      if (res.ok) {
+        showToast(`✓ ${bankName} set as primary company account for deposits & UPI QR!`);
+        loadAllData();
+      } else {
+        showToast((res.data?.message || (res as any).message || "Failed to set primary bank"), "error");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Network error", "error");
+    }
+  };
+
+  const handleDeleteBank = async (id: string, bankName: string) => {
+    if (!confirm(`Are you sure you want to delete bank account "${bankName}"?`)) return;
+    try {
+      const res = await secureApiCall("/api/v1/super-admin/bank-accounts/delete", {
+        method: "POST",
+        body: JSON.stringify({ id })
+      });
+      if (res.ok) {
+        showToast(`✓ Bank account ${bankName} removed successfully!`);
+        loadAllData();
+      } else {
+        showToast((res.data?.message || (res as any).message || "Failed to delete bank account"), "error");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Network error", "error");
+    }
+  };
+
+  const handleSaveUpiSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingUpi(true);
+    try {
+      const res = await secureApiCall("/api/v1/super-admin/upi-config/update", {
+        method: "POST",
+        body: JSON.stringify(upiFormData)
+      });
+      if (res.ok) {
+        showToast("✓ Dynamic UPI QR settings (GPay & PhonePe) saved successfully!");
+        loadAllData();
+      } else {
+        showToast((res.data?.message || (res as any).message || "Failed to update UPI settings"), "error");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Network error saving UPI settings", "error");
+    } finally {
+      setIsSavingUpi(false);
     }
   };
 
@@ -2715,6 +2884,405 @@ export default function CompanySuperAdminPage() {
       )}
 
       {/* ========================================================================= */}
+      {/* TAB: COMPANY BANK ACCOUNTS & DYNAMIC UPI QR CONFIGURATION (Super Admin) */}
+      {/* ========================================================================= */}
+      {activeTab === "bank-accounts" && (
+        <div className="space-y-6">
+          {/* Header Card */}
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-6 sm:p-8 rounded-3xl text-white shadow-xl border border-slate-800 relative overflow-hidden">
+            <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center space-x-2 px-3 py-1 bg-amber-400/20 border border-amber-400/30 rounded-full text-amber-300 text-xs font-bold uppercase tracking-wider mb-2">
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>Settlement & Liquidity Rails</span>
+                </div>
+                <h2 className="text-2xl font-black tracking-tight">Company Bank Accounts & Dynamic UPI QR Desk</h2>
+                <p className="text-xs text-slate-300 max-w-2xl mt-1">
+                  Manage database-level settlement bank accounts and live GPay / PhonePe / Paytm dynamic QR configurations displayed across Retailer wallet deposit desks.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingBank(null);
+                  setBankFormData({
+                    bank_name: "",
+                    account_holder: "TaxPartner Technologies Pvt Ltd",
+                    account_number: "",
+                    ifsc_code: "",
+                    branch: "",
+                    account_type: "CURRENT",
+                    upi_id: "",
+                    qr_code_url: "",
+                    is_primary: false,
+                    is_active: true
+                  });
+                  setShowAddBankModal(true);
+                }}
+                className="px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold transition-all shadow-lg shadow-blue-600/30 flex items-center space-x-2 self-start sm:self-auto cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Company Bank Account</span>
+              </button>
+            </div>
+          </div>
+
+          {/* TWO COLUMN GRID: Live UPI QR Config & Preview */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Col: Live Dynamic QR Preview */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col items-center text-center space-y-4">
+              <div className="w-full flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center space-x-2">
+                  <div className="p-1.5 bg-amber-100 text-amber-800 rounded-lg">
+                    <Smartphone className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-900">Retailer QR Top-Up Preview</span>
+                </div>
+                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold">
+                  Live Active
+                </span>
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 w-full max-w-xs space-y-3">
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm inline-block">
+                  {upiFormData.qr_code_url && (upiFormData.qr_code_url.startsWith("data:") || upiFormData.qr_code_url.startsWith("http")) ? (
+                    <img
+                      src={upiFormData.qr_code_url}
+                      alt="Company UPI QR"
+                      className="w-40 h-40 mx-auto object-contain rounded-xl"
+                    />
+                  ) : (
+                    <svg
+                      className="w-40 h-40 mx-auto"
+                      viewBox="0 0 200 200"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <rect x="10" y="10" width="50" height="50" rx="6" fill="#1E293B" />
+                      <rect x="20" y="20" width="30" height="30" rx="3" fill="white" />
+                      <rect x="27" y="27" width="16" height="16" rx="2" fill="#1E40AF" />
+
+                      <rect x="140" y="10" width="50" height="50" rx="6" fill="#1E293B" />
+                      <rect x="150" y="20" width="30" height="30" rx="3" fill="white" />
+                      <rect x="157" y="27" width="16" height="16" rx="2" fill="#1E40AF" />
+
+                      <rect x="10" y="140" width="50" height="50" rx="6" fill="#1E293B" />
+                      <rect x="20" y="150" width="30" height="30" rx="3" fill="white" />
+                      <rect x="27" y="157" width="16" height="16" rx="2" fill="#1E40AF" />
+
+                      <rect x="70" y="15" width="12" height="12" fill="#334155" />
+                      <rect x="90" y="15" width="12" height="12" fill="#334155" />
+                      <rect x="115" y="15" width="12" height="12" fill="#334155" />
+                      <rect x="70" y="35" width="12" height="12" fill="#334155" />
+                      <rect x="100" y="35" width="20" height="12" fill="#334155" />
+                      <rect x="70" y="55" width="55" height="12" fill="#334155" />
+
+                      <rect x="15" y="70" width="45" height="12" fill="#334155" />
+                      <rect x="70" y="75" width="15" height="15" fill="#334155" />
+                      <rect x="95" y="75" width="35" height="15" fill="#334155" />
+                      <rect x="140" y="70" width="45" height="12" fill="#334155" />
+
+                      <rect x="75" y="75" width="50" height="50" rx="10" fill="#1E40AF" />
+                      <text x="100" y="105" fill="white" fontSize="16" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">₹</text>
+
+                      <rect x="15" y="115" width="45" height="12" fill="#334155" />
+                      <rect x="70" y="135" width="18" height="18" fill="#334155" />
+                      <rect x="95" y="135" width="35" height="18" fill="#334155" />
+                      <rect x="140" y="90" width="18" height="35" fill="#334155" />
+                      <rect x="165" y="90" width="20" height="15" fill="#334155" />
+
+                      <rect x="70" y="165" width="55" height="15" fill="#334155" />
+                      <rect x="135" y="140" width="20" height="40" fill="#334155" />
+                      <rect x="160" y="140" width="25" height="40" fill="#334155" />
+                    </svg>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <div className="text-xs font-mono font-bold text-slate-800">
+                    VPA: <span className="text-blue-700">{upiFormData.vpa}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 font-medium">
+                    Payee: {upiFormData.payee_name}
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-200 flex items-center justify-center gap-1.5 text-[9px] font-bold text-slate-600">
+                  <span className="px-1.5 py-0.5 bg-white rounded border border-slate-200">GPay</span>
+                  <span className="px-1.5 py-0.5 bg-white rounded border border-slate-200">PhonePe</span>
+                  <span className="px-1.5 py-0.5 bg-white rounded border border-slate-200">Paytm</span>
+                  <span className="px-1.5 py-0.5 bg-white rounded border border-slate-200">BHIM</span>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-slate-400">
+                This QR configuration is rendered live in the Retailer Instant UPI Top-up modal.
+              </p>
+            </div>
+
+            {/* Right Col: UPI QR Settings Form */}
+            <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-5">
+              <div className="border-b border-slate-100 pb-3">
+                <h3 className="text-base font-bold text-slate-900">Dynamic UPI & App Rail Settings (GPay / PhonePe)</h3>
+                <p className="text-xs text-slate-500">
+                  Configure the primary UPI handle (Virtual Payment Address) and Merchant ID mapped to bank deposits.
+                </p>
+              </div>
+
+              <form onSubmit={handleSaveUpiSettings} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Primary UPI VPA / ID <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={upiFormData.vpa}
+                      onChange={(e) => setUpiFormData({ ...upiFormData, vpa: e.target.value })}
+                      placeholder="e.g. taxpartner.retail@icici"
+                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Accepts payments from GPay, PhonePe, Paytm, BHIM.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Payee / Merchant Business Name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={upiFormData.payee_name}
+                      onChange={(e) => setUpiFormData({ ...upiFormData, payee_name: e.target.value })}
+                      placeholder="e.g. TaxPartner Technologies Pvt Ltd"
+                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-900 focus:outline-none focus:border-blue-600"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Displayed to retailer upon UPI application intent launch.</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Map to Primary Bank Settlement Account
+                  </label>
+                  <select
+                    value={upiFormData.bank_account_id}
+                    onChange={(e) => setUpiFormData({ ...upiFormData, bank_account_id: e.target.value })}
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:border-blue-600 font-medium text-slate-800"
+                  >
+                    <option value="">-- Auto-use Primary Settlement Account --</option>
+                    {bankAccounts.map((b: any) => (
+                      <option key={b.id} value={b.id}>
+                        {b.bank_name} - {b.account_number} ({b.ifsc_code}) {b.is_primary ? "★ Primary" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Custom Merchant QR Code Image (Optional Upload)
+                  </label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            setUpiFormData({ ...upiFormData, qr_code_url: reader.result as string });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                    />
+                    {upiFormData.qr_code_url && (
+                      <button
+                        type="button"
+                        onClick={() => setUpiFormData({ ...upiFormData, qr_code_url: "" })}
+                        className="text-[11px] text-rose-600 font-bold hover:underline cursor-pointer"
+                      >
+                        Remove Custom Image
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">If omitted, an ultra-crisp dynamic vector QR will be generated automatically for the VPA.</p>
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={isSavingUpi}
+                    className="px-6 py-2.5 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center space-x-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{isSavingUpi ? "Saving..." : "Save UPI QR Settings"}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          {/* LOWER SECTION: Database Bank Accounts Table */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Configured Company Bank Accounts (DB Level)</h3>
+                <p className="text-xs text-slate-500">
+                  Active accounts are loaded dynamically in Retailer Top-Up modals for direct NEFT / RTGS / IMPS deposit verification.
+                </p>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <span className="text-xs font-semibold text-slate-500">Total Accounts:</span>
+                <span className="px-2.5 py-0.5 bg-slate-100 text-slate-800 rounded-full font-bold text-xs">{bankAccounts.length}</span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-600">
+                <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wider text-slate-500 font-bold border-y border-slate-200/60">
+                  <tr>
+                    <th className="py-3 px-4">Bank & Branch</th>
+                    <th className="py-3 px-4">Account Number & IFSC</th>
+                    <th className="py-3 px-4">Beneficiary Name</th>
+                    <th className="py-3 px-4">UPI VPA</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                    <th className="py-3 px-4 text-center">Primary</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {bankAccounts.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-slate-400">
+                        No company bank accounts configured yet. Click &quot;Add Company Bank Account&quot; to create one.
+                      </td>
+                    </tr>
+                  ) : (
+                    bankAccounts.map((acc: any) => (
+                      <tr key={acc.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="flex items-center space-x-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-black shrink-0">
+                              <Building2 className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900">{acc.bank_name}</div>
+                              <div className="text-[11px] text-slate-400">{acc.branch || "Head Office Branch"}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-mono font-bold text-slate-900 flex items-center space-x-1.5">
+                            <span>{acc.account_number}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(acc.account_number);
+                                setCopiedBankId(acc.id);
+                                setTimeout(() => setCopiedBankId(null), 1500);
+                              }}
+                              className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                              title="Copy Account Number"
+                            >
+                              {copiedBankId === acc.id ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                            </button>
+                          </div>
+                          <div className="text-[11px] font-mono text-slate-500">IFSC: {acc.ifsc_code}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-slate-800">{acc.account_holder}</div>
+                          <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded font-mono">
+                            {acc.account_type || "CURRENT"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
+                            {acc.upi_id || "N/A"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleBankStatus(acc.id, acc.bank_name)}
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition-colors cursor-pointer ${
+                              acc.is_active
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                : "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
+                            }`}
+                          >
+                            {acc.is_active ? "Active" : "Inactive"}
+                          </button>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {acc.is_primary ? (
+                            <span className="inline-flex items-center space-x-1 px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-full text-[10px] font-bold">
+                              <Star className="w-3 h-3 fill-amber-400 text-amber-500" />
+                              <span>Primary</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleSetPrimaryBank(acc.id, acc.bank_name)}
+                              className="text-[11px] text-blue-600 hover:text-blue-800 font-bold hover:underline cursor-pointer"
+                            >
+                              Make Primary
+                            </button>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end space-x-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingBank(acc);
+                                setBankFormData({
+                                  bank_name: acc.bank_name,
+                                  account_holder: acc.account_holder,
+                                  account_number: acc.account_number,
+                                  ifsc_code: acc.ifsc_code,
+                                  branch: acc.branch || "",
+                                  account_type: acc.account_type || "CURRENT",
+                                  upi_id: acc.upi_id || "",
+                                  qr_code_url: acc.qr_code_url || "",
+                                  is_primary: acc.is_primary || false,
+                                  is_active: acc.is_active !== false
+                                });
+                                setShowAddBankModal(true);
+                              }}
+                              className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                              title="Edit Bank Account"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteBank(acc.id, acc.bank_name)}
+                              className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                              title="Delete Bank Account"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
       {/* TAB 7: MASTER FINANCIAL AUDIT LEDGER (Scoped Under Company with Pagination) */}
       {/* ========================================================================= */}
       {activeTab === "ledger" && (
@@ -4499,6 +5067,178 @@ export default function CompanySuperAdminPage() {
             loadAllData();
           }}
         />
+      )}
+
+      {/* MODAL: ADD / EDIT COMPANY BANK ACCOUNT */}
+      {showAddBankModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 bg-blue-100 text-blue-700 rounded-xl">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {editingBank ? "Edit Company Bank Account" : "Add Company Bank Account"}
+                  </h3>
+                  <p className="text-xs text-slate-500">Configure settlement credentials saved to database</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddBankModal(false)}
+                className="text-slate-400 hover:text-slate-700 cursor-pointer text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBank} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Bank Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={bankFormData.bank_name}
+                    onChange={(e) => setBankFormData({ ...bankFormData, bank_name: e.target.value })}
+                    placeholder="e.g. HDFC Bank / ICICI Bank"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Account Type
+                  </label>
+                  <select
+                    value={bankFormData.account_type}
+                    onChange={(e) => setBankFormData({ ...bankFormData, account_type: e.target.value })}
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:border-blue-600"
+                  >
+                    <option value="CURRENT">Current Account</option>
+                    <option value="SAVINGS">Savings Account</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Account Beneficiary Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={bankFormData.account_holder}
+                  onChange={(e) => setBankFormData({ ...bankFormData, account_holder: e.target.value })}
+                  placeholder="e.g. TaxPartner Technologies Pvt Ltd"
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Account Number <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={bankFormData.account_number}
+                    onChange={(e) => setBankFormData({ ...bankFormData, account_number: e.target.value })}
+                    placeholder="e.g. 50200012345678"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    IFSC Code <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={bankFormData.ifsc_code}
+                    onChange={(e) => setBankFormData({ ...bankFormData, ifsc_code: e.target.value.toUpperCase() })}
+                    placeholder="e.g. HDFC0001234"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 focus:outline-none focus:border-blue-600 uppercase"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Branch Name / Location
+                  </label>
+                  <input
+                    type="text"
+                    value={bankFormData.branch}
+                    onChange={(e) => setBankFormData({ ...bankFormData, branch: e.target.value })}
+                    placeholder="e.g. Anna Nagar, Chennai"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    UPI VPA / Handle
+                  </label>
+                  <input
+                    type="text"
+                    value={bankFormData.upi_id}
+                    onChange={(e) => setBankFormData({ ...bankFormData, upi_id: e.target.value })}
+                    placeholder="e.g. taxpartner.retail@icici"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-slate-800">Primary Settlement Account</div>
+                  <div className="text-[10px] text-slate-500">Make this the default account for UPI QR & deposits</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={bankFormData.is_primary}
+                  onChange={(e) => setBankFormData({ ...bankFormData, is_primary: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded cursor-pointer"
+                />
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-slate-800">Active Status</div>
+                  <div className="text-[10px] text-slate-500">Visible in Retailer Top-up dropdown</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={bankFormData.is_active}
+                  onChange={(e) => setBankFormData({ ...bankFormData, is_active: e.target.checked })}
+                  className="w-4 h-4 text-emerald-600 rounded cursor-pointer"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddBankModal(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingBank}
+                  className="px-5 py-2.5 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingBank ? "Saving..." : editingBank ? "Update Account" : "Add Account"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
     </div>

@@ -28,7 +28,8 @@ import {
   Megaphone,
   MessageSquare,
   FileCheck,
-  CheckCircle2
+  CheckCircle2,
+  QrCode
 } from "lucide-react";
 import { clearAuthSession, getAuthUser } from "@/lib/auth";
 import { secureApiCall } from "@/lib/crypto";
@@ -104,6 +105,7 @@ export default function Sidebar({ currentRole = "admin" }: SidebarProps) {
         { label: "Tier 2 Pricing", href: "/dashboard/company?tab=pricing", tabKey: "pricing", icon: Sliders },
         { label: "Announcements", href: "/dashboard/company?tab=announcements", tabKey: "announcements", icon: Megaphone },
         { label: "White Labeling", href: "/dashboard/company?tab=branding", tabKey: "branding", icon: Palette },
+        { label: "Bank & QR Settings", href: "/dashboard/company?tab=bank-accounts", tabKey: "bank-accounts", icon: QrCode },
         { label: "WhatsApp Gateway", href: "/dashboard/company?tab=whatsapp", tabKey: "whatsapp", icon: MessageSquare },
       ];
     } else if (role === "admin" || role.includes("distributor")) {

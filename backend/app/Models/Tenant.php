@@ -96,6 +96,10 @@ class Tenant extends Model {
         return $this->hasMany(AuditLedger::class, 'tenant_id', 'id');
     }
 
+    public function companyBankAccounts() {
+        return $this->hasMany(CompanyBankAccount::class, 'tenant_id', 'id');
+    }
+
     public static function getAllWithMetrics(): array {
         $tenants = self::withCount([
             'users as total_users',

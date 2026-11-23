@@ -71,7 +71,9 @@ export default function Navbar({
   const [activeUser, setActiveUser] = useState<{ name: string; email: string; role: string; wallet?: number; mobile?: string; city?: string; state?: string; tenant?: string } | null>(null);
   const [utrAmount, setUtrAmount] = useState("");
   const [utrNo, setUtrNo] = useState("");
-  const [selectedBank, setSelectedBank] = useState("HDFC Bank (A/c: 50200012345678)");
+  const [selectedBank, setSelectedBank] = useState("HDFC Bank (A/c: 50200012345678, IFSC: HDFC0001234)");
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [selectedBankId, setSelectedBankId] = useState<string>("");
   const [isSuccess, setIsSuccess] = useState(false);
 
   // Profile Edit State
@@ -109,6 +111,22 @@ export default function Navbar({
     }
   };
 
+  const fetchCompanyBankAccounts = async () => {
+    try {
+      const res = await secureApiCall("/api/v1/company/bank-accounts");
+      if (res && res.data && Array.isArray(res.data.bank_accounts)) {
+        setBankAccounts(res.data.bank_accounts);
+        if (res.data.bank_accounts.length > 0) {
+          const primary = res.data.bank_accounts.find((b: any) => b.is_primary) || res.data.bank_accounts[0];
+          setSelectedBankId(primary.id);
+          setSelectedBank(`${primary.bank_name} (A/c: ${primary.account_number}, IFSC: ${primary.ifsc_code})`);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load company bank accounts:", err);
+    }
+  };
+
   React.useEffect(() => {
     const user = getAuthUser();
     if (user) {
@@ -120,6 +138,7 @@ export default function Navbar({
     }
     fetchLiveBalance();
     fetchLiveNotifications();
+    fetchCompanyBankAccounts();
 
     const handleWalletUpdated = () => fetchLiveBalance();
     const handleNotifUpdated = () => fetchLiveNotifications();
@@ -808,14 +827,64 @@ export default function Navbar({
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Select Deposit Company Bank Account</label>
                   <select
-                    value={selectedBank}
-                    onChange={(e) => setSelectedBank(e.target.value)}
+                    value={selectedBankId}
+                    onChange={(e) => {
+                      setSelectedBankId(e.target.value);
+                      const chosen = bankAccounts.find((b: any) => b.id === e.target.value);
+                      if (chosen) {
+                        setSelectedBank(`${chosen.bank_name} (A/c: ${chosen.account_number}, IFSC: ${chosen.ifsc_code})`);
+                      }
+                    }}
                     className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:border-blue-600 font-medium"
                   >
-                    <option>HDFC Bank (A/c: 50200012345678, IFSC: HDFC0001234)</option>
-                    <option>ICICI Bank (A/c: 001105009988, IFSC: ICIC0000011)</option>
-                    <option>State Bank of India (A/c: 33445566778, IFSC: SBIN0004567)</option>
+                    {bankAccounts.length > 0 ? (
+                      bankAccounts.map((b: any) => (
+                        <option key={b.id} value={b.id}>
+                          {b.bank_name} (A/c: {b.account_number}, IFSC: {b.ifsc_code}){b.is_primary ? " [Primary]" : ""}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="default_hdfc">HDFC Bank (A/c: 50200012345678, IFSC: HDFC0001234)</option>
+                        <option value="default_icici">ICICI Bank (A/c: 001105009988, IFSC: ICIC0000011)</option>
+                        <option value="default_sbi">State Bank of India (A/c: 33445566778, IFSC: SBIN0004567)</option>
+                      </>
+                    )}
                   </select>
+
+                  {/* Dynamic Bank Account Details Preview */}
+                  {(() => {
+                    const activeAcc = bankAccounts.find((b: any) => b.id === selectedBankId) || bankAccounts[0];
+                    if (!activeAcc) return null;
+                    return (
+                      <div className="mt-2.5 p-3 bg-blue-50/70 border border-blue-200/60 rounded-xl text-[11px] space-y-1.5">
+                        <div className="flex items-center justify-between text-slate-600">
+                          <span className="font-semibold">Beneficiary Name:</span>
+                          <span className="font-bold text-slate-800">{activeAcc.account_holder}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-slate-600">
+                          <span className="font-semibold">Account Number:</span>
+                          <span className="font-mono font-bold text-blue-900 bg-white px-2 py-0.5 rounded border border-blue-100">{activeAcc.account_number}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-slate-600">
+                          <span className="font-semibold">IFSC Code:</span>
+                          <span className="font-mono font-bold text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200">{activeAcc.ifsc_code}</span>
+                        </div>
+                        {activeAcc.branch && (
+                          <div className="flex items-center justify-between text-slate-600">
+                            <span className="font-semibold">Branch:</span>
+                            <span className="text-slate-700">{activeAcc.branch}</span>
+                          </div>
+                        )}
+                        {activeAcc.upi_id && (
+                          <div className="flex items-center justify-between text-slate-600 pt-1 border-t border-blue-200/50">
+                            <span className="font-semibold">UPI VPA:</span>
+                            <span className="font-mono font-bold text-emerald-700">{activeAcc.upi_id}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div>

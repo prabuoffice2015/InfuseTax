@@ -122,3 +122,12 @@ Router::get('/api/v1/whatsapp/config', 'DashboardController@getWhatsAppConfig');
 Router::post('/api/v1/admin/whatsapp/config', 'DashboardController@updateAdminWhatsAppConfig');
 Router::post('/api/v1/distributor/whatsapp/config', 'DashboardController@updateDistributorWhatsAppConfig');
 Router::post('/api/v1/whatsapp/test-message', 'DashboardController@sendTestWhatsAppMessage');
+
+// 12. Company Bank Accounts & Dynamic UPI QR Configurations
+Router::get('/api/v1/company/bank-accounts', 'CompanyBankAccountController@listAccounts');
+Router::post('/api/v1/super-admin/bank-accounts/create', 'CompanyBankAccountController@createAccount');
+Router::post('/api/v1/super-admin/bank-accounts/update', 'CompanyBankAccountController@updateAccount');
+Router::post('/api/v1/super-admin/bank-accounts/toggle-status', 'CompanyBankAccountController@toggleStatus');
+Router::post('/api/v1/super-admin/bank-accounts/set-primary', 'CompanyBankAccountController@setPrimary');
+Router::post('/api/v1/super-admin/bank-accounts/delete', 'CompanyBankAccountController@deleteAccount');
+Router::post('/api/v1/super-admin/upi-config/update', 'CompanyBankAccountController@updateUpiConfig');
