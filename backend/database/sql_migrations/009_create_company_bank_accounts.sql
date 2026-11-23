@@ -4,7 +4,7 @@
 -- ==============================================================================
 
 CREATE TABLE IF NOT EXISTS public.company_bank_accounts (
-    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE,
     bank_name VARCHAR(100) NOT NULL,
     account_holder VARCHAR(255) NOT NULL,
