@@ -355,6 +355,12 @@ class User extends Model {
         if (isset($data['income_tax_password'])) {
             $updates['income_tax_password'] = trim($data['income_tax_password']);
         }
+        if (isset($data['gst_login_id'])) {
+            $updates['gst_login_id'] = trim($data['gst_login_id']);
+        }
+        if (isset($data['gst_password'])) {
+            $updates['gst_password'] = trim($data['gst_password']);
+        }
         if (isset($data['user_code'])) {
             $updates['user_code'] = trim($data['user_code']);
         }

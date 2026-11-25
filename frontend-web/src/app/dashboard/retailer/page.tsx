@@ -162,6 +162,8 @@ export default function RetailerDashboardPage() {
     mobile: "",
     income_tax_login_id: "",
     income_tax_password: "",
+    gst_login_id: "",
+    gst_password: "",
     login_id: "",
     password: "Customer@1234",
     address_proof: "",
@@ -800,6 +802,8 @@ export default function RetailerDashboardPage() {
           mobile: customerForm.mobile,
           income_tax_login_id: customerForm.income_tax_login_id,
           income_tax_password: customerForm.income_tax_password,
+          gst_login_id: customerForm.gst_login_id,
+          gst_password: customerForm.gst_password,
           taxpartner_login_id: customerForm.login_id,
           password: customerForm.password,
           address_proof: customerForm.address_proof,
@@ -816,6 +820,8 @@ export default function RetailerDashboardPage() {
           mobile: "",
           income_tax_login_id: "",
           income_tax_password: "",
+          gst_login_id: "",
+          gst_password: "",
           login_id: "",
           password: "Customer@1234",
           address_proof: "",
@@ -4067,6 +4073,29 @@ export default function RetailerDashboardPage() {
                     type="password"
                     value={customerForm.income_tax_password}
                     onChange={(e) => setCustomerForm({ ...customerForm, income_tax_password: e.target.value })}
+                    placeholder="••••••••••••"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">GSTIN / GST Login ID</label>
+                  <input
+                    type="text"
+                    value={customerForm.gst_login_id}
+                    onChange={(e) => setCustomerForm({ ...customerForm, gst_login_id: e.target.value.toUpperCase() })}
+                    placeholder="33AAAAA0000A1Z5"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold uppercase text-slate-900 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">GST Portal Password</label>
+                  <input
+                    type="password"
+                    value={customerForm.gst_password}
+                    onChange={(e) => setCustomerForm({ ...customerForm, gst_password: e.target.value })}
                     placeholder="••••••••••••"
                     className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 focus:outline-none focus:border-blue-600"
                   />

@@ -258,6 +258,8 @@ export default function CompanySuperAdminPage() {
     bank_ifsc: "",
     income_tax_login_id: "",
     income_tax_password: "",
+    gst_login_id: "",
+    gst_password: "",
     status: "active",
     user_code: "",
     parent_id: "",
@@ -289,6 +291,8 @@ export default function CompanySuperAdminPage() {
     bank_ifsc: "",
     income_tax_login_id: "",
     income_tax_password: "",
+    gst_login_id: "",
+    gst_password: "",
     login_id: "",
     enabled_modules: ["gst_registration", "gstr_filing", "itr_filing", "reports"] as string[]
   });
@@ -922,7 +926,7 @@ export default function CompanySuperAdminPage() {
           parent_id: "", city: "Chennai", state: "Tamil Nadu", password: "", initial_wallet: "0",
           shop_name: "", address: "", address_proof: "",
           bank_account: "", bank_name: "", bank_ifsc: "",
-          income_tax_login_id: "", income_tax_password: "", login_id: "",
+          income_tax_login_id: "", income_tax_password: "", gst_login_id: "", gst_password: "", login_id: "",
           enabled_modules: ["gst_registration", "gstr_filing", "itr_filing", "reports"]
         });
         loadAllData();
@@ -960,6 +964,8 @@ export default function CompanySuperAdminPage() {
           },
           income_tax_login_id: editUserData.income_tax_login_id,
           income_tax_password: editUserData.income_tax_password,
+          gst_login_id: editUserData.gst_login_id,
+          gst_password: editUserData.gst_password,
           user_code: editUserData.user_code,
           status: editUserData.status,
           parent_id: editUserData.parent_id || null,
@@ -1986,6 +1992,8 @@ export default function CompanySuperAdminPage() {
                                       bank_ifsc: bDetails.ifsc || "",
                                       income_tax_login_id: u.income_tax_login_id || "",
                                       income_tax_password: u.income_tax_password || "",
+                                      gst_login_id: u.gst_login_id || "",
+                                      gst_password: u.gst_password || "",
                                       status: u.status || "active",
                                       user_code: u.user_code || "",
                                       parent_id: u.parent_id || "",
@@ -2039,6 +2047,8 @@ export default function CompanySuperAdminPage() {
                                   bank_ifsc: bDetails.ifsc || "",
                                   income_tax_login_id: u.income_tax_login_id || "",
                                   income_tax_password: u.income_tax_password || "",
+                                  gst_login_id: u.gst_login_id || "",
+                                  gst_password: u.gst_password || "",
                                   status: u.status || "active",
                                   user_code: u.user_code || "",
                                   parent_id: u.parent_id || "",
@@ -4489,6 +4499,24 @@ export default function CompanySuperAdminPage() {
                       placeholder="Income Tax Password"
                       value={editUserData.income_tax_password}
                       onChange={(e) => setEditUserData({ ...editUserData, income_tax_password: e.target.value })}
+                      className="text-xs p-2 bg-white border border-slate-300 rounded-xl font-mono text-slate-900"
+                    />
+                  </div>
+
+                  <div className="text-[11px] font-black uppercase text-amber-900 mt-2">Customer GST Portal Credentials</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      placeholder="GST Login ID / GSTIN"
+                      value={editUserData.gst_login_id}
+                      onChange={(e) => setEditUserData({ ...editUserData, gst_login_id: e.target.value.toUpperCase() })}
+                      className="text-xs p-2 bg-white border border-slate-300 rounded-xl font-mono uppercase text-slate-900 font-bold"
+                    />
+                    <input
+                      type="text"
+                      placeholder="GST Portal Password"
+                      value={editUserData.gst_password}
+                      onChange={(e) => setEditUserData({ ...editUserData, gst_password: e.target.value })}
                       className="text-xs p-2 bg-white border border-slate-300 rounded-xl font-mono text-slate-900"
                     />
                   </div>

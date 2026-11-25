@@ -230,7 +230,7 @@ class DashboardController {
                            u.full_name as name, u.email, u.mobile as contact,
                            u.role, u.city, u.state, u.status, u.parent_id,
                            u.shop_name, u.address, u.address_proof_url, u.bank_details,
-                           u.income_tax_login_id, u.income_tax_password, u.user_code,
+                           u.income_tax_login_id, u.income_tax_password, u.gst_login_id, u.gst_password, u.user_code,
                            u.enabled_modules, COALESCE(u.permissions, 'all') as permissions,
                            p.full_name as parent_name, p.shop_name as parent_shop_name, p.email as parent_email,
                            COALESCE(w.balance, 0.00) as wallet,
@@ -454,6 +454,8 @@ class DashboardController {
             'bank_details'        => $body['bank_details'] ?? null,
             'income_tax_login_id' => Security::sanitizeString($body['income_tax_login_id'] ?? ''),
             'income_tax_password' => Security::sanitizeString($body['income_tax_password'] ?? ''),
+            'gst_login_id'        => Security::sanitizeString($body['gst_login_id'] ?? ''),
+            'gst_password'        => Security::sanitizeString($body['gst_password'] ?? ''),
             'user_code'           => Security::sanitizeString($body['user_code'] ?? $body['login_id'] ?? ''),
             'status'              => Security::sanitizeString($body['status'] ?? ''),
             'enabled_modules'     => $body['enabled_modules'] ?? ($body['services'] ?? null),
@@ -1620,7 +1622,7 @@ class DashboardController {
         try {
             $stmt = $pdo->prepare("
                 SELECT u.id, u.full_name as name, u.email, u.mobile, u.role, u.city, u.state, u.status, 
-                       u.shop_name, u.address, u.address_proof_url, u.income_tax_login_id, u.income_tax_password, u.user_code,
+                       u.shop_name, u.address, u.address_proof_url, u.income_tax_login_id, u.income_tax_password, u.gst_login_id, u.gst_password, u.user_code,
                        COALESCE(u.permissions, 'all') as permissions,
                        COALESCE(w.balance, 0.00) as wallet,
                        to_char(u.created_at, 'DD Mon YYYY') as onboarded_date

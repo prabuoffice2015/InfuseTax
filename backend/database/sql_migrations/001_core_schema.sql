@@ -274,4 +274,4 @@ VALUES (
     'INFUST',
     '#1E40AF',
     '#F59E0B'
-) ON CONFLICT (code) DO NOTHING;
+) ON CONFLICT (id) DO NOTHING;
